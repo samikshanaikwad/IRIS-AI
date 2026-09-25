@@ -1,12 +1,12 @@
 # IRIS Implementation Status
 
-Status values are updated only after implementation and verification. All phases begin as `NOT STARTED` except governance completed by this initialization task.
+Status values are updated only after implementation and verification.
 
 | Phase | Status |
 |---|---|
 | 00 Project governance / documentation | COMPLETE |
-| 01 Repository / Flutter foundation | NOT STARTED |
-| 02 Design system / navigation | NOT STARTED |
+| 01 Repository / Flutter foundation | COMPLETE |
+| 02 Design system / navigation | COMPLETE |
 | 03 Database / case management | NOT STARTED |
 | 04 Evidence import / integrity | NOT STARTED |
 | 05 Camera / evidence quality | NOT STARTED |
@@ -32,4 +32,4 @@ Status values are updated only after implementation and verification. All phases
 | 25 End-to-end testing | NOT STARTED |
 | 26 Release APK | NOT STARTED |
 
-No application implementation, Flutter project, model, dataset, or sample case is included in this initialization.
+The verified scope currently includes project governance, the Flutter/Android foundation, and the application design/navigation shell. No analytical model, dataset, evidence workflow, or incident result is implemented.

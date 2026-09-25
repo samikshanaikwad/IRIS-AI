@@ -4,7 +4,7 @@ IRIS is an offline-first Android application in development for incident reconst
 
 ## Current status
 
-The Flutter source foundation is established under `app/`. Static analysis and widget tests pass, but Android APK validation is blocked until a local Android SDK and compatible Java runtime are installed. No incident analysis, AI, evidence import, location, mapping, database, physics, reconstruction, or reporting feature exists yet.
+The verified Flutter Android foundation and production application shell are established under `app/`. The current application includes the IRIS dark design system, reusable UI components, four-destination navigation, and truthful empty or unavailable states. No incident analysis, AI inference, evidence acquisition, persistence, location, mapping, physics, reconstruction, or reporting feature exists yet.
 
 ## Real-data principle
 
@@ -35,7 +35,7 @@ IRIS/
 
 ## Flutter commands
 
-Once `app/` has been generated and Flutter/Android tooling is available, run from `app/`:
+Run from `app/` with the documented Flutter/Android tooling available:
 
 ```powershell
 flutter pub get
@@ -47,6 +47,6 @@ flutter build apk --debug
 
 The debug APK will be produced at `app/build/app/outputs/flutter-apk/app-debug.apk` after a successful build.
 
-## Foundation-only warning
+## Current-scope warning
 
-This repository does not currently implement any IRIS analytical or reconstruction functionality. Do not interpret this project state as providing incident results or evidence analysis.
+This repository currently provides the application foundation, design system, and navigation shell only. It does not implement IRIS analytical or reconstruction functionality and must not be interpreted as providing incident results or evidence analysis.

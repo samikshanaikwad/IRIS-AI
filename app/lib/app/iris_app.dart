@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-import '../features/foundation/presentation/foundation_screen.dart';
+import 'navigation/iris_app_shell.dart';
+import 'theme/iris_colors.dart';
+import 'theme/iris_theme.dart';
 
 class IrisApp extends StatelessWidget {
   const IrisApp({super.key});
@@ -9,10 +12,22 @@ class IrisApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'IRIS',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-      ),
-      home: const FoundationScreen(),
+      debugShowCheckedModeBanner: false,
+      theme: IrisTheme.dark,
+      darkTheme: IrisTheme.dark,
+      themeMode: ThemeMode.dark,
+      builder: (BuildContext context, Widget? child) {
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: const SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.light,
+            systemNavigationBarColor: IrisColors.elevatedBackground,
+            systemNavigationBarIconBrightness: Brightness.light,
+          ),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
+      home: const IrisAppShell(),
     );
   }
 }

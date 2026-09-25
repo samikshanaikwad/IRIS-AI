@@ -1,10 +1,10 @@
 # IRIS Flutter Application
 
-This directory contains the Android-focused Flutter foundation for IRIS.
+This directory contains the Android-focused Flutter application for IRIS.
 
-The current screen displays only neutral foundation information. No incident analysis or reconstruction capability is implemented here.
+The current application implements the dark design system, reusable interface components, and navigation shell. It displays truthful empty and unavailable states because incident analysis, evidence acquisition, and reconstruction capabilities are not implemented yet.
 
-Run from this directory after installing the Android SDK and compatible Java runtime:
+Run from this directory with the documented Flutter, Android SDK, and JDK 17 toolchain:
 
 ```powershell
 flutter run
