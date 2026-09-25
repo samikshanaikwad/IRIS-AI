@@ -1,0 +1,42 @@
+# Flutter and Dart tooling
+app/.dart_tool/
+app/.packages
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/.pub/
+app/build/
+
+# Android and Gradle local/generated files
+app/android/.gradle/
+app/android/local.properties
+app/android/key.properties
+app/android/app/build/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# IDE and operating system files
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
+
+# Local tooling and secrets
+.local-tools/
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+
+# Large/local ML and data outputs; keep source configurations and documentation tracked.
+ml/checkpoints/
+ml/runs/
+ml/outputs/
+datasets/raw/
+datasets/processed/
+benchmarks/results/
