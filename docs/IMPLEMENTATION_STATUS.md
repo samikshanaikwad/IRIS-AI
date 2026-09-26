@@ -7,7 +7,7 @@ Status values are updated only after implementation and verification.
 | 00 Project governance / documentation | COMPLETE |
 | 01 Repository / Flutter foundation | COMPLETE |
 | 02 Design system / navigation | COMPLETE |
-| 03 Database / case management | NOT STARTED |
+| 03 Database / case management | COMPLETE |
 | 04 Evidence import / integrity | NOT STARTED |
 | 05 Camera / evidence quality | NOT STARTED |
 | 06 Analysis job engine | NOT STARTED |
@@ -32,4 +32,4 @@ Status values are updated only after implementation and verification.
 | 25 End-to-end testing | NOT STARTED |
 | 26 Release APK | NOT STARTED |
 
-The verified scope currently includes project governance, the Flutter/Android foundation, and the application design/navigation shell. No analytical model, dataset, evidence workflow, or incident result is implemented.
+The verified scope currently includes project governance, the Flutter/Android foundation, the application design/navigation shell, and offline SQLite case metadata management. No analytical model, dataset, evidence workflow, or incident result is implemented.

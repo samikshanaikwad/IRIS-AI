@@ -4,7 +4,7 @@ IRIS is an offline-first Android application in development for incident reconst
 
 ## Current status
 
-The verified Flutter Android foundation and production application shell are established under `app/`. The current application includes the IRIS dark design system, reusable UI components, four-destination navigation, and truthful empty or unavailable states. No incident analysis, AI inference, evidence acquisition, persistence, location, mapping, physics, reconstruction, or reporting feature exists yet.
+The verified Flutter Android foundation and production application shell are established under `app/`. The current application includes the IRIS dark design system, four-destination navigation, and real offline SQLite case management. Users can create, list, open, rename, and delete case metadata; Home and Cases are driven by persisted records. Evidence acquisition and all analytical capabilities remain unavailable.
 
 ## Real-data principle
 
@@ -16,7 +16,7 @@ IRIS must never present fabricated, mock, or placeholder analytical information 
 IRIS/
 ├── AGENTS.md                 # Permanent engineering rules
 ├── README.md
-├── app/                      # Flutter Android application foundation
+├── app/                      # Flutter Android application and local case persistence
 ├── native/                   # Reserved for justified native modules
 ├── ml/                       # Model training/configuration source, not model outputs
 ├── datasets/                 # Dataset documentation/configuration, no committed large data
@@ -45,8 +45,8 @@ flutter test
 flutter build apk --debug
 ```
 
-The debug APK will be produced at `app/build/app/outputs/flutter-apk/app-debug.apk` after a successful build.
+The debug APK will be produced at `app/build/app/outputs/flutter-apk/app-debug.apk` after a successful build. Case operations use the local `iris.db` SQLite database and require no network connection. See [docs/CASE_DATABASE.md](docs/CASE_DATABASE.md) for the schema and migration rules.
 
 ## Current-scope warning
 
-This repository currently provides the application foundation, design system, and navigation shell only. It does not implement IRIS analytical or reconstruction functionality and must not be interpreted as providing incident results or evidence analysis.
+This repository currently provides the application foundation, design system, navigation shell, and local case metadata lifecycle. It does not acquire evidence or implement IRIS analytical, location, reconstruction, physics, scenario, or reporting functionality and must not be interpreted as providing incident results or evidence analysis.

@@ -115,6 +115,31 @@ abstract final class IrisTheme {
         color: IrisColors.subtleBorder,
         thickness: 1,
       ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: IrisColors.elevatedBackground,
+        labelStyle: const TextStyle(color: IrisColors.secondaryText),
+        hintStyle: const TextStyle(color: IrisColors.mutedText),
+        enabledBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: IrisColors.primaryBorder),
+          borderRadius: BorderRadius.circular(IrisRadius.input),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: const BorderSide(
+            color: IrisColors.primaryBlue,
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(IrisRadius.input),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: IrisColors.danger),
+          borderRadius: BorderRadius.circular(IrisRadius.input),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: IrisColors.danger, width: 1.5),
+          borderRadius: BorderRadius.circular(IrisRadius.input),
+        ),
+      ),
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: IrisColors.elevatedCard,
         surfaceTintColor: Colors.transparent,

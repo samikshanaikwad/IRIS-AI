@@ -4,15 +4,28 @@ import '../../../app/theme/iris_colors.dart';
 import '../../../app/theme/iris_radius.dart';
 import '../../../app/theme/iris_spacing.dart';
 import '../../../core/widgets/iris_button.dart';
+import '../../../core/widgets/iris_async_states.dart';
 import '../../../core/widgets/iris_card.dart';
 import '../../../core/widgets/iris_empty_state.dart';
 import '../../../core/widgets/iris_page_body.dart';
 import '../../../core/widgets/iris_section_header.dart';
+import '../../cases/application/case_controller.dart';
+import '../../cases/domain/incident_case.dart';
+import '../../cases/presentation/widgets/case_card.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({required this.onAnalyzeIncident, super.key});
+  const HomeScreen({
+    required this.caseController,
+    required this.onAnalyzeIncident,
+    required this.onOpenCase,
+    required this.onViewCases,
+    super.key,
+  });
 
+  final CaseController caseController;
   final VoidCallback onAnalyzeIncident;
+  final ValueChanged<String> onOpenCase;
+  final VoidCallback onViewCases;
 
   @override
   Widget build(BuildContext context) {
@@ -78,8 +91,8 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: IrisSpacing.xs),
                 Text(
-                  'Start by adding real scene evidence. Evidence acquisition '
-                  'will become available in a later implementation phase.',
+                  'Create a case to organize real incident evidence and '
+                  'reconstruction work on this device.',
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 const SizedBox(height: IrisSpacing.md),
@@ -98,13 +111,63 @@ class HomeScreen extends StatelessWidget {
             supportingText: 'Your incident work will be organized here.',
           ),
           const SizedBox(height: IrisSpacing.sm),
-          const IrisEmptyState(
-            icon: Icons.folder_open_outlined,
-            title: 'No cases yet',
-            message: 'Incident cases will appear here after they are created.',
+          AnimatedBuilder(
+            animation: caseController,
+            builder: (BuildContext context, Widget? child) {
+              return _buildRecentCases(context);
+            },
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildRecentCases(BuildContext context) {
+    switch (caseController.state) {
+      case CaseCollectionState.loading:
+        return const IrisLoadingState(label: 'Loading recent cases');
+      case CaseCollectionState.error:
+        return IrisErrorState(
+          title: 'Recent cases unavailable',
+          message: 'IRIS could not read cases from local storage.',
+          onRetry: caseController.retry,
+        );
+      case CaseCollectionState.data:
+        final List<IncidentCase> recentCases = caseController.cases
+            .take(3)
+            .toList(growable: false);
+        if (recentCases.isEmpty) {
+          return const IrisEmptyState(
+            icon: Icons.folder_open_outlined,
+            title: 'No cases yet',
+            message: 'Incident cases will appear here after they are created.',
+          );
+        }
+
+        return Column(
+          children: <Widget>[
+            for (
+              int index = 0;
+              index < recentCases.length;
+              index++
+            ) ...<Widget>[
+              CaseCard(
+                key: ValueKey<String>('home-case-${recentCases[index].id}'),
+                incidentCase: recentCases[index],
+                compact: true,
+                onTap: () => onOpenCase(recentCases[index].id),
+              ),
+              if (index != recentCases.length - 1)
+                const SizedBox(height: IrisSpacing.sm),
+            ],
+            const SizedBox(height: IrisSpacing.sm),
+            IrisSecondaryButton(
+              label: 'View all cases',
+              icon: Icons.folder_open_outlined,
+              onPressed: onViewCases,
+            ),
+          ],
+        );
+    }
   }
 }

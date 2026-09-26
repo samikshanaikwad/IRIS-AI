@@ -2,12 +2,18 @@ import 'package:flutter/material.dart';
 
 import '../../features/capture/presentation/capture_screen.dart';
 import '../../features/cases/presentation/cases_screen.dart';
+import '../../features/cases/application/case_controller.dart';
+import '../../features/cases/domain/incident_case.dart';
+import '../../features/cases/presentation/case_overview_screen.dart';
+import '../../features/cases/presentation/case_title_sheet.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/more/presentation/more_screen.dart';
 import 'iris_navigation.dart';
 
 class IrisAppShell extends StatefulWidget {
-  const IrisAppShell({super.key});
+  const IrisAppShell({required this.caseController, super.key});
+
+  final CaseController caseController;
 
   @override
   State<IrisAppShell> createState() => _IrisAppShellState();
@@ -26,14 +32,44 @@ class _IrisAppShellState extends State<IrisAppShell> {
     });
   }
 
+  Future<void> _createCase() async {
+    final IncidentCase? incidentCase = await showCaseTitleSheet(
+      context: context,
+      heading: 'Create incident case',
+      submitLabel: 'Create Case',
+      onSubmit: widget.caseController.createCase,
+    );
+    if (incidentCase != null && mounted) {
+      _openCase(incidentCase.id);
+    }
+  }
+
+  void _openCase(String caseId) {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) {
+          return CaseOverviewScreen(
+            caseId: caseId,
+            caseController: widget.caseController,
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<Widget> screens = <Widget>[
       HomeScreen(
-        onAnalyzeIncident: () => _selectDestination(IrisDestination.capture),
+        caseController: widget.caseController,
+        onAnalyzeIncident: _createCase,
+        onOpenCase: _openCase,
+        onViewCases: () => _selectDestination(IrisDestination.cases),
       ),
       CasesScreen(
-        onStartAnalysis: () => _selectDestination(IrisDestination.capture),
+        caseController: widget.caseController,
+        onStartAnalysis: _createCase,
+        onOpenCase: _openCase,
       ),
       const CaptureScreen(),
       const MoreScreen(),

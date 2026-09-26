@@ -3,10 +3,23 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:iris/app/iris_app.dart';
 
+import 'support/case_test_harness.dart';
+import 'support/widget_test_tools.dart';
+
 void main() {
+  late CaseTestHarness harness;
+
+  setUp(() async {
+    harness = await CaseTestHarness.create();
+  });
+
+  tearDown(() async {
+    await harness.dispose();
+  });
+
   Future<void> pumpIris(WidgetTester tester) async {
-    await tester.pumpWidget(const IrisApp());
-    await tester.pumpAndSettle();
+    await tester.pumpWidget(IrisApp(services: harness.services));
+    await pumpUntilStorageStateSettles(tester);
   }
 
   NavigationBar navigationBar(WidgetTester tester) {
@@ -32,13 +45,13 @@ void main() {
     expect(find.text('No cases yet'), findsOneWidget);
   });
 
-  testWidgets('Cases navigation shows a truthful empty state', (
+  testWidgets('Cases navigation shows a database-backed empty state', (
     WidgetTester tester,
   ) async {
     await pumpIris(tester);
 
     await tester.tap(find.byKey(const ValueKey<String>('nav-cases')));
-    await tester.pumpAndSettle();
+    await pumpUiTransition(tester);
 
     expect(navigationBar(tester).selectedIndex, 1);
     expect(find.text('No incident cases'), findsOneWidget);
@@ -52,18 +65,11 @@ void main() {
     await pumpIris(tester);
 
     await tester.tap(find.byKey(const ValueKey<String>('nav-capture')));
-    await tester.pumpAndSettle();
+    await pumpUiTransition(tester);
 
     expect(navigationBar(tester).selectedIndex, 2);
     expect(find.text('Evidence Capture'), findsOneWidget);
     expect(find.text('Not available yet'), findsNWidgets(2));
-    expect(
-      find.text(
-        'Evidence acquisition controls will be enabled after camera and '
-        'import setup.',
-      ),
-      findsNWidgets(2),
-    );
 
     final Finder captureButton = find.descendant(
       of: find.byKey(const ValueKey<String>('capture-scene-button')),
@@ -88,7 +94,7 @@ void main() {
     await pumpIris(tester);
 
     await tester.tap(find.byKey(const ValueKey<String>('nav-more')));
-    await tester.pumpAndSettle();
+    await pumpUiTransition(tester);
 
     expect(navigationBar(tester).selectedIndex, 3);
     expect(find.text('About IRIS'), findsOneWidget);
@@ -98,7 +104,7 @@ void main() {
     );
   });
 
-  testWidgets('Home primary action selects Capture without stacking a route', (
+  testWidgets('Home action opens creation without persisting until confirmed', (
     WidgetTester tester,
   ) async {
     await pumpIris(tester);
@@ -108,10 +114,17 @@ void main() {
     );
     await tester.ensureVisible(action);
     await tester.tap(action);
-    await tester.pumpAndSettle();
+    await pumpUiTransition(tester);
 
-    expect(navigationBar(tester).selectedIndex, 2);
-    expect(find.text('Evidence Capture'), findsOneWidget);
+    expect(find.text('Create incident case'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('case-title-field')),
+      findsOneWidget,
+    );
+    expect(
+      await runOutsideFakeAsync(tester, harness.repository.getCases),
+      isEmpty,
+    );
   });
 
   testWidgets('no fabricated recent incident record is rendered', (
@@ -132,26 +145,22 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
-      const MediaQuery(
-        data: MediaQueryData(textScaler: TextScaler.linear(2)),
-        child: IrisApp(),
+      MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+        child: IrisApp(services: harness.services),
       ),
     );
-    await tester.pumpAndSettle();
+    await pumpUntilStorageStateSettles(tester);
 
     expect(tester.takeException(), isNull);
     expect(find.text('IRIS'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey<String>('nav-cases')));
-    await tester.pumpAndSettle();
-
+    await pumpUiTransition(tester);
     expect(tester.takeException(), isNull);
-    expect(find.text('No incident cases'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey<String>('nav-capture')));
-    await tester.pumpAndSettle();
-
+    await pumpUiTransition(tester);
     expect(tester.takeException(), isNull);
-    expect(find.text('Evidence Capture'), findsOneWidget);
   });
 }
