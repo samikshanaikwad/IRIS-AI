@@ -13,12 +13,82 @@ Future<void> migrateDatabase(
         await _createVersionOne(database);
       case 2:
         await _createVersionTwo(database);
+      case 3:
+        await _createVersionThree(database);
       default:
         throw StateError(
           'No database migration registered for version $version.',
         );
     }
   }
+}
+
+Future<void> _createVersionThree(Database database) async {
+  final List<Map<String, Object?>> evidenceTable = await database.rawQuery(
+    "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+    <Object?>[IrisDatabaseConstants.evidenceTable],
+  );
+  if (evidenceTable.length != 1) {
+    throw StateError(
+      'Cannot migrate IRIS database to version 3 without the version 2 evidence table.',
+    );
+  }
+
+  await database.execute('''
+    CREATE TABLE ${IrisDatabaseConstants.evidenceQualityTable} (
+      evidence_id TEXT PRIMARY KEY NOT NULL,
+      assessed_at INTEGER NOT NULL,
+      algorithm_version TEXT NOT NULL,
+      expected_sha256 TEXT NOT NULL CHECK(length(expected_sha256) = 64),
+      assessed_sha256 TEXT CHECK(
+        assessed_sha256 IS NULL OR length(assessed_sha256) = 64
+      ),
+      file_state TEXT NOT NULL CHECK(
+        file_state IN ('available', 'missing', 'unreadable')
+      ),
+      decode_state TEXT NOT NULL CHECK(
+        decode_state IN ('decoded', 'failed', 'not_attempted')
+      ),
+      integrity_state TEXT NOT NULL CHECK(
+        integrity_state IN ('verified', 'mismatch', 'unavailable')
+      ),
+      readiness_state TEXT NOT NULL CHECK(
+        readiness_state IN ('ready', 'usable_with_limitations', 'not_usable')
+      ),
+      file_size_bytes INTEGER CHECK(
+        file_size_bytes IS NULL OR file_size_bytes >= 0
+      ),
+      original_width INTEGER CHECK(
+        original_width IS NULL OR original_width > 0
+      ),
+      original_height INTEGER CHECK(
+        original_height IS NULL OR original_height > 0
+      ),
+      analysis_width INTEGER CHECK(
+        analysis_width IS NULL OR analysis_width > 0
+      ),
+      analysis_height INTEGER CHECK(
+        analysis_height IS NULL OR analysis_height > 0
+      ),
+      orientation TEXT CHECK(
+        orientation IS NULL OR orientation IN ('portrait', 'landscape', 'square')
+      ),
+      sharpness_value REAL,
+      mean_luminance REAL,
+      dark_clipped_fraction REAL CHECK(
+        dark_clipped_fraction IS NULL OR
+        dark_clipped_fraction BETWEEN 0.0 AND 1.0
+      ),
+      bright_clipped_fraction REAL CHECK(
+        bright_clipped_fraction IS NULL OR
+        bright_clipped_fraction BETWEEN 0.0 AND 1.0
+      ),
+      findings_json TEXT NOT NULL,
+      FOREIGN KEY(evidence_id)
+        REFERENCES ${IrisDatabaseConstants.evidenceTable}(id)
+        ON DELETE CASCADE
+    )
+  ''');
 }
 
 Future<void> _createVersionTwo(Database database) async {

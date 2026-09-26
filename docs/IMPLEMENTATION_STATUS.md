@@ -8,8 +8,8 @@ Status values are updated only after implementation and verification.
 | 01 Repository / Flutter foundation | COMPLETE |
 | 02 Design system / navigation | COMPLETE |
 | 03 Database / case management | COMPLETE |
-| 04 Evidence import / integrity | PARTIAL — IMPLEMENTED; MANUAL ANDROID ACCEPTANCE PENDING |
-| 05 Camera / evidence quality | NOT STARTED |
+| 04 Evidence import / integrity | COMPLETE |
+| 05 Camera / evidence quality | PARTIAL — IMPLEMENTED; TASK 005 HUMAN ACCEPTANCE PENDING |
 | 06 Analysis job engine | NOT STARTED |
 | 07 Location / maps | NOT STARTED |
 | 08 Incident classifier | NOT STARTED |
@@ -32,4 +32,4 @@ Status values are updated only after implementation and verification.
 | 25 End-to-end testing | NOT STARTED |
 | 26 Release APK | NOT STARTED |
 
-The verified scope includes project governance, the Flutter/Android foundation, the application design/navigation shell, and accepted offline SQLite case management. Real camera/gallery evidence acquisition, managed originals, SHA-256 integrity, and schema v2 pass host and Android production-engine integration tests; final human Android workflow acceptance remains pending. No analytical model, dataset, accident conclusion, reconstruction, physics result, scenario, or report is implemented.
+The verified scope includes project governance, the Flutter/Android foundation, the application design/navigation shell, accepted offline SQLite case management, and human-accepted camera/gallery evidence acquisition with immutable managed originals. Deterministic schema-v3 evidence quality assessment is implemented pending TASK 005 human acceptance. No analytical model, dataset, accident conclusion, reconstruction, physics result, scenario, or report is implemented.

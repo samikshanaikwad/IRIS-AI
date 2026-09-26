@@ -44,7 +44,6 @@ The production `MainActivity` continues to invoke Flutter's generated plugin reg
 
 ## Current limitations
 
-- Human Android acceptance of real camera/gallery interaction remains pending.
 - Full EXIF and GPS extraction are intentionally deferred.
 - Originals are app-private but no export or chain-of-custody workflow exists yet.
-- Image quality assessment, AI analysis, reconstruction, physics, scenarios, and reports are not implemented.
+- Deterministic technical image quality checks are documented in [EVIDENCE_QUALITY.md](EVIDENCE_QUALITY.md). AI analysis, reconstruction, physics, scenarios, and reports are not implemented.

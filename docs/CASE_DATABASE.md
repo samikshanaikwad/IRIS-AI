@@ -5,7 +5,7 @@ IRIS stores case metadata in an on-device SQLite database. The Flutter SDK does 
 ## Database identity
 
 - Filename: `iris.db`
-- Current schema version: `1`
+- Current schema version: `3`
 - Production location: the application database directory returned by `getDatabasesPath()`
 - Production startup state: an empty `cases` table on a clean installation
 - Sort order: `updated_at DESC`, then `created_at DESC`, then `id ASC`
@@ -45,7 +45,7 @@ Case IDs are UUIDv4-shaped 128-bit identifiers produced with Dart's cryptographi
 
 On Android, plugin registration uses Flutter's standard generated mechanism. `flutter pub get` resolves `sqflite` to `sqflite_android`, records that native implementation in `.flutter-plugins-dependencies`, and generates `GeneratedPluginRegistrant`. `MainActivity.configureFlutterEngine` invokes that generated registrant directly once; it does not import or instantiate an individual plugin implementation. The Android build fails if generated metadata or the registrant omits sqflite. Debug-only runtime diagnostics and an on-device production-path test additionally verify that the plugin is attached to the exact `MainActivity` engine and that `getDatabasesPath` responds.
 
-After SQLite opens, `IrisDatabase` verifies both schema version 1 and the presence of the `cases` table. An inconsistent existing database fails explicitly and is not deleted or recreated. Debug builds print database initialization failures and repository operation stack traces; repository diagnostics omit case titles, SQL arguments, and record contents. Release builds retain the generic user-facing storage error without debug diagnostics.
+After SQLite opens, `IrisDatabase` verifies schema version 3 and the presence of `cases`, `evidence_images`, and `evidence_quality_assessments`. An inconsistent existing database fails explicitly and is not deleted or recreated. Debug builds print database initialization failures and repository operation stack traces; repository diagnostics omit case titles, SQL arguments, and record contents. Release builds retain generic user-facing storage errors without debug diagnostics.
 
 User-provided titles are passed through SQLite binding arguments or map-based `sqflite` operations. They are never concatenated into SQL. Titles are whitespace-normalized, required, and limited to 120 characters while retaining legitimate punctuation.
 
@@ -55,6 +55,6 @@ Every schema change must increment `IrisDatabaseConstants.schemaVersion` and add
 
 Database tests use isolated temporary SQLite files through `sqflite_common_ffi`. They never open, seed, or delete the production database.
 
-## Future evidence storage
+## Later schema versions
 
-Version 1 stores case metadata only. Images are not stored as SQLite BLOBs, and no evidence files or directories are fabricated. A later evidence task may use the stable case ID for application-controlled paths such as `cases/<case-id>/originals/` and `cases/<case-id>/derivatives/`, while SQLite stores the corresponding evidence metadata and integrity records.
+Version 2 adds real managed evidence metadata and import-time SHA-256 identifiers without storing image BLOBs. Version 3 adds the latest deterministic technical quality assessment per evidence record. Both migrations are sequential and non-destructive. See [EVIDENCE_ACQUISITION.md](EVIDENCE_ACQUISITION.md) and [EVIDENCE_QUALITY.md](EVIDENCE_QUALITY.md) for their schemas and lifecycle rules.

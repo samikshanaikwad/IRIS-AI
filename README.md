@@ -4,7 +4,7 @@ IRIS is an offline-first Android application in development for incident reconst
 
 ## Current status
 
-The verified Flutter Android foundation and production application shell are established under `app/`. The current application includes the IRIS dark design system, four-destination navigation, real offline SQLite case management, and an implemented local evidence-acquisition pipeline pending final human Android acceptance. A case can own real camera/gallery images copied into app-private storage with persisted metadata and SHA-256 integrity identifiers.
+The verified Flutter Android foundation and production application shell are established under `app/`. The application includes the IRIS dark design system, four-destination navigation, real offline SQLite case management, and human-accepted local camera/gallery acquisition. A case can own real images copied unchanged into app-private storage with persisted metadata and SHA-256 integrity identifiers. Deterministic offline evidence-quality assessment is implemented pending TASK 005 human acceptance.
 
 ## Real-data principle
 
@@ -45,8 +45,8 @@ flutter test
 flutter build apk --debug
 ```
 
-The debug APK will be produced at `app/build/app/outputs/flutter-apk/app-debug.apk` after a successful build. Case and evidence operations use local SQLite and app-private files and require no network connection. See [docs/CASE_DATABASE.md](docs/CASE_DATABASE.md) and [docs/EVIDENCE_ACQUISITION.md](docs/EVIDENCE_ACQUISITION.md) for persistence and integrity rules.
+The debug APK will be produced at `app/build/app/outputs/flutter-apk/app-debug.apk` after a successful build. Case, evidence, and deterministic quality operations use local SQLite and app-private files and require no network connection. See [docs/CASE_DATABASE.md](docs/CASE_DATABASE.md), [docs/EVIDENCE_ACQUISITION.md](docs/EVIDENCE_ACQUISITION.md), and [docs/EVIDENCE_QUALITY.md](docs/EVIDENCE_QUALITY.md) for persistence, integrity, and quality rules.
 
 ## Current-scope warning
 
-This repository currently provides the application foundation, design system, navigation shell, local case lifecycle, and real local image acquisition/storage. It does not analyze evidence or implement IRIS location, reconstruction, physics, scenario, or reporting functionality and must not be interpreted as providing incident results or evidence analysis.
+This repository currently provides the application foundation, design system, navigation shell, local case lifecycle, real local image acquisition/storage, and deterministic technical image-quality measurements. Quality readiness is not accident analysis or forensic validation. IRIS does not yet implement incident classification, location, reconstruction, physics, scenarios, or reports and must not be interpreted as providing incident conclusions.

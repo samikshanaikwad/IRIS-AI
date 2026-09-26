@@ -6,7 +6,13 @@ import '../features/evidence/application/evidence_acquisition_service.dart';
 import '../features/evidence/application/evidence_controller.dart';
 import '../features/evidence/data/evidence_storage.dart';
 import '../features/evidence/data/sqlite_evidence_repository.dart';
+import '../features/evidence/domain/evidence_image.dart';
 import '../features/evidence/domain/evidence_repository.dart';
+import '../features/evidence_quality/application/evidence_quality_controller.dart';
+import '../features/evidence_quality/application/evidence_quality_service.dart';
+import '../features/evidence_quality/data/sqlite_evidence_quality_repository.dart';
+import '../features/evidence_quality/domain/evidence_quality_repository.dart';
+import '../features/evidence_quality/processing/image_quality_analyzer.dart';
 
 class IrisApplicationServices {
   IrisApplicationServices({
@@ -14,6 +20,8 @@ class IrisApplicationServices {
     this.evidenceRepository,
     this.evidenceStorage,
     this.evidenceAcquisition,
+    this.evidenceQualityRepository,
+    this.evidenceQuality,
     Future<void> Function()? close,
   }) : _close = close;
 
@@ -30,6 +38,13 @@ class IrisApplicationServices {
     final EvidenceRepository evidenceRepository = SqliteEvidenceRepository(
       database,
     );
+    final EvidenceQualityRepository qualityRepository =
+        SqliteEvidenceQualityRepository(database);
+    final EvidenceQualityService qualityService = EvidenceQualityService(
+      repository: qualityRepository,
+      storage: storage,
+      analyzer: FlutterImageQualityAnalyzer(),
+    );
     return IrisApplicationServices(
       caseRepository: ManagedCaseRepository(
         SqliteCaseRepository(database),
@@ -41,6 +56,8 @@ class IrisApplicationServices {
         repository: evidenceRepository,
         storage: storage,
       ),
+      evidenceQualityRepository: qualityRepository,
+      evidenceQuality: qualityService,
       close: database.close,
     );
   }
@@ -49,6 +66,8 @@ class IrisApplicationServices {
   final EvidenceRepository? evidenceRepository;
   final EvidenceStorage? evidenceStorage;
   final EvidenceAcquisitionService? evidenceAcquisition;
+  final EvidenceQualityRepository? evidenceQualityRepository;
+  final EvidenceQualityOperations? evidenceQuality;
   final Future<void> Function()? _close;
 
   EvidenceController evidenceControllerFor(String caseId) {
@@ -63,6 +82,19 @@ class IrisApplicationServices {
       repository: repository,
       storage: storage,
       acquisition: acquisition,
+    );
+  }
+
+  EvidenceQualityController evidenceQualityControllerFor(
+    EvidenceImage evidence,
+  ) {
+    final EvidenceQualityOperations? operations = evidenceQuality;
+    if (operations == null) {
+      throw StateError('Evidence quality services are not configured.');
+    }
+    return EvidenceQualityController(
+      evidence: evidence,
+      operations: operations,
     );
   }
 

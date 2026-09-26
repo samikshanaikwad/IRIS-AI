@@ -18,6 +18,7 @@ import 'package:iris/features/cases/domain/incident_case.dart';
 import 'package:iris/features/evidence/application/evidence_acquisition_service.dart';
 import 'package:iris/features/evidence/data/evidence_storage.dart';
 import 'package:iris/features/evidence/domain/evidence_image.dart';
+import 'package:iris/features/evidence_quality/domain/evidence_quality_assessment.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -114,11 +115,25 @@ void main() {
       expect(createdCases, hasLength(1));
       expect(createdCases.single.title, testTitle);
       final String createdId = createdCases.single.id;
-      final File sourceImage = File(path.join(evidenceRoot.path, 'source.png'));
+      final File sourceImage = File(path.join(evidenceRoot.path, 'source.jpg'));
       await sourceImage.parent.create(recursive: true);
       await sourceImage.writeAsBytes(
         base64Decode(
-          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl4sAAAAASUVORK5CYII=',
+          '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQE'
+          'BQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/'
+          '2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQU'
+          'FBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCAADAAQDASIAAhEBAxEB/'
+          '8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAw'
+          'UFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2Jygg'
+          'kKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3'
+          'R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxM'
+          'XGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQ'
+          'EBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AA'
+          'ECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGR'
+          'omJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6go'
+          'OEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0t'
+          'PU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD6B+CPgT'
+          'w//wAK80//AIlVv37H0HvRRRQB/9k=',
         ),
         flush: true,
       );
@@ -129,20 +144,27 @@ void main() {
               EvidenceImportCandidate(
                 path: sourceImage.path,
                 source: EvidenceSource.gallery,
-                originalDisplayName: 'source.png',
-                mimeType: 'image/png',
+                originalDisplayName: 'source.jpg',
+                mimeType: 'image/jpeg',
               ),
             ],
           );
       expect(imported.imported, 1);
       final EvidenceImage evidence =
           (await services.evidenceRepository!.getForCase(createdId)).single;
-      expect(
-        await File(
-          await storage.absolutePath(evidence.storedRelativePath),
-        ).exists(),
-        isTrue,
+      final File managedEvidence = File(
+        await storage.absolutePath(evidence.storedRelativePath),
       );
+      expect(await managedEvidence.exists(), isTrue);
+      final List<int> originalBytes = await managedEvidence.readAsBytes();
+      final EvidenceQualityAssessment quality = await services.evidenceQuality!
+          .assess(evidence);
+      expect(quality.integrityState, EvidenceIntegrityState.verified);
+      expect(quality.decodeState, EvidenceDecodeState.decoded);
+      expect(quality.originalWidth, 4);
+      expect(quality.originalHeight, 3);
+      expect(quality.readiness, EvidenceReadiness.usableWithLimitations);
+      expect(await managedEvidence.readAsBytes(), originalBytes);
 
       final Database opened = await database.open();
       expect(await opened.getVersion(), IrisDatabaseConstants.schemaVersion);
@@ -151,6 +173,13 @@ void main() {
         <Object?>[IrisDatabaseConstants.casesTable],
       );
       expect(tables, hasLength(1));
+      expect(
+        await opened.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+          <Object?>[IrisDatabaseConstants.evidenceQualityTable],
+        ),
+        hasLength(1),
+      );
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();
@@ -171,6 +200,16 @@ void main() {
       expect(
         await services.evidenceRepository!.getForCase(createdId),
         hasLength(1),
+      );
+      final EvidenceImage reopenedEvidence =
+          (await services.evidenceRepository!.getForCase(createdId)).single;
+      final EvidenceQualitySnapshot reopenedQuality = await services
+          .evidenceQuality!
+          .load(reopenedEvidence);
+      expect(reopenedQuality.state, EvidenceQualitySnapshotState.current);
+      expect(
+        reopenedQuality.assessment?.integrityState,
+        EvidenceIntegrityState.verified,
       );
     },
   );

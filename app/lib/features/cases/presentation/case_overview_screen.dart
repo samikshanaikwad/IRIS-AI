@@ -15,6 +15,7 @@ import '../application/case_controller.dart';
 import '../domain/incident_case.dart';
 import '../../evidence/application/evidence_controller.dart';
 import '../../evidence/presentation/case_evidence_section.dart';
+import '../../evidence_quality/application/evidence_quality_service.dart';
 import 'case_date_formatter.dart';
 import 'case_title_sheet.dart';
 
@@ -23,12 +24,14 @@ class CaseOverviewScreen extends StatefulWidget {
     required this.caseId,
     required this.caseController,
     required this.evidenceController,
+    required this.evidenceQuality,
     super.key,
   });
 
   final String caseId;
   final CaseController caseController;
   final EvidenceController evidenceController;
+  final EvidenceQualityOperations evidenceQuality;
 
   @override
   State<CaseOverviewScreen> createState() => _CaseOverviewScreenState();
@@ -258,7 +261,10 @@ class _CaseOverviewScreenState extends State<CaseOverviewScreen> {
           supportingText: 'Only persisted or currently known states are shown.',
         ),
         const SizedBox(height: IrisSpacing.sm),
-        CaseEvidenceSection(controller: widget.evidenceController),
+        CaseEvidenceSection(
+          controller: widget.evidenceController,
+          qualityOperations: widget.evidenceQuality,
+        ),
         const SizedBox(height: IrisSpacing.md),
         const _WorkflowState(
           icon: Icons.location_off_outlined,

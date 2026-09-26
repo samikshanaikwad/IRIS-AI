@@ -50,7 +50,7 @@ void main() {
     'fresh schema contains evidence table, index, and foreign key',
     () async {
       final db = await database.open();
-      expect(await db.getVersion(), 2);
+      expect(await db.getVersion(), IrisDatabaseConstants.schemaVersion);
       expect(
         await db.rawQuery(
           "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
@@ -74,7 +74,7 @@ void main() {
   );
 
   test(
-    'version 1 migration preserves existing case and creates v2 schema',
+    'version 1 migration preserves existing case and creates current schema',
     () async {
       await services.close();
       final String databasePath = path.join(directory.path, 'migration.db');
@@ -109,7 +109,10 @@ void main() {
         (await services.caseRepository.getCases()).single.id,
         'migration-case',
       );
-      expect(await (await database.open()).getVersion(), 2);
+      expect(
+        await (await database.open()).getVersion(),
+        IrisDatabaseConstants.schemaVersion,
+      );
     },
   );
 

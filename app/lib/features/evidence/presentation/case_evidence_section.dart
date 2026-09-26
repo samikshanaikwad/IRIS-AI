@@ -9,6 +9,10 @@ import '../../../app/theme/iris_spacing.dart';
 import '../../../core/widgets/iris_button.dart';
 import '../../../core/widgets/iris_card.dart';
 import '../../../core/widgets/iris_section_header.dart';
+import '../../../core/widgets/iris_status_chip.dart';
+import '../../evidence_quality/application/evidence_quality_controller.dart';
+import '../../evidence_quality/application/evidence_quality_service.dart';
+import '../../evidence_quality/domain/evidence_quality_assessment.dart';
 import '../application/evidence_acquisition_service.dart';
 import '../application/evidence_controller.dart';
 import '../data/evidence_picker_gateway.dart';
@@ -17,9 +21,15 @@ import 'camera_capture_screen.dart';
 import 'evidence_detail_screen.dart';
 
 class CaseEvidenceSection extends StatefulWidget {
-  const CaseEvidenceSection({required this.controller, this.picker, super.key});
+  const CaseEvidenceSection({
+    required this.controller,
+    required this.qualityOperations,
+    this.picker,
+    super.key,
+  });
 
   final EvidenceController controller;
+  final EvidenceQualityOperations qualityOperations;
   final EvidencePickerGateway? picker;
 
   @override
@@ -29,6 +39,11 @@ class CaseEvidenceSection extends StatefulWidget {
 class _CaseEvidenceSectionState extends State<CaseEvidenceSection> {
   late final EvidencePickerGateway _picker;
   bool _importing = false;
+  bool _qualityLoading = false;
+  String _qualitySignature = '';
+  int _qualityGeneration = 0;
+  Map<String, EvidenceQualitySnapshot> _quality =
+      const <String, EvidenceQualitySnapshot>{};
 
   @override
   void initState() {
@@ -41,6 +56,39 @@ class _CaseEvidenceSectionState extends State<CaseEvidenceSection> {
   void _onChanged() {
     if (mounted) {
       setState(() {});
+      if (!widget.controller.loading && !widget.controller.failed) {
+        unawaited(_loadQuality());
+      }
+    }
+  }
+
+  Future<void> _loadQuality({bool force = false}) async {
+    final List<EvidenceImage> items = widget.controller.items;
+    final String signature = items
+        .map((EvidenceImage item) => item.id)
+        .join('|');
+    if (!force && signature == _qualitySignature) {
+      return;
+    }
+    _qualitySignature = signature;
+    final int generation = ++_qualityGeneration;
+    if (mounted) {
+      setState(() => _qualityLoading = items.isNotEmpty);
+    }
+    final Map<String, EvidenceQualitySnapshot> loaded =
+        <String, EvidenceQualitySnapshot>{};
+    for (final EvidenceImage evidence in items) {
+      try {
+        loaded[evidence.id] = await widget.qualityOperations.load(evidence);
+      } on Object {
+        loaded[evidence.id] = const EvidenceQualitySnapshot.unavailable();
+      }
+    }
+    if (mounted && generation == _qualityGeneration) {
+      setState(() {
+        _quality = Map<String, EvidenceQualitySnapshot>.unmodifiable(loaded);
+        _qualityLoading = false;
+      });
     }
   }
 
@@ -203,9 +251,7 @@ class _CaseEvidenceSectionState extends State<CaseEvidenceSection> {
       children: <Widget>[
         IrisSectionHeader(
           title: 'Evidence',
-          supportingText: controller.items.isEmpty
-              ? 'No evidence has been added to this case.'
-              : '${controller.items.length} stored image${controller.items.length == 1 ? '' : 's'}',
+          supportingText: _summary(controller.items),
         ),
         const SizedBox(height: IrisSpacing.sm),
         if (controller.loading)
@@ -236,7 +282,7 @@ class _CaseEvidenceSectionState extends State<CaseEvidenceSection> {
               crossAxisCount: 2,
               crossAxisSpacing: IrisSpacing.sm,
               mainAxisSpacing: IrisSpacing.sm,
-              childAspectRatio: 0.9,
+              childAspectRatio: 0.78,
             ),
             itemCount: controller.items.length,
             itemBuilder: (BuildContext context, int index) {
@@ -244,14 +290,23 @@ class _CaseEvidenceSectionState extends State<CaseEvidenceSection> {
               return _EvidenceTile(
                 evidence: evidence,
                 controller: controller,
-                onOpen: () => Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(
-                    builder: (_) => EvidenceDetailScreen(
-                      evidence: evidence,
-                      controller: controller,
+                quality: _quality[evidence.id],
+                qualityLoading: _qualityLoading,
+                onOpen: () async {
+                  await Navigator.of(context).push<void>(
+                    MaterialPageRoute<void>(
+                      builder: (_) => EvidenceDetailScreen(
+                        evidence: evidence,
+                        controller: controller,
+                        qualityController: EvidenceQualityController(
+                          evidence: evidence,
+                          operations: widget.qualityOperations,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                  await _loadQuality(force: true);
+                },
                 onDelete: () => _delete(evidence),
               );
             },
@@ -266,18 +321,75 @@ class _CaseEvidenceSectionState extends State<CaseEvidenceSection> {
       ],
     );
   }
+
+  String _summary(List<EvidenceImage> items) {
+    if (items.isEmpty) {
+      return 'No evidence has been added to this case.';
+    }
+    final List<String> parts = <String>[
+      '${items.length} stored image${items.length == 1 ? '' : 's'}',
+    ];
+    if (_qualityLoading) {
+      parts.add('checking quality state');
+      return parts.join(' · ');
+    }
+    int ready = 0;
+    int limitations = 0;
+    int notUsable = 0;
+    int notAssessed = 0;
+    int unavailable = 0;
+    for (final EvidenceImage item in items) {
+      final EvidenceQualitySnapshot? snapshot = _quality[item.id];
+      if (snapshot == null ||
+          snapshot.state == EvidenceQualitySnapshotState.notAssessed ||
+          snapshot.state == EvidenceQualitySnapshotState.stale) {
+        notAssessed++;
+      } else if (snapshot.state == EvidenceQualitySnapshotState.unavailable) {
+        unavailable++;
+      } else {
+        switch (snapshot.assessment!.readiness) {
+          case EvidenceReadiness.ready:
+            ready++;
+          case EvidenceReadiness.usableWithLimitations:
+            limitations++;
+          case EvidenceReadiness.notUsable:
+            notUsable++;
+        }
+      }
+    }
+    if (ready > 0) {
+      parts.add('$ready ready');
+    }
+    if (limitations > 0) {
+      parts.add('$limitations with limitations');
+    }
+    if (notUsable > 0) {
+      parts.add('$notUsable not usable');
+    }
+    if (notAssessed > 0) {
+      parts.add('$notAssessed not assessed');
+    }
+    if (unavailable > 0) {
+      parts.add('$unavailable status unavailable');
+    }
+    return parts.join(' · ');
+  }
 }
 
 class _EvidenceTile extends StatelessWidget {
   const _EvidenceTile({
     required this.evidence,
     required this.controller,
+    required this.quality,
+    required this.qualityLoading,
     required this.onOpen,
     required this.onDelete,
   });
 
   final EvidenceImage evidence;
   final EvidenceController controller;
+  final EvidenceQualitySnapshot? quality;
+  final bool qualityLoading;
   final VoidCallback onOpen;
   final VoidCallback onDelete;
 
@@ -307,11 +419,24 @@ class _EvidenceTile extends StatelessWidget {
             ),
           ),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.only(left: IrisSpacing.sm),
-                  child: Text(evidence.source.displayLabel),
+                  padding: const EdgeInsets.fromLTRB(
+                    IrisSpacing.sm,
+                    IrisSpacing.xs,
+                    0,
+                    IrisSpacing.xs,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(evidence.source.displayLabel),
+                      const SizedBox(height: IrisSpacing.xxs),
+                      _QualityChip(snapshot: quality, loading: qualityLoading),
+                    ],
+                  ),
                 ),
               ),
               IconButton(
@@ -325,4 +450,49 @@ class _EvidenceTile extends StatelessWidget {
       ),
     ),
   );
+}
+
+class _QualityChip extends StatelessWidget {
+  const _QualityChip({required this.snapshot, required this.loading});
+
+  final EvidenceQualitySnapshot? snapshot;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading && snapshot == null) {
+      return const IrisStatusChip(label: 'Checking quality');
+    }
+    final EvidenceQualitySnapshot? value = snapshot;
+    if (value == null ||
+        value.state == EvidenceQualitySnapshotState.notAssessed) {
+      return const IrisStatusChip(label: 'Not assessed');
+    }
+    if (value.state == EvidenceQualitySnapshotState.stale) {
+      return const IrisStatusChip(
+        label: 'Reassess',
+        tone: IrisStatusTone.warning,
+      );
+    }
+    if (value.state == EvidenceQualitySnapshotState.unavailable) {
+      return const IrisStatusChip(
+        label: 'Status unavailable',
+        tone: IrisStatusTone.warning,
+      );
+    }
+    return switch (value.assessment!.readiness) {
+      EvidenceReadiness.ready => const IrisStatusChip(
+        label: 'Ready',
+        tone: IrisStatusTone.success,
+      ),
+      EvidenceReadiness.usableWithLimitations => const IrisStatusChip(
+        label: 'Limitations',
+        tone: IrisStatusTone.warning,
+      ),
+      EvidenceReadiness.notUsable => const IrisStatusChip(
+        label: 'Not usable',
+        tone: IrisStatusTone.danger,
+      ),
+    };
+  }
 }

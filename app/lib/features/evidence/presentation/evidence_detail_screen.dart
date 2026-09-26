@@ -10,16 +10,20 @@ import '../../../core/widgets/iris_card.dart';
 import '../../../core/widgets/iris_page_body.dart';
 import '../application/evidence_controller.dart';
 import '../domain/evidence_image.dart';
+import '../../evidence_quality/application/evidence_quality_controller.dart';
+import '../../evidence_quality/presentation/evidence_quality_section.dart';
 
 class EvidenceDetailScreen extends StatefulWidget {
   const EvidenceDetailScreen({
     required this.evidence,
     required this.controller,
+    required this.qualityController,
     super.key,
   });
 
   final EvidenceImage evidence;
   final EvidenceController controller;
+  final EvidenceQualityController qualityController;
 
   @override
   State<EvidenceDetailScreen> createState() => _EvidenceDetailScreenState();
@@ -160,6 +164,8 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
               ],
             ),
           ),
+          const SizedBox(height: IrisSpacing.md),
+          EvidenceQualitySection(controller: widget.qualityController),
           const SizedBox(height: IrisSpacing.md),
           IrisSecondaryButton(
             key: const ValueKey<String>('detail-remove-evidence-button'),
