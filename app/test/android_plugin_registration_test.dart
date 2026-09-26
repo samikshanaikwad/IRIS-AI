@@ -4,15 +4,20 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('MainActivity delegates plugin registration to Flutter embedding', () {
+  test('MainActivity invokes the generated Flutter plugin registrant', () {
     final String source = File(
       'android/app/src/main/kotlin/com/iris/incidentreconstruction/'
       'MainActivity.kt',
     ).readAsStringSync();
 
     expect(source, contains('class MainActivity : FlutterActivity()'));
-    expect(source, isNot(contains('SqflitePlugin')));
-    expect(source, isNot(contains('configureFlutterEngine')));
+    expect(source, contains('override fun configureFlutterEngine'));
+    expect(
+      source,
+      contains('GeneratedPluginRegistrant.registerWith(flutterEngine)'),
+    );
+    expect(source, isNot(contains('SqflitePlugin()')));
+    expect(source, isNot(contains('import com.tekartik.sqflite')));
   });
 
   test('Flutter dependency metadata includes native sqflite for Android', () {
@@ -63,5 +68,6 @@ void main() {
 
     expect(settings, contains('dev.flutter.flutter-plugin-loader'));
     expect(appBuild, contains('dev.flutter.flutter-gradle-plugin'));
+    expect(appBuild, contains('verifyIrisGeneratedPluginRegistration'));
   });
 }

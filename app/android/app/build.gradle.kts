@@ -39,3 +39,38 @@ android {
 flutter {
     source = "../.."
 }
+
+val verifyIrisGeneratedPluginRegistration by tasks.registering {
+    group = "verification"
+    description = "Verifies that Flutter generated the Android sqflite registration."
+
+    doLast {
+        val pluginMetadata = rootProject.file("../.flutter-plugins-dependencies")
+        val generatedRegistrant =
+            file("src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java")
+
+        check(pluginMetadata.isFile) {
+            "Flutter plugin metadata is missing. Run flutter pub get before building."
+        }
+        check(
+            Regex(""""name"\s*:\s*"sqflite_android"""")
+                .containsMatchIn(pluginMetadata.readText()),
+        ) {
+            "Flutter plugin metadata omits sqflite_android. Run flutter clean and flutter pub get."
+        }
+        check(generatedRegistrant.isFile) {
+            "Flutter's GeneratedPluginRegistrant.java is missing."
+        }
+        check(
+            generatedRegistrant
+                .readText()
+                .contains("new com.tekartik.sqflite.SqflitePlugin()"),
+        ) {
+            "GeneratedPluginRegistrant does not register SqflitePlugin."
+        }
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(verifyIrisGeneratedPluginRegistration)
+}

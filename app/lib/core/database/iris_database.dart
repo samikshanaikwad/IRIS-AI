@@ -27,11 +27,16 @@ class IrisDatabase {
   bool get isOpen => _database?.isOpen ?? false;
 
   Future<String> resolvePath() async {
-    return _databasePath ??
-        path.join(
-          await _databaseDirectoryProvider(),
-          IrisDatabaseConstants.fileName,
-        );
+    final String? explicitPath = _databasePath;
+    if (explicitPath != null) {
+      return explicitPath;
+    }
+
+    final String databaseDirectory = await _databaseDirectoryProvider();
+    if (kDebugMode) {
+      debugPrint('IRIS sqflite getDatabasesPath channel responded.');
+    }
+    return path.join(databaseDirectory, IrisDatabaseConstants.fileName);
   }
 
   Future<Database> open() async {
