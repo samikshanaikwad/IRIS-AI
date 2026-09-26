@@ -7,8 +7,8 @@ Status values are updated only after implementation and verification.
 | 00 Project governance / documentation | COMPLETE |
 | 01 Repository / Flutter foundation | COMPLETE |
 | 02 Design system / navigation | COMPLETE |
-| 03 Database / case management | PARTIAL — MANUAL RE-VERIFICATION PENDING |
-| 04 Evidence import / integrity | NOT STARTED |
+| 03 Database / case management | COMPLETE |
+| 04 Evidence import / integrity | PARTIAL — IMPLEMENTED; MANUAL ANDROID ACCEPTANCE PENDING |
 | 05 Camera / evidence quality | NOT STARTED |
 | 06 Analysis job engine | NOT STARTED |
 | 07 Location / maps | NOT STARTED |
@@ -32,4 +32,4 @@ Status values are updated only after implementation and verification.
 | 25 End-to-end testing | NOT STARTED |
 | 26 Release APK | NOT STARTED |
 
-The verified scope currently includes project governance, the Flutter/Android foundation, and the application design/navigation shell. Offline SQLite case management passes host and Android integration tests after an Android plugin-registration fix; final human lifecycle acceptance remains pending. No analytical model, dataset, evidence workflow, or incident result is implemented.
+The verified scope includes project governance, the Flutter/Android foundation, the application design/navigation shell, and accepted offline SQLite case management. Real camera/gallery evidence acquisition, managed originals, SHA-256 integrity, and schema v2 pass host and Android production-engine integration tests; final human Android workflow acceptance remains pending. No analytical model, dataset, accident conclusion, reconstruction, physics result, scenario, or report is implemented.

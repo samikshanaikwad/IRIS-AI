@@ -79,7 +79,10 @@ void main() {
     expect(find.text('Case Overview'), findsOneWidget);
     expect(find.text(title), findsOneWidget);
     expect(find.text('Draft'), findsOneWidget);
-    expect(find.text('No evidence added'), findsOneWidget);
+    expect(
+      find.text('No evidence has been added to this case.'),
+      findsOneWidget,
+    );
 
     await tester.pageBack();
     await pumpUiTransition(tester);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../iris_application_services.dart';
 import '../../features/capture/presentation/capture_screen.dart';
 import '../../features/cases/presentation/cases_screen.dart';
 import '../../features/cases/application/case_controller.dart';
@@ -11,9 +12,14 @@ import '../../features/more/presentation/more_screen.dart';
 import 'iris_navigation.dart';
 
 class IrisAppShell extends StatefulWidget {
-  const IrisAppShell({required this.caseController, super.key});
+  const IrisAppShell({
+    required this.caseController,
+    required this.services,
+    super.key,
+  });
 
   final CaseController caseController;
+  final IrisApplicationServices services;
 
   @override
   State<IrisAppShell> createState() => _IrisAppShellState();
@@ -51,6 +57,7 @@ class _IrisAppShellState extends State<IrisAppShell> {
           return CaseOverviewScreen(
             caseId: caseId,
             caseController: widget.caseController,
+            evidenceController: widget.services.evidenceControllerFor(caseId),
           );
         },
       ),
@@ -71,7 +78,10 @@ class _IrisAppShellState extends State<IrisAppShell> {
         onStartAnalysis: _createCase,
         onOpenCase: _openCase,
       ),
-      const CaptureScreen(),
+      CaptureScreen(
+        onSelectCase: () => _selectDestination(IrisDestination.cases),
+        onCreateCase: _createCase,
+      ),
       const MoreScreen(),
     ];
 

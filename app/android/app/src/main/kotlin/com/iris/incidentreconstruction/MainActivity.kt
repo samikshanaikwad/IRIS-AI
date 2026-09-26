@@ -28,7 +28,7 @@ class MainActivity : FlutterActivity() {
         flutterEngine: FlutterEngine,
         generatedRegistrantInvoked: Boolean,
     ) {
-        val sqflitePluginClass = resolveSqflitePluginClass()
+        val sqflitePluginClass = resolvePluginClass(sqflitePluginClassName)
         val classAvailable = sqflitePluginClass != null
         val pluginRegistered =
             sqflitePluginClass?.let { pluginClass ->
@@ -43,6 +43,16 @@ class MainActivity : FlutterActivity() {
                 "sqfliteRegistered=$pluginRegistered",
         )
 
+        val pluginStates = pluginClassNames.mapValues { (_, className) ->
+            val pluginClass = resolvePluginClass(className)
+            mapOf(
+                "classAvailable" to (pluginClass != null),
+                "registered" to
+                    (pluginClass?.let { flutterEngine.plugins.has(it) } ?: false),
+            )
+        }
+        Log.d(diagnosticsTag, "MainActivity engine plugin states: $pluginStates")
+
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             diagnosticsChannel,
@@ -54,6 +64,7 @@ class MainActivity : FlutterActivity() {
                         "generatedRegistrantInvoked" to generatedRegistrantInvoked,
                         "sqfliteClassAvailable" to classAvailable,
                         "sqfliteRegistered" to pluginRegistered,
+                        "plugins" to pluginStates,
                     ),
                 )
             } else {
@@ -62,11 +73,11 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun resolveSqflitePluginClass(): Class<out FlutterPlugin>? =
+    private fun resolvePluginClass(className: String): Class<out FlutterPlugin>? =
         try {
-            Class.forName(sqflitePluginClassName).asSubclass(FlutterPlugin::class.java)
+            Class.forName(className).asSubclass(FlutterPlugin::class.java)
         } catch (error: ClassNotFoundException) {
-            Log.e(diagnosticsTag, "SqflitePlugin class is not packaged.", error)
+            Log.e(diagnosticsTag, "Flutter plugin class is not packaged: $className", error)
             null
         }
 
@@ -75,5 +86,12 @@ class MainActivity : FlutterActivity() {
         const val diagnosticsChannel = "com.iris.debug/plugin_registration"
         const val diagnosticsMethod = "getRegistrationState"
         const val sqflitePluginClassName = "com.tekartik.sqflite.SqflitePlugin"
+        val pluginClassNames = mapOf(
+            "camera" to "io.flutter.plugins.camerax.CameraAndroidCameraxPlugin",
+            "image_picker" to "io.flutter.plugins.imagepicker.ImagePickerPlugin",
+            "sqflite" to sqflitePluginClassName,
+            "jni" to "com.github.dart_lang.jni.JniPlugin",
+            "jni_flutter" to "com.github.dart_lang.jni_flutter.JniFlutterPlugin",
+        )
     }
 }

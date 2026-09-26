@@ -13,6 +13,8 @@ import '../../../core/widgets/iris_section_header.dart';
 import '../../../core/widgets/iris_status_chip.dart';
 import '../application/case_controller.dart';
 import '../domain/incident_case.dart';
+import '../../evidence/application/evidence_controller.dart';
+import '../../evidence/presentation/case_evidence_section.dart';
 import 'case_date_formatter.dart';
 import 'case_title_sheet.dart';
 
@@ -20,11 +22,13 @@ class CaseOverviewScreen extends StatefulWidget {
   const CaseOverviewScreen({
     required this.caseId,
     required this.caseController,
+    required this.evidenceController,
     super.key,
   });
 
   final String caseId;
   final CaseController caseController;
+  final EvidenceController evidenceController;
 
   @override
   State<CaseOverviewScreen> createState() => _CaseOverviewScreenState();
@@ -103,8 +107,8 @@ class _CaseOverviewScreenState extends State<CaseOverviewScreen> {
             return AlertDialog(
               title: const Text('Delete case?'),
               content: Text(
-                'Delete “${current.title}”? This permanently removes the case '
-                'record from this device.',
+                'Delete “${current.title}”? This permanently removes the case, '
+                'its stored evidence copies, and related metadata from this device.',
               ),
               actions: <Widget>[
                 TextButton(
@@ -254,12 +258,8 @@ class _CaseOverviewScreenState extends State<CaseOverviewScreen> {
           supportingText: 'Only persisted or currently known states are shown.',
         ),
         const SizedBox(height: IrisSpacing.sm),
-        const _WorkflowState(
-          icon: Icons.photo_library_outlined,
-          title: 'Evidence',
-          state: 'No evidence added',
-        ),
-        const SizedBox(height: IrisSpacing.sm),
+        CaseEvidenceSection(controller: widget.evidenceController),
+        const SizedBox(height: IrisSpacing.md),
         const _WorkflowState(
           icon: Icons.location_off_outlined,
           title: 'Location',

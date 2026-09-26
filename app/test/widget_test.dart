@@ -59,7 +59,7 @@ void main() {
     expect(find.text('Start Incident Analysis'), findsOneWidget);
   });
 
-  testWidgets('Capture navigation reports acquisition as unavailable', (
+  testWidgets('Capture navigation requires a case before acquisition', (
     WidgetTester tester,
   ) async {
     await pumpIris(tester);
@@ -69,23 +69,32 @@ void main() {
 
     expect(navigationBar(tester).selectedIndex, 2);
     expect(find.text('Evidence Capture'), findsOneWidget);
-    expect(find.text('Not available yet'), findsNWidgets(2));
+    expect(find.text('Select a case first'), findsOneWidget);
+    expect(
+      find.text(
+        'Evidence is stored inside an incident case so files cannot become orphaned.',
+      ),
+      findsOneWidget,
+    );
 
-    final Finder captureButton = find.descendant(
-      of: find.byKey(const ValueKey<String>('capture-scene-button')),
+    final Finder selectCaseButton = find.descendant(
+      of: find.byKey(const ValueKey<String>('capture-select-case-button')),
       matching: find.byWidgetPredicate((Widget widget) {
         return widget is FilledButton;
       }),
     );
-    final Finder importButton = find.descendant(
-      of: find.byKey(const ValueKey<String>('import-evidence-button')),
+    final Finder createCaseButton = find.descendant(
+      of: find.byKey(const ValueKey<String>('capture-create-case-button')),
       matching: find.byWidgetPredicate((Widget widget) {
         return widget is OutlinedButton;
       }),
     );
 
-    expect(tester.widget<FilledButton>(captureButton).onPressed, isNull);
-    expect(tester.widget<OutlinedButton>(importButton).onPressed, isNull);
+    expect(tester.widget<FilledButton>(selectCaseButton).onPressed, isNotNull);
+    expect(
+      tester.widget<OutlinedButton>(createCaseButton).onPressed,
+      isNotNull,
+    );
   });
 
   testWidgets('More navigation shows factual product information', (

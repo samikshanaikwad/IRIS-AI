@@ -20,3 +20,4 @@ ADRs are append-only historical records. Do not rewrite an accepted decision to 
 - [001 — Flutter Android Foundation](001-flutter-android-foundation.md)
 - [002 — Local SQLite Case Persistence](002-local-sqlite-case-persistence.md)
 - [003 — Production Android Plugin Registration](003-production-android-plugin-registration.md)
+- [004 — Managed Local Evidence Acquisition](004-managed-evidence-acquisition.md)

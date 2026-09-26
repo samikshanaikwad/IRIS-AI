@@ -226,7 +226,7 @@ void main() {
   });
 
   test(
-    'close and reopen supports another insert at schema version 1',
+    'close and reopen supports another insert at current schema version',
     () async {
       final IncidentCase first = await repository.createCase(
         title: 'Test fixture: Before close',
@@ -247,7 +247,10 @@ void main() {
         second.id,
         first.id,
       ]);
-      expect(await (await database.open()).getVersion(), 1);
+      expect(
+        await (await database.open()).getVersion(),
+        IrisDatabaseConstants.schemaVersion,
+      );
     },
   );
 

@@ -7,45 +7,63 @@ import '../../../core/widgets/iris_button.dart';
 import '../../../core/widgets/iris_card.dart';
 import '../../../core/widgets/iris_page_body.dart';
 import '../../../core/widgets/iris_section_header.dart';
-import '../../../core/widgets/iris_status_chip.dart';
 
 class CaptureScreen extends StatelessWidget {
-  const CaptureScreen({super.key});
+  const CaptureScreen({
+    required this.onSelectCase,
+    required this.onCreateCase,
+    super.key,
+  });
+
+  final VoidCallback onSelectCase;
+  final VoidCallback onCreateCase;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const IrisAppBar(title: 'Evidence Capture'),
-      body: const IrisPageBody(
+      body: IrisPageBody(
         children: <Widget>[
-          IrisSectionHeader(
-            title: 'Add scene evidence',
-            supportingText: 'Add scene evidence to begin an incident analysis.',
+          const IrisSectionHeader(
+            title: 'Select a case first',
+            supportingText:
+                'Evidence is stored inside an incident case so files cannot become orphaned.',
           ),
           SizedBox(height: IrisSpacing.sm),
-          _EvidenceActionCard(
-            icon: Icons.photo_camera_outlined,
-            title: 'Capture Scene',
-            description: 'Use the device camera to record scene evidence.',
-            buttonKey: ValueKey<String>('capture-scene-button'),
-            primary: true,
-          ),
-          SizedBox(height: IrisSpacing.sm),
-          _EvidenceActionCard(
-            icon: Icons.file_upload_outlined,
-            title: 'Import Evidence',
-            description: 'Select existing evidence files from this device.',
-            buttonKey: ValueKey<String>('import-evidence-button'),
-            primary: false,
+          IrisCard(
+            child: Column(
+              children: <Widget>[
+                const Icon(Icons.folder_open_outlined, size: 36),
+                const SizedBox(height: IrisSpacing.sm),
+                const Text(
+                  'Open an existing case to capture or import evidence, or create a new incident case.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: IrisSpacing.md),
+                IrisPrimaryButton(
+                  key: const ValueKey<String>('capture-select-case-button'),
+                  label: 'Select Existing Case',
+                  icon: Icons.folder_open_outlined,
+                  onPressed: onSelectCase,
+                ),
+                const SizedBox(height: IrisSpacing.xs),
+                IrisSecondaryButton(
+                  key: const ValueKey<String>('capture-create-case-button'),
+                  label: 'Create Incident Case',
+                  icon: Icons.add,
+                  onPressed: onCreateCase,
+                ),
+              ],
+            ),
           ),
           SizedBox(height: IrisSpacing.lg),
-          IrisSectionHeader(
+          const IrisSectionHeader(
             title: 'Evidence guidance',
             supportingText:
                 'When capture becomes available, include views that document:',
           ),
           SizedBox(height: IrisSpacing.sm),
-          IrisCard(
+          const IrisCard(
             child: Column(
               children: <Widget>[
                 _GuidanceItem(
@@ -65,79 +83,6 @@ class CaptureScreen extends StatelessWidget {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EvidenceActionCard extends StatelessWidget {
-  const _EvidenceActionCard({
-    required this.icon,
-    required this.title,
-    required this.description,
-    required this.buttonKey,
-    required this.primary,
-  });
-
-  final IconData icon;
-  final String title;
-  final String description;
-  final Key buttonKey;
-  final bool primary;
-
-  @override
-  Widget build(BuildContext context) {
-    return IrisCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Icon(icon, color: IrisColors.primaryBlueLight, size: 26),
-              const SizedBox(width: IrisSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(title, style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: IrisSpacing.xxs),
-                    Text(
-                      description,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: IrisSpacing.sm),
-          const IrisStatusChip(
-            label: 'Not available yet',
-            icon: Icons.info_outline,
-          ),
-          const SizedBox(height: IrisSpacing.xs),
-          Text(
-            'Evidence acquisition controls will be enabled after camera and '
-            'import setup.',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: IrisSpacing.sm),
-          if (primary)
-            IrisPrimaryButton(
-              key: buttonKey,
-              label: title,
-              icon: icon,
-              onPressed: null,
-            )
-          else
-            IrisSecondaryButton(
-              key: buttonKey,
-              label: title,
-              icon: icon,
-              onPressed: null,
-            ),
         ],
       ),
     );

@@ -52,11 +52,13 @@ val verifyIrisGeneratedPluginRegistration by tasks.registering {
         check(pluginMetadata.isFile) {
             "Flutter plugin metadata is missing. Run flutter pub get before building."
         }
-        check(
-            Regex(""""name"\s*:\s*"sqflite_android"""")
-                .containsMatchIn(pluginMetadata.readText()),
-        ) {
-            "Flutter plugin metadata omits sqflite_android. Run flutter clean and flutter pub get."
+        val metadata = pluginMetadata.readText()
+        val requiredPlugins =
+            listOf("camera_android_camerax", "image_picker_android", "path_provider_android", "sqflite_android")
+        requiredPlugins.forEach { plugin ->
+            check(Regex(""""name"\s*:\s*"$plugin"""").containsMatchIn(metadata)) {
+                "Flutter plugin metadata omits $plugin. Run flutter clean and flutter pub get."
+            }
         }
         check(generatedRegistrant.isFile) {
             "Flutter's GeneratedPluginRegistrant.java is missing."
@@ -67,6 +69,20 @@ val verifyIrisGeneratedPluginRegistration by tasks.registering {
                 .contains("new com.tekartik.sqflite.SqflitePlugin()"),
         ) {
             "GeneratedPluginRegistrant does not register SqflitePlugin."
+        }
+        check(
+            generatedRegistrant
+                .readText()
+                .contains("new io.flutter.plugins.camerax.CameraAndroidCameraxPlugin()"),
+        ) {
+            "GeneratedPluginRegistrant does not register CameraAndroidCameraxPlugin."
+        }
+        check(
+            generatedRegistrant
+                .readText()
+                .contains("new io.flutter.plugins.imagepicker.ImagePickerPlugin()"),
+        ) {
+            "GeneratedPluginRegistrant does not register ImagePickerPlugin."
         }
     }
 }

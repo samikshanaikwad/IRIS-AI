@@ -6,6 +6,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:iris/app/iris_application_services.dart';
 import 'package:iris/core/database/iris_database.dart';
 import 'package:iris/features/cases/data/sqlite_case_repository.dart';
+import 'package:iris/features/evidence/data/evidence_storage.dart';
 
 class CaseTestHarness {
   CaseTestHarness._({
@@ -35,9 +36,9 @@ class CaseTestHarness {
       directory: directory,
       database: database,
       repository: repository,
-      services: IrisApplicationServices(
-        caseRepository: repository,
-        close: database.close,
+      services: IrisApplicationServices.fromDatabase(
+        database,
+        evidenceStorage: EvidenceStorage(rootProvider: () async => directory),
       ),
     );
   }

@@ -60,7 +60,7 @@ class _IrisAppState extends State<IrisApp> {
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: IrisAppShell(caseController: _caseController),
+      home: IrisAppShell(caseController: _caseController, services: _services),
     );
   }
 }
