@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../../core/database/database_constants.dart';
@@ -39,105 +40,136 @@ class SqliteCaseRepository implements CaseRepository {
       updatedAt: timestamp,
     );
 
-    final Database database = await _irisDatabase.open();
-    await database.insert(
-      IrisDatabaseConstants.casesTable,
-      _toRecord(incidentCase),
-      conflictAlgorithm: ConflictAlgorithm.abort,
-    );
-    return incidentCase;
+    return _runOperation<IncidentCase>('create case', () async {
+      final Database database = await _irisDatabase.open();
+      await database.insert(
+        IrisDatabaseConstants.casesTable,
+        _toRecord(incidentCase),
+        conflictAlgorithm: ConflictAlgorithm.abort,
+      );
+      return incidentCase;
+    });
   }
 
-  @override
-  Future<bool> deleteCase(String id) async {
-    final Database database = await _irisDatabase.open();
-    final int deleted = await database.delete(
-      IrisDatabaseConstants.casesTable,
-      where: 'id = ?',
-      whereArgs: <Object?>[id],
-    );
-    return deleted == 1;
-  }
-
-  @override
-  Future<IncidentCase?> getCaseById(String id) async {
-    final Database database = await _irisDatabase.open();
-    final List<Map<String, Object?>> records = await database.query(
-      IrisDatabaseConstants.casesTable,
-      where: 'id = ?',
-      whereArgs: <Object?>[id],
-      limit: 1,
-    );
-    if (records.isEmpty) {
-      return null;
+  Future<T> _runOperation<T>(
+    String operation,
+    Future<T> Function() action,
+  ) async {
+    try {
+      return await action();
+    } on Object catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint(
+          'IRIS case repository failed to $operation '
+          '(${error.runtimeType}).',
+        );
+        if (error is DatabaseException) {
+          debugPrint(
+            'SQLite result code: ${error.getResultCode() ?? 'unknown'}.',
+          );
+        }
+        debugPrintStack(stackTrace: stackTrace);
+      }
+      rethrow;
     }
-    return _fromRecord(records.single);
   }
 
   @override
-  Future<List<IncidentCase>> getCases({int? limit}) async {
-    if (limit != null && limit <= 0) {
-      throw ArgumentError.value(limit, 'limit', 'Must be greater than zero.');
-    }
-
-    final Database database = await _irisDatabase.open();
-    final List<Map<String, Object?>> records = await database.query(
-      IrisDatabaseConstants.casesTable,
-      orderBy: 'updated_at DESC, created_at DESC, id ASC',
-      limit: limit,
-    );
-    return records.map(_fromRecord).toList(growable: false);
+  Future<bool> deleteCase(String id) {
+    return _runOperation<bool>('delete case', () async {
+      final Database database = await _irisDatabase.open();
+      final int deleted = await database.delete(
+        IrisDatabaseConstants.casesTable,
+        where: 'id = ?',
+        whereArgs: <Object?>[id],
+      );
+      return deleted == 1;
+    });
   }
 
   @override
-  Future<IncidentCase> renameCase({
-    required String id,
-    required String title,
-  }) async {
-    final String normalizedTitle = CaseTitleValidator.normalizeAndValidate(
-      title,
-    );
-    final Database database = await _irisDatabase.open();
-
-    return database.transaction<IncidentCase>((Transaction transaction) async {
-      final List<Map<String, Object?>> records = await transaction.query(
+  Future<IncidentCase?> getCaseById(String id) {
+    return _runOperation<IncidentCase?>('read case', () async {
+      final Database database = await _irisDatabase.open();
+      final List<Map<String, Object?>> records = await database.query(
         IrisDatabaseConstants.casesTable,
         where: 'id = ?',
         whereArgs: <Object?>[id],
         limit: 1,
       );
       if (records.isEmpty) {
-        throw CaseNotFoundException(id);
+        return null;
       }
+      return _fromRecord(records.single);
+    });
+  }
 
-      final IncidentCase existing = _fromRecord(records.single);
-      if (existing.title == normalizedTitle) {
-        return existing;
-      }
+  @override
+  Future<List<IncidentCase>> getCases({int? limit}) {
+    if (limit != null && limit <= 0) {
+      throw ArgumentError.value(limit, 'limit', 'Must be greater than zero.');
+    }
 
-      final DateTime updatedAt = _clock().toUtc();
-      final int updated = await transaction.update(
+    return _runOperation<List<IncidentCase>>('list cases', () async {
+      final Database database = await _irisDatabase.open();
+      final List<Map<String, Object?>> records = await database.query(
         IrisDatabaseConstants.casesTable,
-        <String, Object?>{
-          'title': normalizedTitle,
-          'updated_at': updatedAt.millisecondsSinceEpoch,
-        },
-        where: 'id = ?',
-        whereArgs: <Object?>[id],
+        orderBy: 'updated_at DESC, created_at DESC, id ASC',
+        limit: limit,
       );
-      if (updated != 1) {
-        throw CaseNotFoundException(id);
-      }
+      return records.map(_fromRecord).toList(growable: false);
+    });
+  }
 
-      return IncidentCase(
-        id: existing.id,
-        title: normalizedTitle,
-        status: existing.status,
-        createdAt: existing.createdAt,
-        updatedAt: updatedAt,
-        incidentOccurredAt: existing.incidentOccurredAt,
-        notes: existing.notes,
-      );
+  @override
+  Future<IncidentCase> renameCase({required String id, required String title}) {
+    final String normalizedTitle = CaseTitleValidator.normalizeAndValidate(
+      title,
+    );
+    return _runOperation<IncidentCase>('rename case', () async {
+      final Database database = await _irisDatabase.open();
+      return database.transaction<IncidentCase>((
+        Transaction transaction,
+      ) async {
+        final List<Map<String, Object?>> records = await transaction.query(
+          IrisDatabaseConstants.casesTable,
+          where: 'id = ?',
+          whereArgs: <Object?>[id],
+          limit: 1,
+        );
+        if (records.isEmpty) {
+          throw CaseNotFoundException(id);
+        }
+
+        final IncidentCase existing = _fromRecord(records.single);
+        if (existing.title == normalizedTitle) {
+          return existing;
+        }
+
+        final DateTime updatedAt = _clock().toUtc();
+        final int updated = await transaction.update(
+          IrisDatabaseConstants.casesTable,
+          <String, Object?>{
+            'title': normalizedTitle,
+            'updated_at': updatedAt.millisecondsSinceEpoch,
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>[id],
+        );
+        if (updated != 1) {
+          throw CaseNotFoundException(id);
+        }
+
+        return IncidentCase(
+          id: existing.id,
+          title: normalizedTitle,
+          status: existing.status,
+          createdAt: existing.createdAt,
+          updatedAt: updatedAt,
+          incidentOccurredAt: existing.incidentOccurredAt,
+          notes: existing.notes,
+        );
+      });
     });
   }
 

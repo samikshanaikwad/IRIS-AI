@@ -43,6 +43,10 @@ Case IDs are UUIDv4-shaped 128-bit identifiers produced with Dart's cryptographi
 - `IrisApplicationServices` is the application composition and lifetime boundary.
 - `CaseController` distinguishes loading, data/empty, and storage-error states while treating the repository as the source of truth.
 
+On Android, Flutter's generated plugin registrant normally attaches the native `SqflitePlugin`. `MainActivity` also performs a guarded registration after standard Flutter registration: it adds sqflite only when the engine does not already contain it. This prevents a stale or empty generated registrant from producing an APK whose SQLite method channel has no Android handler.
+
+After SQLite opens, `IrisDatabase` verifies both schema version 1 and the presence of the `cases` table. An inconsistent existing database fails explicitly and is not deleted or recreated. Debug builds print database initialization failures and repository operation stack traces; repository diagnostics omit case titles, SQL arguments, and record contents. Release builds retain the generic user-facing storage error without debug diagnostics.
+
 User-provided titles are passed through SQLite binding arguments or map-based `sqflite` operations. They are never concatenated into SQL. Titles are whitespace-normalized, required, and limited to 120 characters while retaining legitimate punctuation.
 
 ## Migration convention

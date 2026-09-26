@@ -33,3 +33,7 @@ IRIS needs durable case metadata that remains available offline and across appli
 ## Consequences
 
 Android gains a native SQLite plugin registration but no Android toolchain version changes. Repository methods remain asynchronous and UI surfaces explicit loading, empty/data, and error states. Future schema work must add and test ordered migrations rather than editing version 1 in place after release. Evidence cleanup will need to extend the deletion workflow atomically when evidence storage is introduced; TASK 003 deletion removes only the case metadata record because no evidence store exists yet.
+
+## Android registration safeguard — 2026-09-26
+
+Manual emulator acceptance found an APK whose generated Flutter plugin registrant was empty even though sqflite was bundled. The SQLite method channel therefore had no Android handler and failed before the database directory could be created. `MainActivity` now runs standard Flutter registration first and then adds `SqflitePlugin` only when it is absent. This is idempotent when generated registration is correct and turns missing native linkage into a compile-time dependency rather than a silent runtime-only failure. An Android integration test exercises fresh schema creation and inserts before and after reopening an isolated test database.

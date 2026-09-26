@@ -62,8 +62,8 @@ void main() {
       'PRAGMA table_info(${IrisDatabaseConstants.casesTable})',
     );
     expect(
-      columns.map((Map<String, Object?> row) => row['name']),
-      containsAll(<String>[
+      columns.map((Map<String, Object?> row) => row['name']).toList(),
+      <Object?>[
         'id',
         'title',
         'status',
@@ -71,9 +71,31 @@ void main() {
         'updated_at',
         'incident_occurred_at',
         'notes',
-      ]),
+      ],
     );
   });
+
+  test(
+    'database path uses the Android-compatible database directory',
+    () async {
+      final String androidDirectory = path.join(
+        'data',
+        'user',
+        '0',
+        'com.iris.incidentreconstruction',
+        'databases',
+      );
+      final IrisDatabase pathDatabase = IrisDatabase(
+        factory: databaseFactoryFfi,
+        databaseDirectoryProvider: () async => androidDirectory,
+      );
+
+      expect(
+        await pathDatabase.resolvePath(),
+        path.join(androidDirectory, IrisDatabaseConstants.fileName),
+      );
+    },
+  );
 
   test('clean database returns zero cases', () async {
     expect(await repository.getCases(), isEmpty);
@@ -202,4 +224,56 @@ void main() {
       created.title,
     );
   });
+
+  test(
+    'close and reopen supports another insert at schema version 1',
+    () async {
+      final IncidentCase first = await repository.createCase(
+        title: 'Test fixture: Before close',
+      );
+      await database.close();
+
+      database = IrisDatabase(
+        factory: databaseFactoryFfi,
+        databasePath: databasePath,
+      );
+      repository = SqliteCaseRepository(database, clock: clock);
+      final IncidentCase second = await repository.createCase(
+        title: 'Test fixture: After reopen',
+      );
+
+      final List<IncidentCase> cases = await repository.getCases();
+      expect(cases.map((IncidentCase item) => item.id), <String>[
+        second.id,
+        first.id,
+      ]);
+      expect(await (await database.open()).getVersion(), 1);
+    },
+  );
+
+  test(
+    'version 1 database missing cases table fails without deletion',
+    () async {
+      final Database inconsistent = await databaseFactoryFfi.openDatabase(
+        databasePath,
+        options: OpenDatabaseOptions(version: 1),
+      );
+      await inconsistent.close();
+
+      await expectLater(database.open(), throwsA(isA<StateError>()));
+
+      final Database unchanged = await databaseFactoryFfi.openDatabase(
+        databasePath,
+      );
+      expect(await unchanged.getVersion(), 1);
+      expect(
+        await unchanged.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+          <Object?>[IrisDatabaseConstants.casesTable],
+        ),
+        isEmpty,
+      );
+      await unchanged.close();
+    },
+  );
 }

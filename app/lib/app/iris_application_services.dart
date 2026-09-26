@@ -10,6 +10,10 @@ class IrisApplicationServices {
 
   factory IrisApplicationServices.production() {
     final IrisDatabase database = IrisDatabase();
+    return IrisApplicationServices.fromDatabase(database);
+  }
+
+  factory IrisApplicationServices.fromDatabase(IrisDatabase database) {
     return IrisApplicationServices(
       caseRepository: SqliteCaseRepository(database),
       close: database.close,

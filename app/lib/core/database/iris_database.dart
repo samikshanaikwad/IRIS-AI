@@ -1,19 +1,38 @@
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
 
 import 'database_constants.dart';
 import 'migrations/database_migrations.dart';
 
+typedef DatabaseDirectoryProvider = Future<String> Function();
+
 class IrisDatabase {
-  IrisDatabase({DatabaseFactory? factory, String? databasePath})
-    : _factory = factory ?? databaseFactory,
-      _databasePath = databasePath;
+  IrisDatabase({
+    DatabaseFactory? factory,
+    String? databasePath,
+    DatabaseDirectoryProvider? databaseDirectoryProvider,
+  }) : _factory = factory ?? databaseFactory,
+       _databasePath = databasePath,
+       _databaseDirectoryProvider =
+           databaseDirectoryProvider ?? getDatabasesPath;
 
   final DatabaseFactory _factory;
   final String? _databasePath;
+  final DatabaseDirectoryProvider _databaseDirectoryProvider;
 
   Database? _database;
   Future<Database>? _opening;
+
+  bool get isOpen => _database?.isOpen ?? false;
+
+  Future<String> resolvePath() async {
+    return _databasePath ??
+        path.join(
+          await _databaseDirectoryProvider(),
+          IrisDatabaseConstants.fileName,
+        );
+  }
 
   Future<Database> open() async {
     final Database? existing = _database;
@@ -38,7 +57,15 @@ class IrisDatabase {
   }
 
   Future<void> close() async {
-    final Database? database = _database;
+    Database? database = _database;
+    final Future<Database>? opening = _opening;
+    if (database == null && opening != null) {
+      try {
+        database = await opening;
+      } on Object {
+        return;
+      }
+    }
     _database = null;
     if (database != null && database.isOpen) {
       await database.close();
@@ -46,27 +73,69 @@ class IrisDatabase {
   }
 
   Future<Database> _openDatabase() async {
-    final String resolvedPath =
-        _databasePath ??
-        path.join(await getDatabasesPath(), IrisDatabaseConstants.fileName);
+    try {
+      final String resolvedPath = await resolvePath();
+      final Database database = await _factory.openDatabase(
+        resolvedPath,
+        options: OpenDatabaseOptions(
+          version: IrisDatabaseConstants.schemaVersion,
+          onConfigure: (Database database) async {
+            await database.execute('PRAGMA foreign_keys = ON');
+          },
+          onCreate: (Database database, int version) {
+            return migrateDatabase(database, 0, version);
+          },
+          onUpgrade: migrateDatabase,
+          onDowngrade: (Database database, int oldVersion, int newVersion) {
+            throw StateError(
+              'Database downgrade from $oldVersion to $newVersion is not supported.',
+            );
+          },
+        ),
+      );
 
-    return _factory.openDatabase(
-      resolvedPath,
-      options: OpenDatabaseOptions(
-        version: IrisDatabaseConstants.schemaVersion,
-        onConfigure: (Database database) async {
-          await database.execute('PRAGMA foreign_keys = ON');
-        },
-        onCreate: (Database database, int version) {
-          return migrateDatabase(database, 0, version);
-        },
-        onUpgrade: migrateDatabase,
-        onDowngrade: (Database database, int oldVersion, int newVersion) {
-          throw StateError(
-            'Database downgrade from $oldVersion to $newVersion is not supported.',
-          );
-        },
-      ),
+      try {
+        await _verifySchema(database);
+      } on Object {
+        await database.close();
+        rethrow;
+      }
+
+      if (kDebugMode) {
+        debugPrint(
+          'IRIS SQLite initialized: ${path.basename(resolvedPath)}, '
+          'schema v${IrisDatabaseConstants.schemaVersion}.',
+        );
+      }
+      return database;
+    } on Object catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint(
+          'IRIS SQLite initialization failed (${error.runtimeType}): $error',
+        );
+        debugPrintStack(stackTrace: stackTrace);
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> _verifySchema(Database database) async {
+    final int version = await database.getVersion();
+    if (version != IrisDatabaseConstants.schemaVersion) {
+      throw StateError(
+        'Unexpected IRIS database version $version; expected '
+        '${IrisDatabaseConstants.schemaVersion}.',
+      );
+    }
+
+    final List<Map<String, Object?>> tables = await database.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+      <Object?>[IrisDatabaseConstants.casesTable],
     );
+    if (tables.length != 1) {
+      throw StateError(
+        'IRIS database schema is missing the required cases table.',
+      );
+    }
   }
 }
