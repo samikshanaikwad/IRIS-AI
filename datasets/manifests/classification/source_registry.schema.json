@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://iris.local/schemas/dataset-source-registry-v1.json",
+  "title": "IRIS dataset source registry v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "sources"],
+  "properties": {
+    "schema_version": {"const": "iris-dataset-source-registry-v1"},
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "dataset_id",
+          "official_name",
+          "official_reference",
+          "dataset_version",
+          "data_acquired_at",
+          "code_license",
+          "dataset_content_license",
+          "usage_status",
+          "redistribution_status",
+          "derived_data_status",
+          "attribution_requirements",
+          "acquisition_method",
+          "local_raw_path",
+          "task_suitability",
+          "notes"
+        ],
+        "properties": {
+          "dataset_id": {"type": "string", "minLength": 1},
+          "official_name": {"type": "string", "minLength": 1},
+          "official_reference": {"type": "string", "format": "uri"},
+          "paper_reference": {"type": ["string", "null"], "format": "uri"},
+          "dataset_version": {"type": "string", "minLength": 1},
+          "metadata_inspection_date": {"type": ["string", "null"], "format": "date"},
+          "data_acquired_at": {"type": ["string", "null"], "format": "date-time"},
+          "code_license": {"type": ["string", "null"]},
+          "code_license_reference": {"type": ["string", "null"], "format": "uri"},
+          "dataset_content_license": {"type": ["string", "null"]},
+          "dataset_terms_reference": {"type": ["string", "null"], "format": "uri"},
+          "usage_status": {"enum": ["APPROVED", "REVIEW_REQUIRED", "RESTRICTED", "PROHIBITED"]},
+          "redistribution_status": {"enum": ["APPROVED", "REVIEW_REQUIRED", "RESTRICTED", "PROHIBITED"]},
+          "derived_data_status": {"enum": ["APPROVED", "REVIEW_REQUIRED", "RESTRICTED", "PROHIBITED"]},
+          "attribution_requirements": {"type": "string"},
+          "acquisition_method": {"type": "string", "minLength": 1},
+          "local_raw_path": {"type": "string", "minLength": 1},
+          "locally_computed_metadata_checksums": {
+            "type": "object",
+            "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+          },
+          "task_suitability": {"type": "string", "minLength": 1},
+          "notes": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

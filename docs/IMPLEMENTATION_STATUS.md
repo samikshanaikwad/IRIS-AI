@@ -9,10 +9,10 @@ Status values are updated only after implementation and verification.
 | 02 Design system / navigation | COMPLETE |
 | 03 Database / case management | COMPLETE |
 | 04 Evidence import / integrity | COMPLETE |
-| 05 Camera / evidence quality | PARTIAL — IMPLEMENTED; TASK 005 HUMAN ACCEPTANCE PENDING |
+| 05 Camera / evidence quality | COMPLETE |
 | 06 Analysis job engine | NOT STARTED |
 | 07 Location / maps | NOT STARTED |
-| 08 Incident classifier | NOT STARTED |
+| 08 Incident classifier | PARTIAL — DATASET PREPARATION INFRASTRUCTURE COMPLETE; REAL DATA ACQUISITION, TRAINING, AND APP INTEGRATION NOT STARTED |
 | 09 Detection | NOT STARTED |
 | 10 Segmentation | NOT STARTED |
 | 11 Damage / evidence intelligence | NOT STARTED |
@@ -32,4 +32,4 @@ Status values are updated only after implementation and verification.
 | 25 End-to-end testing | NOT STARTED |
 | 26 Release APK | NOT STARTED |
 
-The verified scope includes project governance, the Flutter/Android foundation, the application design/navigation shell, accepted offline SQLite case management, and human-accepted camera/gallery evidence acquisition with immutable managed originals. Deterministic schema-v3 evidence quality assessment is implemented pending TASK 005 human acceptance. No analytical model, dataset, accident conclusion, reconstruction, physics result, scenario, or report is implemented.
+The verified application scope includes project governance, the Flutter/Android foundation, the design/navigation shell, offline SQLite case management, camera/gallery evidence acquisition with immutable managed originals, and deterministic schema-v3 evidence quality assessment. TASK 005 has been human accepted. TASK 006 now has tested dataset-preparation infrastructure, but no real classification dataset has been acquired or approved and no classifier has been trained or integrated. No accident conclusion, reconstruction, physics result, scenario, or report is implemented.

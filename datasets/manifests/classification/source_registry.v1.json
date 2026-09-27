@@ -1,0 +1,40 @@
+{
+  "schema_version": "iris-dataset-source-registry-v1",
+  "sources": [
+    {
+      "dataset_id": "dota-official",
+      "official_name": "Detection of Traffic Anomaly (DoTA)",
+      "official_reference": "https://github.com/MoonBlvd/Detection-of-Traffic-Anomaly",
+      "paper_reference": "https://arxiv.org/abs/2004.03044",
+      "dataset_version": "official-repository-f8f603b8c06a946bc314752947ed480a4f33f82a",
+      "metadata_inspection_date": "2026-09-27",
+      "data_acquired_at": null,
+      "code_license": "MIT",
+      "code_license_reference": "https://github.com/MoonBlvd/Detection-of-Traffic-Anomaly/blob/f8f603b8c06a946bc314752947ed480a4f33f82a/LICENSE",
+      "dataset_content_license": null,
+      "dataset_terms_reference": null,
+      "usage_status": "REVIEW_REQUIRED",
+      "redistribution_status": "REVIEW_REQUIRED",
+      "derived_data_status": "REVIEW_REQUIRED",
+      "attribution_requirements": "Cite the official DoTA paper and repository; additional video-content requirements remain unresolved.",
+      "acquisition_method": "Manual download from the official Google Drive links published by the official repository.",
+      "local_raw_path": "datasets/raw/classification/dota",
+      "locally_computed_metadata_checksums": {
+        "DoTA_annotations.zip": "56209f87398cbf47b9eeee4b516461e71cd3f97f9dd8c4432773315db307ff15",
+        "metadata_train.json": "eceb50ab8237c1fd27e1a0a99cc724a7fa4300aff0bcada99eace2c70bb22efd",
+        "metadata_val.json": "d273974886f9e68113dad6fdbb6217ac4476c47efd7aab878ac37bf3579b895d",
+        "DoTA_urls.txt": "25ce01a4ddc398f0225653596d8a15171c26a6f5625317e8064157c8918c844d"
+      },
+      "task_suitability": "CONDITIONAL_REVIEW",
+      "notes": [
+        "Metadata checksums were computed locally from the inspected official repository commit; the official source did not publish archive checksums.",
+        "The repository README states that the authors contacted original channel authors and obtained authority to share downloaded clips.",
+        "No separate dataset-content license or explicit derived-frame permission was found in the inspected official materials.",
+        "The repository MIT license is recorded only as the code license and is not treated as a video-content license.",
+        "DoTA annotations begin an anomaly when it becomes inevitable, which can precede visible impact; IRIS therefore requires reviewed visible-collision windows.",
+        "The inspected annotation archive marks 61 of 4,677 clips with ignore=true; IRIS excludes those clips.",
+        "IRIS must replace the official clip split because 177 original source videos occur in both official train and validation metadata."
+      ]
+    }
+  ]
+}

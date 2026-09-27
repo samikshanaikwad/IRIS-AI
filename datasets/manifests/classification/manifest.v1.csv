@@ -1,0 +1,1 @@
+manifest_version,item_id,relative_path,label,split,source_dataset_id,source_dataset_version,source_group_id,source_event_id,source_video_id,source_frame_index,source_timestamp_ms,source_reference,source_category,label_basis,license_status,sha256,perceptual_hash,extraction_version,width,height,day_night,weather,ego_involvement,accident_category

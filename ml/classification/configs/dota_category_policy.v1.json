@@ -1,0 +1,177 @@
+{
+  "policy_version": "iris-dota-category-policy-v1",
+  "policy_status": "REVIEW_REQUIRED",
+  "source_dataset_id": "dota-official",
+  "normal_precursor_action": "POSSIBLE_NON_ACCIDENT_SOURCE",
+  "normal_precursor_conditions": [
+    "Frame is earlier than the configured pre-event exclusion buffer.",
+    "Frame itself contains no visible accident evidence.",
+    "Source permission and extraction policy are approved."
+  ],
+  "categories": [
+    {
+      "annotation_id": 1,
+      "annotation_name": "start_stop_or_stationary",
+      "viewpoint": "ego",
+      "official_meaning": "Collision with another vehicle which starts, stops, or is stationary",
+      "iris_action": "INCLUDE_ACCIDENT",
+      "rationale": "Collision category; only reviewed frames with visible collision evidence are eligible."
+    },
+    {
+      "annotation_id": 1,
+      "annotation_name": "start_stop_or_stationary",
+      "viewpoint": "other",
+      "official_meaning": "Non-ego collision with another vehicle which starts, stops, or is stationary",
+      "iris_action": "INCLUDE_ACCIDENT",
+      "rationale": "Collision category; visibility review remains mandatory."
+    },
+    {
+      "annotation_id": 2,
+      "annotation_name": "moving_ahead_or_waiting",
+      "viewpoint": "ego",
+      "official_meaning": "Collision with another vehicle moving ahead or waiting",
+      "iris_action": "INCLUDE_ACCIDENT",
+      "rationale": "Collision category; visibility review remains mandatory."
+    },
+    {
+      "annotation_id": 2,
+      "annotation_name": "moving_ahead_or_waiting",
+      "viewpoint": "other",
+      "official_meaning": "Non-ego collision with another vehicle moving ahead or waiting",
+      "iris_action": "INCLUDE_ACCIDENT",
+      "rationale": "Collision category; visibility review remains mandatory."
+    },
+    {
+      "annotation_id": 3,
+      "annotation_name": "lateral",
+      "viewpoint": "ego",
+      "official_meaning": "Collision with another vehicle moving laterally in the same direction",
+      "iris_action": "INCLUDE_ACCIDENT",
+      "rationale": "Collision category; visibility review remains mandatory."
+    },
+    {
+      "annotation_id": 3,
+      "annotation_name": "lateral",
+      "viewpoint": "other",
+      "official_meaning": "Non-ego collision with another vehicle moving laterally in the same direction",
+      "iris_action": "INCLUDE_ACCIDENT",
+      "rationale": "Collision category; visibility review remains mandatory."
+    },
+    {
+      "annotation_id": 4,
+      "annotation_name": "oncoming",
+      "viewpoint": "ego",
+      "official_meaning": "Collision with another oncoming vehicle",
+      "iris_action": "INCLUDE_ACCIDENT",
+      "rationale": "Collision category; visibility review remains mandatory."
+    },
+    {
+      "annotation_id": 4,
+      "annotation_name": "oncoming",
+      "viewpoint": "other",
+      "official_meaning": "Non-ego collision with another oncoming vehicle",
+      "iris_action": "INCLUDE_ACCIDENT",
+      "rationale": "Collision category; visibility review remains mandatory."
+    },
+    {
+      "annotation_id": 5,
+      "annotation_name": "turning",
+      "viewpoint": "ego",
+      "official_meaning": "Collision with another vehicle which turns into or crosses a road",
+      "iris_action": "INCLUDE_ACCIDENT",
+      "rationale": "Collision category; visibility review remains mandatory."
+    },
+    {
+      "annotation_id": 5,
+      "annotation_name": "turning",
+      "viewpoint": "other",
+      "official_meaning": "Non-ego collision with another vehicle which turns into or crosses a road",
+      "iris_action": "INCLUDE_ACCIDENT",
+      "rationale": "Collision category; visibility review remains mandatory."
+    },
+    {
+      "annotation_id": 6,
+      "annotation_name": "pedestrian",
+      "viewpoint": "ego",
+      "official_meaning": "Collision between vehicle and pedestrian",
+      "iris_action": "INCLUDE_ACCIDENT",
+      "rationale": "Road-traffic collision category; visibility review remains mandatory."
+    },
+    {
+      "annotation_id": 6,
+      "annotation_name": "pedestrian",
+      "viewpoint": "other",
+      "official_meaning": "Non-ego collision between vehicle and pedestrian",
+      "iris_action": "INCLUDE_ACCIDENT",
+      "rationale": "Road-traffic collision category; visibility review remains mandatory."
+    },
+    {
+      "annotation_id": 7,
+      "annotation_name": "obstacle",
+      "viewpoint": "ego",
+      "official_meaning": "Collision with an obstacle in the roadway",
+      "iris_action": "INCLUDE_ACCIDENT",
+      "rationale": "Road-vehicle collision category; visible crash evidence must be reviewed."
+    },
+    {
+      "annotation_id": 7,
+      "annotation_name": "obstacle",
+      "viewpoint": "other",
+      "official_meaning": "Non-ego collision with an obstacle in the roadway",
+      "iris_action": "INCLUDE_ACCIDENT",
+      "rationale": "Road-vehicle collision category; visible crash evidence must be reviewed."
+    },
+    {
+      "annotation_id": 8,
+      "annotation_name": "leave_to_right",
+      "viewpoint": "ego",
+      "official_meaning": "Out-of-control vehicle leaving the roadway to the right",
+      "iris_action": "EXCLUDE_AMBIGUOUS",
+      "rationale": "Leaving the roadway does not itself prove a visible collision in a still image."
+    },
+    {
+      "annotation_id": 8,
+      "annotation_name": "leave_to_right",
+      "viewpoint": "other",
+      "official_meaning": "Non-ego out-of-control vehicle leaving the roadway to the right",
+      "iris_action": "EXCLUDE_AMBIGUOUS",
+      "rationale": "Leaving the roadway does not itself prove a visible collision in a still image."
+    },
+    {
+      "annotation_id": 9,
+      "annotation_name": "leave_to_left",
+      "viewpoint": "ego",
+      "official_meaning": "Out-of-control vehicle leaving the roadway to the left",
+      "iris_action": "EXCLUDE_AMBIGUOUS",
+      "rationale": "Leaving the roadway does not itself prove a visible collision in a still image."
+    },
+    {
+      "annotation_id": 9,
+      "annotation_name": "leave_to_left",
+      "viewpoint": "other",
+      "official_meaning": "Non-ego out-of-control vehicle leaving the roadway to the left",
+      "iris_action": "EXCLUDE_AMBIGUOUS",
+      "rationale": "Leaving the roadway does not itself prove a visible collision in a still image."
+    },
+    {
+      "annotation_id": 10,
+      "annotation_name": "unknown",
+      "viewpoint": "ego",
+      "official_meaning": "Unknown anomaly",
+      "iris_action": "REVIEW_REQUIRED",
+      "rationale": "The official category does not establish IRIS label eligibility."
+    },
+    {
+      "annotation_id": 10,
+      "annotation_name": "unknown",
+      "viewpoint": "other",
+      "official_meaning": "Unknown non-ego anomaly",
+      "iris_action": "REVIEW_REQUIRED",
+      "rationale": "The official category does not establish IRIS label eligibility."
+    }
+  ],
+  "notes": [
+    "The paper presents nine base categories and ego/non-ego variants. The inspected official annotation archive uses IDs 1-10 because leaving-left and leaving-right are separate IDs.",
+    "Category eligibility never labels every anomaly-window frame as accident. Visible-collision review remains required."
+  ]
+}

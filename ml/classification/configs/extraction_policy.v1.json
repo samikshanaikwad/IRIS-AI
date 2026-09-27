@@ -1,0 +1,22 @@
+{
+  "extraction_version": "iris-dota-frame-extraction-v1",
+  "policy_status": "REVIEW_REQUIRED",
+  "source_dataset_id": "dota-official",
+  "source_frames_per_second": 10,
+  "normal_pre_event_buffer_frames": 20,
+  "normal_reviewed_window_required": true,
+  "post_event_normal_enabled": false,
+  "accident_visible_window_required": true,
+  "minimum_temporal_spacing_frames": 10,
+  "maximum_accident_frames_per_event": 3,
+  "maximum_normal_frames_per_event": 3,
+  "copy_mode": "BYTE_PRESERVING",
+  "allowed_source_extensions": [".jpg", ".jpeg", ".png"],
+  "notes": [
+    "The proposed 20-frame normal buffer equals two seconds at the official 10 fps extraction rate.",
+    "This buffer is a conservative, configurable starting policy and is not claimed to be scientifically optimal.",
+    "Normal frames require a separately reviewed window that ends before the temporal exclusion buffer.",
+    "Accident frames require a separately reviewed visible-collision window because the official anomaly start can precede visible impact.",
+    "Post-anomaly frames are not used as normal examples."
+  ]
+}

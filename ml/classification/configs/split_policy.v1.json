@@ -1,0 +1,17 @@
+{
+  "policy_version": "iris-classification-split-v1",
+  "policy_status": "APPROVED_FOR_PREPARATION",
+  "seed": 6006,
+  "group_field": "source_group_id",
+  "stratify_fields": [
+    "source_dataset_id",
+    "source_category"
+  ],
+  "targets": {
+    "train": 0.70,
+    "validation": 0.15,
+    "test": 0.15
+  },
+  "preserve_external_test": true,
+  "notes": "The seed is a reproducibility identifier with no scientific meaning. Targets apply to source groups, not image rows."
+}

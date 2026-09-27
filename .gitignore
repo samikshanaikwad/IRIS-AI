@@ -27,6 +27,10 @@ Thumbs.db
 
 # Local tooling and secrets
 .local-tools/
+.venv/
+**/.venv/
+__pycache__/
+*.py[cod]
 .env
 .env.*
 !.env.example
@@ -37,6 +41,15 @@ Thumbs.db
 ml/checkpoints/
 ml/runs/
 ml/outputs/
-datasets/raw/
+datasets/raw/*
+!datasets/raw/classification/
+datasets/raw/classification/*
+!datasets/raw/classification/.gitkeep
+!datasets/raw/classification/README.md
+datasets/derived/*
+!datasets/derived/classification/
+datasets/derived/classification/*
+!datasets/derived/classification/.gitkeep
+!datasets/derived/classification/README.md
 datasets/processed/
 benchmarks/results/
