@@ -332,8 +332,13 @@ def _write_review_contact_sheet(
         f"<img src=\"{html.escape(row['review_file'], quote=True)}\" "
         f"alt=\"{html.escape(row['source_item'], quote=True)}\"></a>"
         f"<p><code>{html.escape(row['source_item'])}</code></p>"
+        f"<p>Group: <code>{html.escape(row['source_group_id'])}</code></p>"
+        f"<p>Group basis: <code>{html.escape(row['group_basis'])}</code></p>"
+        f"<p>Exact-byte duplicates in DATS inventory: "
+        f"<code>{html.escape(row['exact_duplicate_count'])}</code></p>"
         f"<p>SHA-256: <code>{html.escape(row['sha256'])}</code></p>"
-        "<p>Decision: pending — edit review_batch.csv only after visual review.</p>"
+        "<p>Decision: pending — record only a human visual decision in "
+        "review_batch.csv.</p>"
         "</article>"
         for row in batch_rows
     )
@@ -345,7 +350,15 @@ article{{border:1px solid #26313d;border-radius:12px;padding:12px;background:#15
 img{{display:block;width:100%;height:180px;object-fit:contain;background:#111820}}
 p{{overflow-wrap:anywhere;font-size:12px}}code{{color:#a8b3bf}}</style></head>
 <body><h1>IRIS DATS visual review batch</h1>
-<p>This generated index records no semantic decision. Record only observed decisions in review_batch.csv.</p>
+<p>This generated index records no semantic decision. The displayed group is a
+conservative leakage group; it can reflect source sequence, exact duplicates,
+or dHash-near candidates. Exact-byte duplicates are represented once in this
+batch. Review only what the still visibly supports.</p>
+<p>Record only observed decisions in review_batch.csv: <code>pending</code>,
+<code>non_accident</code>, <code>exclude_visible_accident</code>,
+<code>exclude_ambiguous</code>, <code>exclude_irrelevant</code>, or
+<code>exclude_corrupt</code>. A completed decision requires label_basis,
+reviewer, and review_date (YYYY-MM-DD).</p>
 <main>{cards}</main></body></html>
 """
     path = output_root / "review_sheet.html"
@@ -365,14 +378,27 @@ def create_review_batch(
         raise SourceInspectionError(
             "Review batch start must be non-negative and limit positive"
         )
+    all_rows = load_review_inventory(review_inventory_path)
     rows = [
         row
-        for row in load_review_inventory(review_inventory_path)
+        for row in all_rows
         if row["source_dataset_id"] == source_dataset_id
         and row["review_decision"] == "pending"
         and row["technical_status"] == "READABLE"
     ]
-    selected = rows[start : start + limit]
+    exact_duplicate_counts = Counter(
+        row["sha256"]
+        for row in all_rows
+        if row["source_dataset_id"] == source_dataset_id and row["sha256"]
+    )
+    unique_rows: list[dict[str, str]] = []
+    seen_hashes: set[str] = set()
+    for row in rows:
+        if row["sha256"] in seen_hashes:
+            continue
+        seen_hashes.add(row["sha256"])
+        unique_rows.append(row)
+    selected = unique_rows[start : start + limit]
     output_root.mkdir(parents=True, exist_ok=True)
     image_root = output_root / "images"
     image_root.mkdir(parents=True, exist_ok=True)
@@ -410,6 +436,9 @@ def create_review_batch(
                     "reviewer": "",
                     "review_date": "",
                     "rationale": "",
+                    "source_group_id": row["source_group_id"],
+                    "group_basis": row["group_basis"],
+                    "exact_duplicate_count": str(exact_duplicate_counts[source_hash]),
                 }
             )
     batch_path = output_root / "review_batch.csv"
@@ -418,10 +447,16 @@ def create_review_batch(
             handle, fieldnames=REVIEW_BATCH_FIELDS, lineterminator="\n"
         )
         writer.writeheader()
-        writer.writerows(batch_rows)
+        writer.writerows(
+            [
+                {field: row[field] for field in REVIEW_BATCH_FIELDS}
+                for row in batch_rows
+            ]
+        )
     contact_sheet_path = _write_review_contact_sheet(output_root, batch_rows)
     return {
         "available_pending_rows": len(rows),
+        "available_pending_unique_content_rows": len(unique_rows),
         "batch_start": start,
         "batch_items": len(batch_rows),
         "batch_path": batch_path.as_posix(),
@@ -430,7 +465,9 @@ def create_review_batch(
 
 
 def apply_review_batch(
-    review_inventory_path: Path, batch_path: Path
+    review_inventory_path: Path,
+    batch_path: Path,
+    propagate_exact_duplicates: bool = False,
 ) -> dict[str, Any]:
     master_rows = load_review_inventory(review_inventory_path)
     master_by_item = {row["source_item"]: row for row in master_rows}
@@ -443,6 +480,7 @@ def apply_review_batch(
             for row in reader
         ]
     applied = 0
+    propagated = 0
     for batch_row in batch_rows:
         decision = batch_row["review_decision"]
         if decision == "pending":
@@ -472,6 +510,32 @@ def apply_review_batch(
         ):
             master_row[field] = batch_row[field]
         applied += 1
+        if not propagate_exact_duplicates:
+            continue
+        for duplicate_row in master_rows:
+            if (
+                duplicate_row is master_row
+                or duplicate_row["sha256"] != batch_row["sha256"]
+            ):
+                continue
+            if duplicate_row["source_dataset_id"] != master_row["source_dataset_id"]:
+                continue
+            if duplicate_row["source_group_id"] != master_row["source_group_id"]:
+                continue
+            if duplicate_row["review_decision"] != "pending":
+                continue
+            duplicate_row["review_decision"] = decision
+            duplicate_row["label_basis"] = batch_row["label_basis"]
+            duplicate_row["reviewer"] = batch_row["reviewer"]
+            duplicate_row["review_date"] = batch_row["review_date"]
+            provenance = (
+                "Exact SHA-256 duplicate decision propagated from "
+                f"{master_row['source_item']} after explicit reviewer request."
+            )
+            duplicate_row["rationale"] = " ".join(
+                value for value in (batch_row["rationale"], provenance) if value
+            )
+            propagated += 1
     validation = validate_review_rows(master_rows)
     if validation["validation_errors"]:
         raise SourceInspectionError(
@@ -479,7 +543,11 @@ def apply_review_batch(
             + "; ".join(validation["validation_errors"][:10])
         )
     write_review_inventory(review_inventory_path, master_rows)
-    return {"applied_decisions": applied, **validation}
+    return {
+        "applied_decisions": applied,
+        "propagated_exact_duplicate_decisions": propagated,
+        **validation,
+    }
 
 
 def _duplicate_summary(images: list[InspectedImage]) -> dict[str, Any]:

@@ -247,20 +247,24 @@ then apply and validate it:
 
 ```powershell
 py -3.10 ml\classification\scripts\dataset_tool.py create-review-batch --output-root datasets\raw\classification\review_batches\dats-v2-0000 --start 0 --limit 100
-py -3.10 ml\classification\scripts\dataset_tool.py apply-review-batch --batch datasets\raw\classification\review_batches\dats-v2-0000\review_batch.csv
+py -3.10 ml\classification\scripts\dataset_tool.py apply-review-batch --batch datasets\raw\classification\review_batches\dats-v2-0000\review_batch.csv --propagate-exact-duplicates
 py -3.10 ml\classification\scripts\dataset_tool.py validate-reviews
 ```
 
 Each generated batch also has `review_sheet.html`, an ignored local contact
-sheet containing only its extracted source images, source identifiers, hashes,
-and `pending` status. It records no decision; the human reviewer must enter
+sheet containing only its extracted source images, source identifiers,
+conservative leakage-group details, exact-byte duplicate counts, hashes, and
+`pending` status. It records no decision; the human reviewer must enter
 observed decisions and rationale in `review_batch.csv` before applying it.
 
 Applying a batch persists only explicit decisions whose source item and
-SHA-256 still match. Reinspection preserves valid prior decisions. Review
-batches and extracted images remain ignored. Promotion of reviewed items into
-the production manifest is deliberately deferred; this checkpoint adds zero
-manifest rows.
+SHA-256 still match. With the explicit `--propagate-exact-duplicates` option,
+the same decision is copied only to still-pending rows that have the same
+SHA-256, source dataset, and conservative source group; the persisted rationale
+records the source decision. Near duplicates never inherit a decision.
+Reinspection preserves valid prior decisions. Review batches and extracted
+images remain ignored. Promotion of reviewed items into the production manifest
+is deliberately deferred; this checkpoint adds zero manifest rows.
 
 ## Review and temporal safety
 

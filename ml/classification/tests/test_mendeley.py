@@ -348,6 +348,96 @@ class MendeleySourceInspectionTest(unittest.TestCase):
                     limit=1,
                 )
 
+    def test_review_batch_explicitly_propagates_safe_exact_duplicates(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            archive_path = root / "dats.zip"
+            inventory_path = root / "review.csv"
+            batch_root = root / "batch"
+            image = _png_bytes((100, 120, 140), (12, 8))
+            first_item = "Images/first.png"
+            second_item = "Images/second.png"
+            with zipfile.ZipFile(archive_path, "w") as archive:
+                archive.writestr(first_item, image)
+                archive.writestr(second_item, image)
+            digest = hashlib.sha256(image).hexdigest()
+            rows = []
+            for source_item in (first_item, second_item):
+                rows.append(
+                    {
+                        **{field: "" for field in REVIEW_FIELDS},
+                        "review_version": REVIEW_VERSION,
+                        "inspection_tool_version": INSPECTION_VERSION,
+                        "source_dataset_id": "dats-2022-mendeley",
+                        "source_dataset_version": "test-v2",
+                        "source_item": source_item,
+                        "source_filename": Path(source_item).name,
+                        "source_group_id": "dats-2022:safe-duplicate-group",
+                        "group_basis": "test-only-exact-duplicate",
+                        "annotation_status": (
+                            "OBJECT_DETECTION_ONLY_NOT_ACCIDENT_LABEL"
+                        ),
+                        "technical_status": "READABLE",
+                        "rights_status": "APPROVED",
+                        "sha256": digest,
+                        "perceptual_hash": "0000000000000000",
+                        "width": "12",
+                        "height": "8",
+                        "decoded_format": "PNG",
+                        "review_decision": "pending",
+                    }
+                )
+            write_review_inventory(inventory_path, rows)
+
+            result = create_review_batch(
+                archive_path,
+                inventory_path,
+                batch_root,
+                "dats-2022-mendeley",
+                start=0,
+                limit=100,
+            )
+            self.assertEqual(result["available_pending_rows"], 2)
+            self.assertEqual(result["available_pending_unique_content_rows"], 1)
+            self.assertEqual(result["batch_items"], 1)
+            self.assertIn(
+                "Exact-byte duplicates in DATS inventory: <code>2</code>",
+                (batch_root / "review_sheet.html").read_text(encoding="utf-8"),
+            )
+
+            batch_path = batch_root / "review_batch.csv"
+            with batch_path.open("r", encoding="utf-8", newline="") as handle:
+                batch_rows = list(csv.DictReader(handle))
+            batch_rows[0].update(
+                {
+                    "review_decision": "non_accident",
+                    "label_basis": "Human visual review found no accident evidence.",
+                    "reviewer": "test-reviewer",
+                    "review_date": "2026-09-27",
+                }
+            )
+            with batch_path.open("w", encoding="utf-8", newline="") as handle:
+                writer = csv.DictWriter(
+                    handle, fieldnames=REVIEW_BATCH_FIELDS, lineterminator="\n"
+                )
+                writer.writeheader()
+                writer.writerows(batch_rows)
+
+            applied = apply_review_batch(
+                inventory_path, batch_path, propagate_exact_duplicates=True
+            )
+            loaded = load_review_inventory(inventory_path)
+            self.assertEqual(applied["applied_decisions"], 1)
+            self.assertEqual(applied["propagated_exact_duplicate_decisions"], 1)
+            self.assertEqual(
+                [row["review_decision"] for row in loaded],
+                ["non_accident", "non_accident"],
+            )
+            self.assertIn(
+                "Exact SHA-256 duplicate decision propagated",
+                loaded[1]["rationale"],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

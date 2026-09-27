@@ -237,7 +237,11 @@ def _create_review_batch_command(args: argparse.Namespace) -> int:
 
 
 def _apply_review_batch_command(args: argparse.Namespace) -> int:
-    result = apply_review_batch(args.review_inventory, args.batch)
+    result = apply_review_batch(
+        args.review_inventory,
+        args.batch,
+        propagate_exact_duplicates=args.propagate_exact_duplicates,
+    )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0
 
@@ -337,6 +341,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--review-inventory", type=Path, default=DEFAULT_DATS_REVIEW
     )
     apply_review_parser.add_argument("--batch", type=Path, required=True)
+    apply_review_parser.add_argument(
+        "--propagate-exact-duplicates",
+        action="store_true",
+        help=(
+            "Explicitly propagate an entered decision only to pending rows with "
+            "the same SHA-256, source dataset, and conservative source group."
+        ),
+    )
     apply_review_parser.set_defaults(handler=_apply_review_batch_command)
 
     validate_review_parser = subparsers.add_parser("validate-reviews")
