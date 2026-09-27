@@ -118,5 +118,5 @@ def format_report(report: DatasetReport) -> str:
         f"Training eligible: {eligibility}",
     ]
     if report.total_items == 0:
-        lines.append("No real dataset has been acquired or derived.")
+        lines.append("No real dataset item has been admitted to the manifest.")
     return "\n".join(lines)

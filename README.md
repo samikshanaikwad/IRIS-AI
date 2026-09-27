@@ -6,7 +6,7 @@ IRIS is an offline-first Android application in development for incident reconst
 
 The verified Flutter Android foundation and production application shell are established under `app/`. The application includes the IRIS dark design system, four-destination navigation, real offline SQLite case management, human-accepted local camera/gallery acquisition, and human-accepted deterministic evidence-quality assessment. A case can own real images copied unchanged into app-private storage with persisted metadata and SHA-256 integrity identifiers.
 
-TASK 006 has established a source-grouped classification dataset preparation and validation pipeline. No real classification dataset has been acquired or approved, and no classifier has been trained or integrated.
+TASK 006 has established a source-grouped classification dataset preparation and validation pipeline. Official AccidentDetection-9k and DATS_2022 candidate archives have been acquired and inspected in Git-ignored storage, but no image has completed semantic review, AccidentDetection underlying-image rights remain unresolved, and the production manifest is empty. No classifier has been trained or integrated.
 
 ## Real-data principle
 

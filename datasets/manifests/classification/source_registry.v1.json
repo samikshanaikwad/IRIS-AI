@@ -35,6 +35,172 @@
         "The inspected annotation archive marks 61 of 4,677 clips with ignore=true; IRIS excludes those clips.",
         "IRIS must replace the official clip split because 177 original source videos occur in both official train and validation metadata."
       ]
+    },
+    {
+      "dataset_id": "accident-detection-9k-mendeley",
+      "official_name": "AccidentDetection-9k: An Annotated Road Accident Image Dataset for Object Detection",
+      "official_reference": "https://data.mendeley.com/datasets/4x5my8gbcs/2",
+      "doi": "10.17632/4x5my8gbcs.2",
+      "citation": "Mily, Farzana Akter; Mahin, Md Ibrahim Shikder; Arefin, Md Shamsul (2026), AccidentDetection-9k: An Annotated Road Accident Image Dataset for Object Detection, Mendeley Data, V2, doi: 10.17632/4x5my8gbcs.2",
+      "publication_date": "2026-09-01",
+      "paper_reference": "https://doi.org/10.1016/j.heliyon.2025.e42432",
+      "dataset_version": "mendeley-v2-doi-10.17632/4x5my8gbcs.2",
+      "metadata_inspection_date": "2026-09-27",
+      "data_acquired_at": "2026-09-27T07:43:59Z",
+      "code_license": null,
+      "code_license_reference": null,
+      "dataset_content_license": "CC BY 4.0 (Mendeley dataset record declaration; underlying-image rights require separate review)",
+      "dataset_terms_reference": "https://data.mendeley.com/datasets/4x5my8gbcs/2",
+      "license_reference": "https://creativecommons.org/licenses/by/4.0/",
+      "usage_status": "REVIEW_REQUIRED",
+      "redistribution_status": "REVIEW_REQUIRED",
+      "derived_data_status": "REVIEW_REQUIRED",
+      "attribution_requirements": "Cite the version-2 Mendeley Data record and named contributors. Preserve attribution required by any underlying image rightsholder if use is later approved.",
+      "acquisition_method": "Unauthenticated download from the official Mendeley Data public-file endpoints listed by the public dataset API.",
+      "acquisition_urls": [
+        "https://data.mendeley.com/datasets/4x5my8gbcs/2",
+        "https://data.mendeley.com/public-files/datasets/4x5my8gbcs/files/8035340f-c9d5-4f03-9dad-54c793dd6855/file_downloaded"
+      ],
+      "interactive_authentication_required": false,
+      "local_raw_path": "datasets/raw/classification/accident_detection_9k/v2",
+      "public_file_inventory": [
+        {
+          "name": "Accident_Detection.zip",
+          "file_count": 1,
+          "total_bytes": 606678399,
+          "file_id": "8035340f-c9d5-4f03-9dad-54c793dd6855",
+          "sha256": "707c932ef7b5a56a713d5f09713712016863793bcdae007d3ad90eba9503ae73",
+          "content_type": "application/zip"
+        },
+        {
+          "name": "annotation_guidelines.pdf",
+          "file_count": 1,
+          "total_bytes": 196532,
+          "file_id": "6d12228b-bc95-4f82-a343-bb6d0c3ff23d",
+          "sha256": "57c243739097d32963ec3ca374fc3fd7c599f028c7660ec5cc88d36923456622",
+          "content_type": "application/pdf"
+        },
+        {
+          "name": "data.yaml",
+          "file_count": 1,
+          "total_bytes": 140,
+          "file_id": "c6fa0741-43bc-41b9-ae42-39ad8036b07b",
+          "sha256": "3846239c50f573eeebf641762c620abee5db23225b547c5c92204191b3def2fc",
+          "content_type": "application/x-yaml"
+        },
+        {
+          "name": "README.md",
+          "file_count": 1,
+          "total_bytes": 5046,
+          "file_id": "9fd6b69c-72e3-4431-88a5-158a79816b40",
+          "sha256": "3f425f8aba6415f597f9276800536a07c4d0dd9df48ddc0ae7b2a92e733a34d2",
+          "content_type": "text/markdown"
+        }
+      ],
+      "downloaded_artifact_checksums": {
+        "Accident_Detection.zip": "707c932ef7b5a56a713d5f09713712016863793bcdae007d3ad90eba9503ae73",
+        "annotation_guidelines.pdf": "57c243739097d32963ec3ca374fc3fd7c599f028c7660ec5cc88d36923456622",
+        "data.yaml": "3846239c50f573eeebf641762c620abee5db23225b547c5c92204191b3def2fc",
+        "README.md": "3f425f8aba6415f597f9276800536a07c4d0dd9df48ddc0ae7b2a92e733a34d2"
+      },
+      "task_suitability": "POSITIVE_CANDIDATES_BLOCKED_BY_RIGHTS_AND_SEMANTIC_REVIEW",
+      "notes": [
+        "The Mendeley record declares CC BY 4.0 for the dataset publication.",
+        "The publisher states that images were collected through systematic keyword-based Google image searches using an automated downloader.",
+        "The supplied README states that copyright remains with each original creator or rightsholder and calls for confirmation before redistribution.",
+        "The record-level CC BY 4.0 declaration does not independently establish copyright provenance or reuse permission for every underlying web image.",
+        "YOLO class-0 Accident annotations are publisher labels and still require IRIS visual-policy review before a classification label can enter the production manifest."
+      ]
+    },
+    {
+      "dataset_id": "dats-2022-mendeley",
+      "official_name": "DATS_2022",
+      "official_reference": "https://data.mendeley.com/datasets/nfc34n8svj/2",
+      "doi": "10.17632/nfc34n8svj.2",
+      "citation": "Paranjape, Bhakti (2022), DATS_2022, Mendeley Data, V2, doi: 10.17632/nfc34n8svj.2",
+      "publication_date": "2022-05-10",
+      "paper_reference": null,
+      "dataset_version": "mendeley-v2-doi-10.17632/nfc34n8svj.2",
+      "metadata_inspection_date": "2026-09-27",
+      "data_acquired_at": "2026-09-27T12:35:37Z",
+      "code_license": null,
+      "code_license_reference": null,
+      "dataset_content_license": "CC BY 4.0",
+      "dataset_terms_reference": "https://data.mendeley.com/datasets/nfc34n8svj/2",
+      "license_reference": "https://creativecommons.org/licenses/by/4.0/",
+      "usage_status": "APPROVED",
+      "redistribution_status": "APPROVED",
+      "derived_data_status": "APPROVED",
+      "attribution_requirements": "Cite the version-2 DATS_2022 Mendeley Data record and Bhakti Paranjape; preserve the CC BY 4.0 notice.",
+      "acquisition_method": "Unauthenticated download from the official Mendeley Data public bulk-archive endpoint, cross-checked against the public per-file inventory and hashes.",
+      "acquisition_urls": [
+        "https://data.mendeley.com/datasets/nfc34n8svj/2",
+        "https://data.mendeley.com/public-api/zip/nfc34n8svj/download/2"
+      ],
+      "interactive_authentication_required": false,
+      "local_raw_path": "datasets/raw/classification/dats_2022/v2",
+      "public_file_inventory": [
+        {
+          "name": "Images with Annotations/Images",
+          "file_count": 2048,
+          "total_bytes": 9557543554,
+          "file_id": "eb70006b-3c40-405f-b393-1cc9595db59f",
+          "sha256": null,
+          "content_type": "mixed image/jpeg and image/png"
+        },
+        {
+          "name": "Images with Annotations/JSON files",
+          "file_count": 2226,
+          "total_bytes": 1562123,
+          "file_id": "06e78968-8f96-49cf-86bd-13b54a01a9ef",
+          "sha256": null,
+          "content_type": "application/json"
+        },
+        {
+          "name": "Images with Annotations/TXT files",
+          "file_count": 2227,
+          "total_bytes": 455468,
+          "file_id": "369dfa23-d52e-43cf-81cb-ae32def6a954",
+          "sha256": null,
+          "content_type": "text/plain"
+        },
+        {
+          "name": "Images with Annotations/XML files",
+          "file_count": 2226,
+          "total_bytes": 3445466,
+          "file_id": "21c644a4-a3dc-484d-8635-2cf6ad00c9ef",
+          "sha256": null,
+          "content_type": "text/xml"
+        },
+        {
+          "name": "Images and XML files/XML images",
+          "file_count": 715,
+          "total_bytes": 1473915,
+          "file_id": "392732b2-5782-438a-8045-d70ba14df61a",
+          "sha256": null,
+          "content_type": "text/xml"
+        },
+        {
+          "name": "Images and XML files",
+          "file_count": 803,
+          "total_bytes": 1172830275,
+          "file_id": "ccadf54e-efb6-4d58-9ee6-c698b6f859ec",
+          "sha256": null,
+          "content_type": "802 image/png files and one Windows shortcut"
+        }
+      ],
+      "downloaded_artifact_checksums": {
+        "DATS_2022.zip": "f4ffe186ea9d9c72e2f141e76c285b6b8740b0f4de672e58330b8a80ae36629f"
+      },
+      "task_suitability": "NEGATIVE_CANDIDATES_REQUIRE_SEMANTIC_AND_GROUP_REVIEW",
+      "notes": [
+        "The Mendeley record declares CC BY 4.0 and describes real unstructured Indian traffic captured as photographs and frames from short videos.",
+        "The public record says more than 10,000 images, but the version-2 public file inventory contains 2,850 image files: 2,048 in Images and 802 PNG files in Images and XML files.",
+        "DATS object-detection annotations do not assert that an image is non-accident; no image is automatically assigned the IRIS non_accident label.",
+        "Video-derived neighboring frames must not be randomly split. Original sequence identity is only partly visible in filenames and requires conservative grouping plus duplicate review.",
+        "The interrupted bulk download recovered 5,249,037,795 verified range bytes; only the missing 5,452,586,857 bytes were resumed before complete member-hash verification.",
+        "One public inventory item is a Windows .lnk shortcut and is not an image candidate."
+      ]
     }
   ]
 }

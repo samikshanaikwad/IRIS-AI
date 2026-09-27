@@ -4,12 +4,15 @@
 
 TASK 006 needs a real, provenance-preserving still-image dataset for a future
 binary visual classifier. This checkpoint provides acquisition inspection,
-versioned policies, deterministic frame selection, source-group splitting,
-duplicate checks, validation, reporting, and tests.
+versioned policies, deterministic source grouping, duplicate checks, review
+inventories, validation, reporting, and tests.
 
-No real training images are present. No classifier has been trained, evaluated,
-exported, or integrated into Flutter. The header-only production manifest is
-not training-eligible.
+Two real candidate-source archives are present locally in Git-ignored storage:
+AccidentDetection-9k version 2 and DATS_2022 version 2. Acquisition does not
+make an item training-eligible. All 11,852 candidate images remain pending
+semantic review, AccidentDetection-9k has an unresolved underlying-image rights
+limitation, and the production manifest remains header-only. No classifier has
+been trained, evaluated, exported, or integrated into Flutter.
 
 ## Label contract
 
@@ -29,6 +32,85 @@ response without visible crash evidence, later off-scene damage, racing and
 crash-test imagery, rendered/simulated imagery, vehicle fire without visible
 crash evidence, and non-road industrial accidents. Ambiguity is excluded rather
 than forced into a binary class.
+
+## Acquired Mendeley sources
+
+The official source records are [AccidentDetection-9k version 2](https://data.mendeley.com/datasets/4x5my8gbcs/2)
+(`10.17632/4x5my8gbcs.2`) and [DATS_2022 version 2](https://data.mendeley.com/datasets/nfc34n8svj/2)
+(`10.17632/nfc34n8svj.2`). Both records declare CC BY 4.0 and exposed public,
+unauthenticated downloads when inspected on 2026-09-27. Exact acquisition
+metadata and citations are in `source_registry.v1.json`; measured archive and
+content results are in `mendeley_source_inspection.v1.json`.
+
+### AccidentDetection-9k
+
+The official 606,678,399-byte archive has SHA-256
+`707c932ef7b5a56a713d5f09713712016863793bcdae007d3ad90eba9503ae73`,
+matching the hash published by Mendeley. Full inspection found:
+
+- 9,002 readable JPEG images and no corrupt images, from 512×512 through
+  640×640;
+- publisher splits of 6,308 train, 1,801 validation, and 893 test images;
+- 9,002 label files, including 8,853 images with syntactically valid class-0
+  `Accident` boxes, 147 empty labels, and 2 images missing a corresponding
+  label; two label files are orphaned;
+- 9,859 total publisher bounding boxes;
+- 339 exact-duplicate groups containing 700 images, including 171 groups that
+  cross publisher splits; and
+- 7,772 non-exact dHash candidate pairs at Hamming distance 4 or less,
+  including 3,599 crossing publisher splits.
+
+The 8,853 annotated/readable images are technical positive candidates, not
+accepted IRIS labels. The publisher states that source images were found by
+systematic Google image searches, and its README says underlying copyrights
+remain with original creators. The record-level CC BY 4.0 declaration does not
+independently prove reuse rights for every underlying web image. Consequently,
+zero AccidentDetection images are rights-approved or semantically accepted for
+training, and the publisher split is rejected for IRIS use.
+
+### DATS_2022
+
+The official bulk archive is 10,701,624,652 bytes. Its locally computed
+SHA-256 is
+`f4ffe186ea9d9c72e2f141e76c285b6b8740b0f4de672e58330b8a80ae36629f`.
+Every ZIP member hash matches the multiset from the official per-file inventory:
+10,245 files totaling 10,737,310,801 uncompressed bytes.
+
+At interrupted-session recovery, 5,249,037,795 valid bytes already existed in
+24 ranged parts. Each recovered range start and current tail matched the
+official server. Resuming the missing 5,452,586,857 bytes was more efficient
+than requesting the 2,850 image files individually, whose official sizes alone
+total 10,730,373,278 bytes. No completed range was redownloaded.
+
+The publication broadly describes more than 10,000 images, but the actual
+version-2 inventory and archive contain 2,850 image files. All decode
+successfully; decoded content is 2,845 JPEG and 5 PNG images, with dimensions
+from 448×528 through 4624×4624. The archive also contains 7,394 JSON/TXT/XML
+annotation files and one Windows shortcut. One TXT annotation is not in the
+expected numeric object-detection row format. Observed object labels include
+vehicles, people, traffic infrastructure, animals, and roadside objects; they
+are object-detection metadata, not accident/non-accident labels.
+
+DATS contains 46 exact-duplicate groups covering 92 images and 166 non-exact
+dHash candidate pairs at Hamming distance 4 or less. Filename-derived sequence
+identity is only partial. Camera timestamps and epoch-millisecond names are
+grouped conservatively by day; numbered families stay together; unresolved
+D-series and directory-only families are kept together. Exact and near
+duplicates are then merged into the same leakage component. This reduces 38
+base groups to 30 conservative groups; those groups may be refined only with
+real provenance, never by assuming neighboring frames are independent.
+
+All 2,850 images are candidate road-scene negatives pending visual review.
+None is currently labelled `non_accident`, excluded, or in the production
+manifest.
+
+### Cross-source leakage
+
+No exact content match was found between the two sources. The dHash scan found
+12 cross-source candidate pairs across 3 conservative leakage groups. These are
+review signals, not proof of identity; matched groups remain linked until a
+human resolves them. A conflicting candidate is excluded or reviewed, never
+assigned an arbitrary class.
 
 ## DoTA investigation
 
@@ -104,10 +186,11 @@ required.
 ## Source registry and manifest
 
 `datasets/manifests/classification/source_registry.v1.json` records dataset ID,
-official references, inspected version, separate code/content license fields,
-usage and redistribution status, derived-data status, attribution, acquisition
-method, local path, locally computed metadata checksums, suitability, and
-notes. Its schema identifier is `iris-dataset-source-registry-v1`.
+official references and DOI/citation where available, inspected version,
+separate code/content license fields, usage and redistribution status,
+derived-data status, attribution, acquisition method and URLs, public-file
+inventory, local path, checksums, suitability, and notes. Its schema identifier
+is `iris-dataset-source-registry-v1`.
 
 `manifest.v1.csv` uses `iris-classification-manifest-v1`. Required provenance
 and integrity fields include item/path, label/split, dataset and version,
@@ -120,6 +203,43 @@ invented.
 `source_timestamp_ms` for DoTA is deterministically clip-relative from the
 official 10 fps representation. It is not represented as an original recording
 wall-clock time.
+
+## Mendeley semantic-review workflow
+
+`accident_detection_9k_review.v1.csv` and `dats_2022_review.v1.csv` are tracked
+candidate inventories. They contain actual source path, technical/annotation
+status, rights status, conservative group, SHA-256, dHash, decoded dimensions,
+format, and explicit review fields. Inspection never infers a semantic label.
+The allowed decisions are `pending`, `accident`, `non_accident`,
+`exclude_ambiguous`, `exclude_visible_accident`, `exclude_irrelevant`, and
+`exclude_corrupt`. Every non-pending decision requires a reviewer, review date,
+and label basis. DATS cannot be accepted as `accident` through the negative
+review flow, and AccidentDetection cannot be accepted as `non_accident`.
+
+Run a deterministic local inspection and validate the inventories from the
+repository root:
+
+```powershell
+py -3.10 ml\classification\scripts\dataset_tool.py inspect-mendeley
+py -3.10 ml\classification\scripts\dataset_tool.py validate-reviews --review-inventory datasets\manifests\classification\accident_detection_9k_review.v1.csv
+py -3.10 ml\classification\scripts\dataset_tool.py validate-reviews --review-inventory datasets\manifests\classification\dats_2022_review.v1.csv
+```
+
+Create an ignored visual-review batch without changing the master inventory,
+record real decisions in the batch CSV while inspecting its extracted images,
+then apply and validate it:
+
+```powershell
+py -3.10 ml\classification\scripts\dataset_tool.py create-review-batch --output-root datasets\raw\classification\review_batches\dats-v2-0000 --start 0 --limit 100
+py -3.10 ml\classification\scripts\dataset_tool.py apply-review-batch --batch datasets\raw\classification\review_batches\dats-v2-0000\review_batch.csv
+py -3.10 ml\classification\scripts\dataset_tool.py validate-reviews
+```
+
+Applying a batch persists only explicit decisions whose source item and
+SHA-256 still match. Reinspection preserves valid prior decisions. Review
+batches and extracted images remain ignored. Promotion of reviewed items into
+the production manifest is deliberately deferred; this checkpoint adds zero
+manifest rows.
 
 ## Review and temporal safety
 
@@ -160,6 +280,12 @@ stricter than grouping only one extracted clip. Every row from that group must
 share one split. `external_test` is preserved separately and must never be used
 for training, threshold selection, or tuning.
 
+For the Mendeley sources, publisher splits are informational only. IRIS starts
+from filename-derived source families, merges exact and dHash-near components,
+and links cross-source candidates. A future split must operate on those final
+groups after semantic and rights review; it must not reuse the leaking
+AccidentDetection split or randomly divide DATS video-derived neighbors.
+
 The validator rejects source-group leakage and exact duplicates across splits.
 It also rejects invalid labels/splits, missing provenance, unapproved usage,
 version mismatches, unsafe paths, missing/zero/corrupt/unsupported images,
@@ -182,6 +308,17 @@ datasets/raw/classification/dota/
   official_frames/
     frames/<event>/images/   # Extracted official frame archive layout
 
+datasets/raw/classification/accident_detection_9k/v2/
+  Accident_Detection.zip     # Verified official archive
+  README.md                  # Official source README
+
+datasets/raw/classification/dats_2022/v2/
+  DATS_2022.zip              # Verified against official member inventory
+  inventory/                 # Official public-file metadata pages
+
+datasets/raw/classification/review_batches/
+  <batch>/                   # Temporary extracted images and decision CSV
+
 datasets/derived/classification/
   dota/<event>/<label>/      # Future selected byte-preserving frames
 ```
@@ -190,9 +327,20 @@ Raw and derived contents are Git-ignored. Tracked READMEs, `.gitkeep` files,
 policies, schemas, review CSVs, source registry, and manifests remain in Git.
 Test images are generated only in temporary test directories.
 
-## Acquisition procedure
+## Acquisition status and blocked DoTA procedure
 
-Large downloads require explicit human action:
+Both Mendeley archives were acquired without login from their official public
+endpoints. AccidentDetection's four published files match the publisher's
+SHA-256 values. Mendeley did not publish one bulk-archive hash for DATS, so IRIS
+records its locally computed archive hash and additionally verifies every ZIP
+member against the official per-file hash inventory. Raw archives are ignored
+by Git.
+
+DoTA is not being used for TASK 006 training and its approximately 55 GB frame
+archive was not downloaded. The following procedure is retained only for a
+future decision after dataset-content and derived-frame rights are clarified.
+
+Any future DoTA acquisition requires explicit human action:
 
 1. Open the [official repository](https://github.com/MoonBlvd/Detection-of-Traffic-Anomaly) and acquire the repository at the inspected commit into `datasets/raw/classification/dota/official_repository/`.
 2. Confirm that `dataset/DoTA_annotations.zip`, `dataset/metadata_train.json`, `dataset/metadata_val.json`, and `dataset/DoTA_urls.txt` are present. Their locally computed SHA-256 values at the inspected commit are recorded in the source registry and checked by `inspect-dota`.
@@ -207,7 +355,7 @@ py -3.10 ml\classification\scripts\dataset_tool.py inspect-dota --metadata-root 
 
 The repository also links an [official folder for six removed-source originals](https://drive.google.com/drive/folders/1uSdyNu8XM_QV6y9r4tpxN7iNNNAgWy9P?usp=sharing). Do not acquire or use those separately unless provenance and rights review establishes they are needed.
 
-Acquisition alone does not authorize extraction. After dataset-content and
+DoTA acquisition alone would not authorize extraction. After dataset-content and
 derived-use permission is resolved, policy statuses are approved through a
 reviewed change, and the two review CSVs are populated from real visual review,
 the pipeline is:
@@ -219,19 +367,18 @@ py -3.10 ml\classification\scripts\dataset_tool.py validate
 py -3.10 ml\classification\scripts\dataset_tool.py report
 ```
 
-## Reporting and future sources
+## Reporting and training gate
 
 The report calculates real label/split/source/category/license counts, unique
 source groups, per-group distribution, dimension ranges, duplicate findings,
 missing/corrupt findings, validation totals, and training eligibility. With the
 current empty manifest it truthfully reports zero items and no fabricated
-statistics.
+statistics. The acquired candidate inventories do not count as manifest rows.
 
-A future approved BDD100K or comparable source may add challenging independent
-normal-driving negatives. A future independently sourced dataset such as
-DADA-2000 may be considered only for `external_test`. Neither source is
-approved or acquired by this checkpoint.
+IndiaScene365 has not been acquired or assessed; it may be investigated only
+if reviewed DATS data proves insufficient for negative diversity. DoTA remains
+preserved as a blocked candidate rather than being downloaded or trained on.
 
-No model training may begin until real data is acquired legally, all semantic
-review is complete, the grouped split is produced, and validation reports zero
-errors.
+No model training may begin until both classes contain genuinely accepted
+items, rights status permits use, semantic review is complete, conservative
+groups are split without leakage, and manifest validation reports zero errors.

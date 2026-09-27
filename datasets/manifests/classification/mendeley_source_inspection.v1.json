@@ -1,0 +1,725 @@
+{
+  "cross_source_duplicate_analysis": {
+    "cross_source_leakage_groups": 3,
+    "exact_duplicate_pairs": 0,
+    "examples": [
+      {
+        "accident_source_item": "Accident_Detection/Dataset/test/images/al-icon_png.rf.1c0c445c2d5fb16d5035afef1c7b900c.jpg",
+        "dats_source_item": "DATS_2022/Images and XML files/D_277.png",
+        "hamming_distance": 4,
+        "relationship": "dhash_candidate"
+      },
+      {
+        "accident_source_item": "Accident_Detection/Dataset/train/images/download-34-_png.rf.dd5509f946dd81cee3e921c4aa571797.jpg",
+        "dats_source_item": "DATS_2022/Images and XML files/D_277.png",
+        "hamming_distance": 4,
+        "relationship": "dhash_candidate"
+      },
+      {
+        "accident_source_item": "Accident_Detection/Dataset/train/images/download-70-_png.rf.8102b2b8d7aaadfead87cef727da5c8d.jpg",
+        "dats_source_item": "DATS_2022/Images and XML files/D_277.png",
+        "hamming_distance": 4,
+        "relationship": "dhash_candidate"
+      },
+      {
+        "accident_source_item": "Accident_Detection/Dataset/train/images/download-71-_png.rf.4cd3802964ffc1fced3e17174da38ab6.jpg",
+        "dats_source_item": "DATS_2022/Images and XML files/D_277.png",
+        "hamming_distance": 4,
+        "relationship": "dhash_candidate"
+      },
+      {
+        "accident_source_item": "Accident_Detection/Dataset/train/images/download-84-_png.rf.a617fa227daa7ee136df5eb2c9e100d0.jpg",
+        "dats_source_item": "DATS_2022/Images and XML files/D_277.png",
+        "hamming_distance": 4,
+        "relationship": "dhash_candidate"
+      },
+      {
+        "accident_source_item": "Accident_Detection/Dataset/test/images/download-7-_jpeg.rf.c27455fe50f99178dbdc5705fe0d51e7.jpg",
+        "dats_source_item": "DATS_2022/Images with Annotations/Images/IMG_20201228_103028.jpg",
+        "hamming_distance": 4,
+        "relationship": "dhash_candidate"
+      },
+      {
+        "accident_source_item": "Accident_Detection/Dataset/train/images/burnt-car-in-the-fog-with-the-flames-burning-in-slow-motion-vehicle-accident-concept-video-1-_jpg.rf.8cf6d3e46c09b80ef53055aa04558791.jpg",
+        "dats_source_item": "DATS_2022/Images with Annotations/Images/IMG_20211205_072956.jpg",
+        "hamming_distance": 2,
+        "relationship": "dhash_candidate"
+      },
+      {
+        "accident_source_item": "Accident_Detection/Dataset/train/images/burnt-car-in-the-fog-with-the-flames-burning-in-slow-motion-vehicle-accident-concept-video-1-_jpg.rf.8cf6d3e46c09b80ef53055aa04558791.jpg",
+        "dats_source_item": "DATS_2022/Images with Annotations/Images/IMG_20211205_073035.jpg",
+        "hamming_distance": 4,
+        "relationship": "dhash_candidate"
+      },
+      {
+        "accident_source_item": "Accident_Detection/Dataset/train/images/burnt-car-in-the-fog-with-the-flames-burning-in-slow-motion-vehicle-accident-concept-video-1-_jpg.rf.8cf6d3e46c09b80ef53055aa04558791.jpg",
+        "dats_source_item": "DATS_2022/Images with Annotations/Images/IMG_20211205_073530.jpg",
+        "hamming_distance": 3,
+        "relationship": "dhash_candidate"
+      },
+      {
+        "accident_source_item": "Accident_Detection/Dataset/train/images/burnt-car-in-the-fog-with-the-flames-burning-in-slow-motion-vehicle-accident-concept-video-1-_jpg.rf.8cf6d3e46c09b80ef53055aa04558791.jpg",
+        "dats_source_item": "DATS_2022/Images with Annotations/Images/IMG_20211205_080639.jpg",
+        "hamming_distance": 4,
+        "relationship": "dhash_candidate"
+      },
+      {
+        "accident_source_item": "Accident_Detection/Dataset/train/images/burnt-car-in-the-fog-with-the-flames-burning-in-slow-motion-vehicle-accident-concept-video-1-_jpg.rf.8cf6d3e46c09b80ef53055aa04558791.jpg",
+        "dats_source_item": "DATS_2022/Images with Annotations/Images/IMG_20211205_080640.jpg",
+        "hamming_distance": 4,
+        "relationship": "dhash_candidate"
+      },
+      {
+        "accident_source_item": "Accident_Detection/Dataset/train/images/burnt-car-in-the-fog-with-the-flames-burning-in-slow-motion-vehicle-accident-concept-video-1-_jpg.rf.8cf6d3e46c09b80ef53055aa04558791.jpg",
+        "dats_source_item": "DATS_2022/Images with Annotations/Images/IMG_20211228_074236.jpg",
+        "hamming_distance": 3,
+        "relationship": "dhash_candidate"
+      }
+    ],
+    "near_duplicate_threshold_hamming_bits": 4,
+    "non_exact_near_duplicate_pairs": 12,
+    "policy": "Cross-source exact matches and dHash candidates are forced into one conservative group and require conflict review before labelling."
+  },
+  "inspection_version": "iris-mendeley-source-inspection-v1",
+  "manifest_rows_added": 0,
+  "near_duplicate_threshold_hamming_bits": 4,
+  "sources": [
+    {
+      "annotation_status_counts": {
+        "EMPTY": 147,
+        "MISSING": 2,
+        "VALID_ACCIDENT_ANNOTATION": 8853
+      },
+      "archive_bytes": 606678399,
+      "archive_entries": 18005,
+      "archive_path": "C:/Users/DELL/Desktop/IRIS/datasets/raw/classification/accident_detection_9k/v2/Accident_Detection.zip",
+      "archive_sha256": "707c932ef7b5a56a713d5f09713712016863793bcdae007d3ad90eba9503ae73",
+      "bounding_box_annotations": 9859,
+      "class_names": [
+        "Accident"
+      ],
+      "dataset_id": "accident-detection-9k-mendeley",
+      "dataset_version": "mendeley-v2-doi-10.17632/4x5my8gbcs.2",
+      "duplicate_analysis": {
+        "cross_split_exact_duplicate_groups": 171,
+        "cross_split_near_duplicate_examples": [
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/download-35-_jpeg.rf.1028811e0f866b17fb0f0e95937456c0.jpg",
+            "right": "Accident_Detection/Dataset/train/images/00000183-ff9b-d385-ad87-ffbf05330002_jpg.rf.326f151b45445a0bb68a5015da5ebea9.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/03india-train-wwk-01-cqmt-superJumbo_jpg.rf.0a37a1e0cf668a348f3f26288e1c398c.jpg",
+            "right": "Accident_Detection/Dataset/train/images/03india-train-wwk-01-cqmt-superJumbo_jpg.rf.6e1100a27c88ec5ef5f9e8d988c3e24a.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/0_SDC_MDG_-CHPc_5cc0456_jpg.rf.dc4db77c5e8b98af183209fdf4fd1a4a.jpg",
+            "right": "Accident_Detection/Dataset/train/images/0_SDC_MDG_-CHPc_5cc0456_jpg.rf.b91218f593fd69e699110b1b25754020.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/1000_F_570708583_fQl0jJu9YF4wUSm3hyH1iPTkn0vuo0XJ_jpg.rf.55c355b0219fea5e8cb55039bbc81c0d.jpg",
+            "right": "Accident_Detection/Dataset/train/images/1000_F_570708583_fQl0jJu9YF4wUSm3hyH1iPTkn0vuo0XJ_jpg.rf.4106b80eb39fb79291d3c302c26c5cbc.jpg"
+          },
+          {
+            "hamming_distance": 1,
+            "left": "Accident_Detection/Dataset/test/images/download-2024-03-25T014024-036_jpeg_jpg.rf.fd7cb69484c9b7a5dc0fb5dcd23bef57.jpg",
+            "right": "Accident_Detection/Dataset/train/images/1000_F_570708583_fQl0jJu9YF4wUSm3hyH1iPTkn0vuo0XJ_jpg.rf.4106b80eb39fb79291d3c302c26c5cbc.jpg"
+          },
+          {
+            "hamming_distance": 1,
+            "left": "Accident_Detection/Dataset/test/images/Injuries-Caused-By-a-Road-Accident-Lawyer_jpg.rf.e175e2a780f09421be5349c486303fa4.jpg",
+            "right": "Accident_Detection/Dataset/train/images/1000_F_570708583_fQl0jJu9YF4wUSm3hyH1iPTkn0vuo0XJ_jpg.rf.4106b80eb39fb79291d3c302c26c5cbc.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/1140-car-crash_jpg.rf.a74398880814e9621dc8773910eaa22e.jpg",
+            "right": "Accident_Detection/Dataset/train/images/1140-car-crash_jpg.rf.782564cd7a82dc121849eeb230a36d96.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/13611372_080723-wabc-hempstead-img_jpg.rf.751d7907039b110b004160fa6ccf45b3.jpg",
+            "right": "Accident_Detection/Dataset/train/images/13611372_080723-wabc-hempstead-img_jpg.rf.5dcd26ed9a936c52a418c2e6e0525bea.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/images-23-_jpeg_jpg.rf.ca33c25d09bba98279ed8b36ef64ee77.jpg",
+            "right": "Accident_Detection/Dataset/train/images/1533656510_jpg.rf.34d1d8b9a744a714f018b942fa48325e.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/download-95-_jpeg.rf.b88955942ec46ff0b805ed251ba21f3c.jpg",
+            "right": "Accident_Detection/Dataset/train/images/1535288320_9_jpg.rf.a0baa8228a29c7e9158df3c24b8c5e99.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/download-95-_jpeg_jpg.rf.85d57f8ce3c16cb23e1ea1a653b58e42.jpg",
+            "right": "Accident_Detection/Dataset/train/images/1535288320_9_jpg.rf.a0baa8228a29c7e9158df3c24b8c5e99.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/download-95-_jpeg.rf.b88955942ec46ff0b805ed251ba21f3c.jpg",
+            "right": "Accident_Detection/Dataset/train/images/1535288320_9_jpg.rf.e8b711ff2ae1b1b4b7fd779732fdee19.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/download-95-_jpeg_jpg.rf.85d57f8ce3c16cb23e1ea1a653b58e42.jpg",
+            "right": "Accident_Detection/Dataset/train/images/1535288320_9_jpg.rf.e8b711ff2ae1b1b4b7fd779732fdee19.jpg"
+          },
+          {
+            "hamming_distance": 1,
+            "left": "Accident_Detection/Dataset/test/images/images-81-_jpeg_jpg.rf.2af952ea00d08403a079a63b29c133c8.jpg",
+            "right": "Accident_Detection/Dataset/train/images/1543512908_jpg.rf.6e410b610723488867a33457960abf85.jpg"
+          },
+          {
+            "hamming_distance": 1,
+            "left": "Accident_Detection/Dataset/test/images/images-24-_jpeg_jpg.rf.42dd892b7c780fa60c00fe76d840c17f.jpg",
+            "right": "Accident_Detection/Dataset/train/images/1549905887_jpg.rf.30800a1335ad2d1e76a0321fbdf80baf.jpg"
+          },
+          {
+            "hamming_distance": 1,
+            "left": "Accident_Detection/Dataset/test/images/images-24-_jpeg_jpg.rf.42dd892b7c780fa60c00fe76d840c17f.jpg",
+            "right": "Accident_Detection/Dataset/train/images/1549905887_jpg.rf.3e448820662365e36e36c43afaa6d2f9.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/1580879869_1_jpeg_jpg.rf.e552ff09be3f8082f7681abdd462ba63.jpg",
+            "right": "Accident_Detection/Dataset/train/images/1580879869_1_jpeg.rf.2f0485b9d17e7083f27eef39f5292f50.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/1621972666_Accident_jpg.rf.2f5eed98d45b6913745208ded9d16b9b.jpg",
+            "right": "Accident_Detection/Dataset/train/images/1621972666_Accident_jpg.rf.43c9c4b949c9b0dbd8993b5f0b68dcb9.jpg"
+          },
+          {
+            "hamming_distance": 1,
+            "left": "Accident_Detection/Dataset/test/images/images-24-_jpeg_jpg.rf.42dd892b7c780fa60c00fe76d840c17f.jpg",
+            "right": "Accident_Detection/Dataset/train/images/1641032604-1-_jpg.rf.6f961c3a165e9bfab6b71b43f884f188.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/images-44-_jpeg.rf.683649b7e7c1578c032346f7d77cd28f.jpg",
+            "right": "Accident_Detection/Dataset/train/images/1657893218_jpg.rf.6f062a428d55961c8cf3e25a07be30fd.jpg"
+          },
+          {
+            "hamming_distance": 4,
+            "left": "Accident_Detection/Dataset/test/images/1664999656_3_jpg.rf.b111fcc188e1a9e41091d614b937220d.jpg",
+            "right": "Accident_Detection/Dataset/train/images/1657947266-unb_newswire_0_jpg.rf.4719ea360b7f8a4988d56a91b80b7f08.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/1664999656_3_jpg.rf.b111fcc188e1a9e41091d614b937220d.jpg",
+            "right": "Accident_Detection/Dataset/train/images/1664999656_3_jpg.rf.cfd76c468ffddd32eb85e4e37001b605.jpg"
+          },
+          {
+            "hamming_distance": 1,
+            "left": "Accident_Detection/Dataset/test/images/download-12-_jpeg.rf.e01ad5de7797d5e9f73d0b8247d00c95.jpg",
+            "right": "Accident_Detection/Dataset/train/images/1673852356-ad6f9324ac2a7ed0b45bf3e4a9e91e11_jpg.rf.a4fc5c28b0c52c17e5fe52acfc4fac22.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/1685893296_jpg.rf.c0cd5904182e0c1e2b430977a57bf546.jpg",
+            "right": "Accident_Detection/Dataset/train/images/1685893296_jpg.rf.7098f966deb858d518df3fafcc9614a1.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/download-2024-03-28T103232-548_jpeg_jpg.rf.906e4ec42c8102c95e305680ba90c987.jpg",
+            "right": "Accident_Detection/Dataset/train/images/1692641125_jpg.rf.d0669e748834e957862797a4ecf92b4b.jpg"
+          }
+        ],
+        "cross_split_near_duplicate_pairs": 3599,
+        "exact_duplicate_groups": 339,
+        "exact_duplicate_items": 700,
+        "near_duplicate_examples": [
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/30e5f94cf83bb8c2c2a61be808997ccc-5e12f2b0def01_jpg.rf.49ded0ddd43421c807fc391f4b4d39fe.jpg",
+            "right": "Accident_Detection/Dataset/test/images/30e5f94cf83bb8c2c2a61be808997ccc-5e12f2b0def01_jpg.rf.c791fd69ccce23994be7b58c06c874c9.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/65a40832c4e8a_jpg.rf.11f01c7e8e6a599ce2a3b6c5c3eed9d8.jpg",
+            "right": "Accident_Detection/Dataset/test/images/65a40832c4e8a_jpg.rf.3d3559d05218f6bc4210b3ac455aa58f.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/GN4_DAT_7436227-jpg-motorbike_crash_in_limerick_city_jpg.rf.6bbe2e37424d2653f54186fc0adfb8ca.jpg",
+            "right": "Accident_Detection/Dataset/test/images/GN4_DAT_7436227-jpg-motorbike_crash_in_limerick_city_jpg.rf.76c1defa312206b74196495c6c84a4ff.jpg"
+          },
+          {
+            "hamming_distance": 1,
+            "left": "Accident_Detection/Dataset/test/images/1000_F_570708583_fQl0jJu9YF4wUSm3hyH1iPTkn0vuo0XJ_jpg.rf.55c355b0219fea5e8cb55039bbc81c0d.jpg",
+            "right": "Accident_Detection/Dataset/test/images/Injuries-Caused-By-a-Road-Accident-Lawyer_jpg.rf.e175e2a780f09421be5349c486303fa4.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/Japanese_car_accident_blur_jpg.rf.2b18cfd802a0a2177281b82eeef909e7.jpg",
+            "right": "Accident_Detection/Dataset/test/images/Japanese_car_accident_blur_jpg.rf.a281b5ae6398789a99b9feee80181c10.jpg"
+          },
+          {
+            "hamming_distance": 4,
+            "left": "Accident_Detection/Dataset/test/images/Collision-Tile-768x512-1-_jpg.rf.439a08eff451f9df181ef2d7736b81fb.jpg",
+            "right": "Accident_Detection/Dataset/test/images/WhattoDoAfteraDistractedDrivingAccidentinOhio_jpg.rf.3ba0fd6ffac354ce00174da92e1bfa3e.jpg"
+          },
+          {
+            "hamming_distance": 1,
+            "left": "Accident_Detection/Dataset/test/images/Bangladesh_bus_accident_jpg.rf.ac4b50e139b93147ec54dfc1f8ca5e5f.jpg",
+            "right": "Accident_Detection/Dataset/test/images/bus-accident-1_jpg.rf.92a812c37b1e7de29e48d46e05466560.jpg"
+          },
+          {
+            "hamming_distance": 2,
+            "left": "Accident_Detection/Dataset/test/images/9980eaebda532883b3a1554c54155d87_jpg.rf.73d7773033cc98bdc556b6ae91037da4.jpg",
+            "right": "Accident_Detection/Dataset/test/images/c0068989-800px-wm_jpg.rf.3d67457f2aac00ccfdf9ed8491efd111.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/c2fc4cd4-a715-48d8-b491-2ea7e55a80fa_1140x641-1-_jpg.rf.0d63f8832ac48946e719b3a6bf329d9a.jpg",
+            "right": "Accident_Detection/Dataset/test/images/c2fc4cd4-a715-48d8-b491-2ea7e55a80fa_1140x641-1-_jpg.rf.11a8eeebf1696ea809d52315ccd06803.jpg"
+          },
+          {
+            "hamming_distance": 4,
+            "left": "Accident_Detection/Dataset/test/images/Multi-Vehicle-Chain-Reaction-Crash_jpg.rf.c65735b17201e132103291545bcb1bfe.jpg",
+            "right": "Accident_Detection/Dataset/test/images/car-accident-1-e1683123283199_jpg.rf.eb595c9577f5002a310c060f2ec63ced.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/WhattoDoAfteraDistractedDrivingAccidentinOhio_jpg.rf.3ba0fd6ffac354ce00174da92e1bfa3e.jpg",
+            "right": "Accident_Detection/Dataset/test/images/cars-accident-large_jpg.rf.ca4dc339ebd7efdf0f90d9135988ef6d.jpg"
+          },
+          {
+            "hamming_distance": 4,
+            "left": "Accident_Detection/Dataset/test/images/Collision-Tile-768x512-1-_jpg.rf.439a08eff451f9df181ef2d7736b81fb.jpg",
+            "right": "Accident_Detection/Dataset/test/images/cars-accident-large_jpg.rf.ca4dc339ebd7efdf0f90d9135988ef6d.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/crash-on-the-country-road-devastating-car-accident-scene-ai-generated-free-photo-1-_jpg.rf.bb99571dba28f128172fa506716f9e09.jpg",
+            "right": "Accident_Detection/Dataset/test/images/crash-on-the-country-road-devastating-car-accident-scene-ai-generated-free-photo_jpg.rf.eb6cc34f0624a505548bb9ef0ff6f99b.jpg"
+          },
+          {
+            "hamming_distance": 2,
+            "left": "Accident_Detection/Dataset/test/images/crashed-bus-260nw-256540450_jpg.rf.60ea6d4195df503a01ee939f489efd0c.jpg",
+            "right": "Accident_Detection/Dataset/test/images/crashed-bus-600w-256540450_jpg.rf.d1c0acdaec18c58056bb59435f302e0b.jpg"
+          },
+          {
+            "hamming_distance": 3,
+            "left": "Accident_Detection/Dataset/test/images/crashed-motorcycle-after-road-accident-260nw-770436313_jpg.rf.d20a45df08a5fc488a5722db3af837ed.jpg",
+            "right": "Accident_Detection/Dataset/test/images/crashed-motorcycle-road-accident-car-city-street-crashed-motorcycle-road-accident-car-105467555_jpg.rf.273414f9f3935cbd3710af4c4d54cc4f.jpg"
+          },
+          {
+            "hamming_distance": 2,
+            "left": "Accident_Detection/Dataset/test/images/aaadc-1-_png_jpg.rf.07f7c9f9fa2c7dc29ed28c45875b2e78.jpg",
+            "right": "Accident_Detection/Dataset/test/images/download-11-_jpeg_jpg.rf.0e40a0d7cd19b0b7eea6bbc5696d3b64.jpg"
+          },
+          {
+            "hamming_distance": 3,
+            "left": "Accident_Detection/Dataset/test/images/bus-crash-1024x767_jpg.rf.d146675eb553cfdead7676a1444a9ca7.jpg",
+            "right": "Accident_Detection/Dataset/test/images/download-12-_jpeg.rf.884aca55016ca340e0e981c426e76cf8.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/132321yCXZvigoJJlnvFjrM8HUW8VPU3vHI3kfh6olujqE_jpeg.rf.48d082c792eaba139d4286e44d9623ac.jpg",
+            "right": "Accident_Detection/Dataset/test/images/download-14-_jpeg.rf.6e1c5f7785bae79f0038b09b4a2870cd.jpg"
+          },
+          {
+            "hamming_distance": 2,
+            "left": "Accident_Detection/Dataset/test/images/download-13-_jpeg.rf.ef7466c4665e6346ae4f6103de7f7667.jpg",
+            "right": "Accident_Detection/Dataset/test/images/download-14-_jpg.rf.a41321a018222c74f77e41ae86340f70.jpg"
+          },
+          {
+            "hamming_distance": 3,
+            "left": "Accident_Detection/Dataset/test/images/bus-crash-1-5909048-1652896013516_jpg.rf.3e8aed620f1d2717f73f7015d54f803c.jpg",
+            "right": "Accident_Detection/Dataset/test/images/download-18-_jpeg.rf.22dae454ef4cfd74a74bc91479d30310.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/Untitled-design-16_png.rf.ed04da00ce7d3b0660e132205b0a22fb.jpg",
+            "right": "Accident_Detection/Dataset/test/images/download-2-_jpeg.rf.6b68d50343df4fb1e2011f881d6b7ae4.jpg"
+          },
+          {
+            "hamming_distance": 1,
+            "left": "Accident_Detection/Dataset/test/images/1000_F_570708583_fQl0jJu9YF4wUSm3hyH1iPTkn0vuo0XJ_jpg.rf.55c355b0219fea5e8cb55039bbc81c0d.jpg",
+            "right": "Accident_Detection/Dataset/test/images/download-2024-03-25T014024-036_jpeg_jpg.rf.fd7cb69484c9b7a5dc0fb5dcd23bef57.jpg"
+          },
+          {
+            "hamming_distance": 2,
+            "left": "Accident_Detection/Dataset/test/images/Injuries-Caused-By-a-Road-Accident-Lawyer_jpg.rf.e175e2a780f09421be5349c486303fa4.jpg",
+            "right": "Accident_Detection/Dataset/test/images/download-2024-03-25T014024-036_jpeg_jpg.rf.fd7cb69484c9b7a5dc0fb5dcd23bef57.jpg"
+          },
+          {
+            "hamming_distance": 1,
+            "left": "Accident_Detection/Dataset/test/images/car-crash-accident-on-street-260nw-250536799_jpg.rf.807f5edb80c26dedb8802dd6f6bec298.jpg",
+            "right": "Accident_Detection/Dataset/test/images/download-2024-03-25T215410-609_jpeg.rf.947c2ac1c21c32c50c33ed0707e4871e.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "Accident_Detection/Dataset/test/images/bdnews24-english_2022-11_96718d0c-f360-4be1-8d23-6a7ee635139a_gopalganj_accident_280322_01_jpg.rf.a210282f23646ddc8de78e03e786c4f1.jpg",
+            "right": "Accident_Detection/Dataset/test/images/download-2024-03-30T122622-965_jpeg_jpg.rf.0ebddaae4c989699869369d67aeeb7ae.jpg"
+          }
+        ],
+        "near_duplicate_threshold_hamming_bits": 4,
+        "non_exact_near_duplicate_pairs": 7772,
+        "source_groups": 4060,
+        "source_groups_in_multiple_publisher_splits": 658
+      },
+      "formats": {
+        "JPEG": 9002
+      },
+      "grouping": {
+        "base_source_groups": 6549,
+        "conservative_leakage_groups": 4060,
+        "exact_duplicate_merge_edges": 361,
+        "near_duplicate_merge_edges": 7772
+      },
+      "image_files": 9002,
+      "label_files": 9002,
+      "maximum_height": 640,
+      "maximum_width": 640,
+      "minimum_height": 512,
+      "minimum_width": 512,
+      "orphan_label_files": 2,
+      "publisher_annotated_technical_candidates": 8853,
+      "publisher_split_image_counts": {
+        "test": 893,
+        "train": 6308,
+        "validation": 1801
+      },
+      "publisher_split_label_file_counts": {
+        "test": 893,
+        "train": 6308,
+        "validation": 1801
+      },
+      "readable_images": 9002,
+      "rights_approved_accident_images": 0,
+      "semantically_reviewed_accident_images": 0,
+      "training_blockers": [
+        "Underlying images were discovered through Google image searches; per-image copyright provenance is not established by the record-level CC BY 4.0 declaration.",
+        "Publisher accident boxes are candidate evidence, not an IRIS semantic review of every still image.",
+        "Publisher train/validation/test partitions are not accepted until source grouping and duplicate leakage are resolved."
+      ],
+      "unreadable_images": 0
+    },
+    {
+      "annotation_file_counts": {
+        ".json": 2226,
+        ".txt": 2227,
+        ".xml": 2941
+      },
+      "annotation_parse_failures": {
+        ".txt": 1
+      },
+      "archive_bytes": 10701624652,
+      "archive_content_matches_inventory_hash_multiset": true,
+      "archive_entries": 10245,
+      "archive_path": "C:/Users/DELL/Desktop/IRIS/datasets/raw/classification/dats_2022/v2/DATS_2022.zip",
+      "archive_sha256": "f4ffe186ea9d9c72e2f141e76c285b6b8740b0f4de672e58330b8a80ae36629f",
+      "candidate_normal_images_pending_semantic_review": 2850,
+      "dataset_id": "dats-2022-mendeley",
+      "dataset_version": "mendeley-v2-doi-10.17632/nfc34n8svj.2",
+      "duplicate_analysis": {
+        "cross_split_exact_duplicate_groups": 0,
+        "cross_split_near_duplicate_examples": [],
+        "cross_split_near_duplicate_pairs": 0,
+        "exact_duplicate_groups": 46,
+        "exact_duplicate_items": 92,
+        "near_duplicate_examples": [
+          {
+            "hamming_distance": 0,
+            "left": "DATS_2022/Images and XML files/D_232.png",
+            "right": "DATS_2022/Images and XML files/D_234.png"
+          },
+          {
+            "hamming_distance": 4,
+            "left": "DATS_2022/Images and XML files/E_243.png",
+            "right": "DATS_2022/Images and XML files/E_3.png"
+          },
+          {
+            "hamming_distance": 4,
+            "left": "DATS_2022/Images with Annotations/Images/1634020997309.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1634020997316.jpg"
+          },
+          {
+            "hamming_distance": 3,
+            "left": "DATS_2022/Images with Annotations/Images/1635137342409.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635137342414.jpg"
+          },
+          {
+            "hamming_distance": 3,
+            "left": "DATS_2022/Images with Annotations/Images/1635137342409.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635137342427.jpg"
+          },
+          {
+            "hamming_distance": 3,
+            "left": "DATS_2022/Images with Annotations/Images/1635137342409.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635137342432.jpg"
+          },
+          {
+            "hamming_distance": 4,
+            "left": "DATS_2022/Images with Annotations/Images/1635137342427.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635137342432.jpg"
+          },
+          {
+            "hamming_distance": 4,
+            "left": "DATS_2022/Images with Annotations/Images/1635137342404.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635137342436.jpg"
+          },
+          {
+            "hamming_distance": 4,
+            "left": "DATS_2022/Images with Annotations/Images/1635137342447.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635137342458.jpg"
+          },
+          {
+            "hamming_distance": 4,
+            "left": "DATS_2022/Images with Annotations/Images/1635137342443.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635137342468.jpg"
+          },
+          {
+            "hamming_distance": 3,
+            "left": "DATS_2022/Images with Annotations/Images/1635137342504.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635137342507.jpg"
+          },
+          {
+            "hamming_distance": 3,
+            "left": "DATS_2022/Images with Annotations/Images/1635137342504.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635137342511.jpg"
+          },
+          {
+            "hamming_distance": 4,
+            "left": "DATS_2022/Images with Annotations/Images/1635137342507.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635137342511.jpg"
+          },
+          {
+            "hamming_distance": 4,
+            "left": "DATS_2022/Images with Annotations/Images/1635137342504.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635137342514.jpg"
+          },
+          {
+            "hamming_distance": 4,
+            "left": "DATS_2022/Images with Annotations/Images/1635137342504.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635137342519.jpg"
+          },
+          {
+            "hamming_distance": 4,
+            "left": "DATS_2022/Images with Annotations/Images/1635137342514.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635137342519.jpg"
+          },
+          {
+            "hamming_distance": 3,
+            "left": "DATS_2022/Images with Annotations/Images/1635137342504.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635137342522.jpg"
+          },
+          {
+            "hamming_distance": 4,
+            "left": "DATS_2022/Images with Annotations/Images/1635137342511.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635137342522.jpg"
+          },
+          {
+            "hamming_distance": 3,
+            "left": "DATS_2022/Images with Annotations/Images/1635137342514.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635137342522.jpg"
+          },
+          {
+            "hamming_distance": 3,
+            "left": "DATS_2022/Images with Annotations/Images/1635137342519.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635137342522.jpg"
+          },
+          {
+            "hamming_distance": 3,
+            "left": "DATS_2022/Images with Annotations/Images/1635138945108.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635138945121.jpg"
+          },
+          {
+            "hamming_distance": 4,
+            "left": "DATS_2022/Images with Annotations/Images/1635138945121.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635138945128.jpg"
+          },
+          {
+            "hamming_distance": 3,
+            "left": "DATS_2022/Images with Annotations/Images/1635138945099.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635138945172.jpg"
+          },
+          {
+            "hamming_distance": 0,
+            "left": "DATS_2022/Images with Annotations/Images/1635138945172.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635138945179.jpg"
+          },
+          {
+            "hamming_distance": 3,
+            "left": "DATS_2022/Images with Annotations/Images/1635138945099.jpg",
+            "right": "DATS_2022/Images with Annotations/Images/1635138945179.jpg"
+          }
+        ],
+        "near_duplicate_threshold_hamming_bits": 4,
+        "non_exact_near_duplicate_pairs": 166,
+        "source_groups": 30,
+        "source_groups_in_multiple_publisher_splits": 0
+      },
+      "formats": {
+        "JPEG": 2845,
+        "PNG": 5
+      },
+      "group_basis_counts": {
+        "camera_timestamp_filename_grouped_conservatively_by_capture_day": 3,
+        "camera_timestamp_filename_grouped_conservatively_by_capture_day;epoch_millisecond_filename_grouped_conservatively_by_utc_day;merged_by_sequence_or_duplicate_leakage_guard": 422,
+        "camera_timestamp_filename_grouped_conservatively_by_capture_day;merged_by_sequence_or_duplicate_leakage_guard": 931,
+        "directory_only_sequence_identity_unresolved;numbered_filename_family;merged_by_sequence_or_duplicate_leakage_guard": 447,
+        "directory_only_sequence_identity_unresolved;publisher_d_series_without_recoverable_sequence_identity;merged_by_sequence_or_duplicate_leakage_guard": 802,
+        "epoch_millisecond_filename_grouped_conservatively_by_utc_day;merged_by_sequence_or_duplicate_leakage_guard": 103,
+        "epoch_millisecond_filename_grouped_conservatively_by_utc_day;numbered_filename_family;merged_by_sequence_or_duplicate_leakage_guard": 142
+      },
+      "grouping": {
+        "base_source_groups": 38,
+        "conservative_leakage_groups": 30,
+        "exact_duplicate_merge_edges": 46,
+        "near_duplicate_merge_edges": 166
+      },
+      "image_files": 2850,
+      "maximum_height": 4624,
+      "maximum_width": 4624,
+      "member_suffix_counts": {
+        ".jpeg": 10,
+        ".jpg": 1657,
+        ".json": 2226,
+        ".lnk": 1,
+        ".png": 1183,
+        ".txt": 2227,
+        ".xml": 2941
+      },
+      "minimum_height": 528,
+      "minimum_width": 448,
+      "missing_inventory_file_instances": 0,
+      "object_detection_class_names_by_format": {
+        ".json": [
+          "Ambulance",
+          "Barricade",
+          "Bike",
+          "Board",
+          "Bridge",
+          "Building",
+          "Bus",
+          "Bus Stop",
+          "Bus stop",
+          "Camel",
+          "Car",
+          "Cart",
+          "Cattle",
+          "Crane",
+          "Cycle",
+          "Digital Display",
+          "Dog",
+          "Electricity Pole",
+          "Flag",
+          "Footpath",
+          "Gate",
+          "Goat",
+          "Horse",
+          "Lamo Post",
+          "Lamp Post",
+          "Manhole",
+          "Overbridge",
+          "Person",
+          "Petrol Pump",
+          "Rikshaw",
+          "Road Divider",
+          "Sign Board",
+          "Tempo",
+          "Tractor",
+          "Traffic POlice",
+          "Traffic Police",
+          "Traffic Sign Board",
+          "Traffic Signal",
+          "Tree",
+          "Truck",
+          "Tyre Works",
+          "Vegetation",
+          "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+          "Wall",
+          "Zebra Crossing",
+          "person"
+        ],
+        ".txt": [],
+        ".xml": [
+          "Ambulance",
+          "Barricade",
+          "Bike",
+          "Board",
+          "Bridge",
+          "Building",
+          "Bullock Cart",
+          "Bus",
+          "Bus Stop",
+          "Bus stop",
+          "Camel",
+          "Car",
+          "Cart",
+          "Cattle",
+          "Crane",
+          "Cycle",
+          "Digital Display",
+          "Dog",
+          "Electricity Pole",
+          "Flag",
+          "Footpath",
+          "Fuel Station",
+          "Garbage Bin",
+          "Gate",
+          "Goat",
+          "Hawker",
+          "Hoarding",
+          "Horse",
+          "Island Stucture",
+          "Lamo Post",
+          "Lamp Post",
+          "Manhole",
+          "Metro Station",
+          "Milestone",
+          "Overbridge",
+          "Pedestrian Bridge",
+          "Person",
+          "Petrol Pump",
+          "Rikshaw",
+          "Road",
+          "Road Divider",
+          "Road Roller",
+          "Road Sign Board",
+          "Sign Board",
+          "Signal",
+          "Stall",
+          "Temple",
+          "Tempo",
+          "Tractor",
+          "Traffic POlice",
+          "Traffic Police",
+          "Traffic Sign Board",
+          "Traffic Signal",
+          "Train",
+          "Tree",
+          "Truck",
+          "Tyre Works",
+          "Vegetation",
+          "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW",
+          "Wa",
+          "Wall",
+          "Water",
+          "Zebra Crossing",
+          "person"
+        ]
+      },
+      "official_inventory_bytes": 10737310801,
+      "official_inventory_files": 10245,
+      "readable_images": 2850,
+      "semantically_reviewed_non_accident_images": 0,
+      "training_blockers": [
+        "DATS_2022 object annotations do not establish the non_accident label.",
+        "Every candidate still requires IRIS semantic review; ambiguous and transition imagery must be excluded.",
+        "Original video sequence identity is only partially recoverable from filenames, so conservative groups and near-duplicate review are required before splitting."
+      ],
+      "unexpected_archive_file_instances": 0,
+      "unreadable_images": 0
+    }
+  ],
+  "training_eligibility_reason": "No item has completed required semantic review and the accident source still requires underlying-image rights review.",
+  "training_eligible": false
+}

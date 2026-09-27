@@ -21,6 +21,13 @@ from .manifest import (
     load_source_registry,
     write_manifest,
 )
+from .mendeley import (
+    SourceInspectionError,
+    apply_review_batch,
+    create_review_batch,
+    inspect_mendeley_sources,
+    validate_review_inventory,
+)
 from .reporting import build_report, format_report
 from .splitting import assign_group_splits, load_split_policy
 from .validation import validate_dataset
@@ -49,6 +56,27 @@ DEFAULT_VISIBLE_WINDOWS = (
 DEFAULT_NORMAL_WINDOWS = (
     REPOSITORY_ROOT
     / "datasets/manifests/classification/dota_normal_windows.v1.csv"
+)
+DEFAULT_ACCIDENT_ARCHIVE = (
+    REPOSITORY_ROOT
+    / "datasets/raw/classification/accident_detection_9k/v2/Accident_Detection.zip"
+)
+DEFAULT_DATS_ARCHIVE = (
+    REPOSITORY_ROOT / "datasets/raw/classification/dats_2022/v2/DATS_2022.zip"
+)
+DEFAULT_DATS_INVENTORY = (
+    REPOSITORY_ROOT / "datasets/raw/classification/dats_2022/v2/inventory"
+)
+DEFAULT_ACCIDENT_REVIEW = (
+    REPOSITORY_ROOT
+    / "datasets/manifests/classification/accident_detection_9k_review.v1.csv"
+)
+DEFAULT_DATS_REVIEW = (
+    REPOSITORY_ROOT / "datasets/manifests/classification/dats_2022_review.v1.csv"
+)
+DEFAULT_MENDELEY_INSPECTION = (
+    REPOSITORY_ROOT
+    / "datasets/manifests/classification/mendeley_source_inspection.v1.json"
 )
 
 
@@ -182,6 +210,44 @@ def _inspect_dota_command(args: argparse.Namespace) -> int:
     return 1 if inspection.errors else 0
 
 
+def _inspect_mendeley_command(args: argparse.Namespace) -> int:
+    result = inspect_mendeley_sources(
+        accident_archive=args.accident_archive,
+        dats_archive=args.dats_archive,
+        dats_inventory_root=args.dats_inventory,
+        accident_review_output=args.accident_review_output,
+        dats_review_output=args.dats_review_output,
+        report_output=args.report_output,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _create_review_batch_command(args: argparse.Namespace) -> int:
+    result = create_review_batch(
+        archive_path=args.archive,
+        review_inventory_path=args.review_inventory,
+        output_root=args.output_root,
+        source_dataset_id=args.source_dataset_id,
+        start=args.start,
+        limit=args.limit,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _apply_review_batch_command(args: argparse.Namespace) -> int:
+    result = apply_review_batch(args.review_inventory, args.batch)
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _validate_reviews_command(args: argparse.Namespace) -> int:
+    result = validate_review_inventory(args.review_inventory)
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 1 if result["validation_errors"] else 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="IRIS classification dataset preparation tools"
@@ -229,6 +295,55 @@ def build_parser() -> argparse.ArgumentParser:
     inspect_parser.add_argument("--frames-root", type=Path)
     inspect_parser.add_argument("--json", action="store_true")
     inspect_parser.set_defaults(handler=_inspect_dota_command)
+
+    mendeley_parser = subparsers.add_parser("inspect-mendeley")
+    mendeley_parser.add_argument(
+        "--accident-archive", type=Path, default=DEFAULT_ACCIDENT_ARCHIVE
+    )
+    mendeley_parser.add_argument(
+        "--dats-archive", type=Path, default=DEFAULT_DATS_ARCHIVE
+    )
+    mendeley_parser.add_argument(
+        "--dats-inventory", type=Path, default=DEFAULT_DATS_INVENTORY
+    )
+    mendeley_parser.add_argument(
+        "--accident-review-output", type=Path, default=DEFAULT_ACCIDENT_REVIEW
+    )
+    mendeley_parser.add_argument(
+        "--dats-review-output", type=Path, default=DEFAULT_DATS_REVIEW
+    )
+    mendeley_parser.add_argument(
+        "--report-output", type=Path, default=DEFAULT_MENDELEY_INSPECTION
+    )
+    mendeley_parser.set_defaults(handler=_inspect_mendeley_command)
+
+    review_batch_parser = subparsers.add_parser("create-review-batch")
+    review_batch_parser.add_argument(
+        "--archive", type=Path, default=DEFAULT_DATS_ARCHIVE
+    )
+    review_batch_parser.add_argument(
+        "--review-inventory", type=Path, default=DEFAULT_DATS_REVIEW
+    )
+    review_batch_parser.add_argument(
+        "--source-dataset-id", default="dats-2022-mendeley"
+    )
+    review_batch_parser.add_argument("--output-root", type=Path, required=True)
+    review_batch_parser.add_argument("--start", type=int, default=0)
+    review_batch_parser.add_argument("--limit", type=int, default=100)
+    review_batch_parser.set_defaults(handler=_create_review_batch_command)
+
+    apply_review_parser = subparsers.add_parser("apply-review-batch")
+    apply_review_parser.add_argument(
+        "--review-inventory", type=Path, default=DEFAULT_DATS_REVIEW
+    )
+    apply_review_parser.add_argument("--batch", type=Path, required=True)
+    apply_review_parser.set_defaults(handler=_apply_review_batch_command)
+
+    validate_review_parser = subparsers.add_parser("validate-reviews")
+    validate_review_parser.add_argument(
+        "--review-inventory", type=Path, default=DEFAULT_DATS_REVIEW
+    )
+    validate_review_parser.set_defaults(handler=_validate_reviews_command)
     return parser
 
 
@@ -237,7 +352,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         return args.handler(args)
-    except (DatasetConfigurationError, ImageDependencyError) as error:
+    except (
+        DatasetConfigurationError,
+        ImageDependencyError,
+        SourceInspectionError,
+    ) as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 2
 

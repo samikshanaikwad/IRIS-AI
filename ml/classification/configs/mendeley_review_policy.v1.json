@@ -1,0 +1,47 @@
+{
+  "policy_version": "iris-mendeley-classification-review-v1",
+  "label_contract": {
+    "accident": "The still image itself visibly shows a road crash, collision, rollover, or clearly accident-damaged road-vehicle context.",
+    "non_accident": "The still image is a genuine road or traffic scene with no visible accident evidence.",
+    "exclude": [
+      "ambiguous accident status",
+      "near miss without visible collision",
+      "irrelevant or non-road imagery",
+      "corrupt or unreadable image",
+      "annotation mistake",
+      "uncertain transition imagery"
+    ]
+  },
+  "accident_detection_9k": {
+    "source_dataset_id": "accident-detection-9k-mendeley",
+    "publisher_annotation_requirement": "At least one valid YOLO class-0 Accident bounding box.",
+    "human_semantic_review_required": true,
+    "underlying_image_rights_approval_required": true,
+    "publisher_split_is_authoritative": false,
+    "source_group_basis": "Filename before the Roboflow .rf. augmentation identifier; exact and near-duplicate relationships may merge groups further."
+  },
+  "dats_2022": {
+    "source_dataset_id": "dats-2022-mendeley",
+    "automatic_non_accident_labelling": false,
+    "human_semantic_review_required": true,
+    "object_detection_annotations_are_label_evidence": false,
+    "sequence_group_review_required": true,
+    "sequence_grouping_rule": "Use recoverable capture-date/timestamp families conservatively, merge exact and near-duplicate components, and leave unresolved families unsplit until reviewed."
+  },
+  "duplicate_policy": {
+    "exact_identity": "SHA-256 over complete source image bytes",
+    "near_duplicate_hash": "64-bit grayscale horizontal dHash",
+    "near_duplicate_hamming_threshold": 4,
+    "cross_split_exact_duplicates_allowed": false,
+    "cross_split_near_duplicates_allowed_without_review": false
+  },
+  "manifest_gate": {
+    "pending_review_rows_are_manifest_eligible": false,
+    "rights_review_required_rows_are_manifest_eligible": false,
+    "ambiguous_rows_are_manifest_eligible": false,
+    "approved_labels": [
+      "accident",
+      "non_accident"
+    ]
+  }
+}

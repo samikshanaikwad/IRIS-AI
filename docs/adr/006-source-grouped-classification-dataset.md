@@ -34,6 +34,22 @@ Source use and extraction are blocked while dataset-content and derived-frame
 permissions remain `REVIEW_REQUIRED`. The code repository's MIT license is
 recorded separately and does not approve dataset content.
 
+The acquired Mendeley sources follow the same separation between acquisition,
+technical inspection, rights, semantic review, and manifest admission.
+AccidentDetection-9k's publisher split is rejected because exact and near
+duplicates cross its boundaries. Its record-level CC BY 4.0 declaration is
+recorded, while images sourced through Google image search remain blocked for
+underlying-rights review. DATS_2022's CC BY 4.0 record permits candidate use,
+but its object annotations do not establish `non_accident`; all candidates
+remain pending human visual review.
+
+Where DATS filename timestamps expose temporal affinity, images are grouped by
+capture day. Unresolved D-series and directory families remain together.
+Exact/dHash-near components and cross-source candidates are merged into
+conservative leakage groups before any future split. Review inventories are
+version-controlled metadata; raw archives and visual-review batches remain
+Git-ignored. Inspection never adds rows to the production manifest.
+
 ## Alternatives considered
 
 - Randomly split extracted frames: rejected because adjacent frames and clips
@@ -43,6 +59,10 @@ recorded separately and does not approve dataset content.
   visible.
 - Treat every sufficiently early frame as non-accident without review:
   rejected because time alone does not prove what a still image depicts.
+- Treat all DATS road images as non-accident: rejected because its annotations
+  describe objects, not the absence of an accident.
+- Trust the AccidentDetection publisher split: rejected because inspection
+  found extensive exact and perceptual duplicate leakage across its splits.
 - Use a repository software license as content permission: rejected because
   code and dataset rights are distinct.
 - Seed synthetic or scraped images to exercise the pipeline: rejected by the
@@ -50,8 +70,9 @@ recorded separately and does not approve dataset content.
 
 ## Consequences
 
-- Real acquisition and legal review remain blockers; no model can yet be
-  trained.
+- Candidate acquisition is complete for the two Mendeley sources, but semantic
+  review and AccidentDetection underlying-image rights remain blockers; no
+  model can yet be trained.
 - Human semantic review is required but prevents automatic ambiguous labels.
 - Group-level splitting may deviate from exact image-count ratios.
 - Dataset integrity and leakage checks are deterministic and reproducible.

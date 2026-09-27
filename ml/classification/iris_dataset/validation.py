@@ -167,7 +167,7 @@ def validate_dataset(
             ValidationIssue(
                 "INFO",
                 "EMPTY_DATASET",
-                "No real classification dataset items are present",
+                "No real classification dataset items are present in the manifest",
             )
         )
 

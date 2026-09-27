@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -30,6 +31,13 @@ def sha256_file(path: Path) -> str:
 
 
 def probe_image(path: Path) -> ImageProbe:
+    with path.open("rb") as handle:
+        return probe_image_bytes(handle.read())
+
+
+def probe_image_bytes(data: bytes) -> ImageProbe:
+    """Fully decode image bytes and calculate the canonical 64-bit dHash."""
+
     try:
         from PIL import Image, UnidentifiedImageError
     except ImportError as error:
@@ -39,13 +47,13 @@ def probe_image(path: Path) -> ImageProbe:
         ) from error
 
     try:
-        with Image.open(path) as image:
+        with Image.open(io.BytesIO(data)) as image:
             image_format = (image.format or "").upper()
             width, height = image.size
             image.verify()
         if image_format not in {"JPEG", "PNG"}:
             raise ImageDecodeError(f"Unsupported decoded image format: {image_format}")
-        with Image.open(path) as image:
+        with Image.open(io.BytesIO(data)) as image:
             image.load()
             grayscale = image.convert("L").resize((9, 8), Image.Resampling.LANCZOS)
             pixels = list(grayscale.getdata())

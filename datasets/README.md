@@ -14,8 +14,11 @@ datasets/
 ```
 
 Only documentation and `.gitkeep` files under `raw/` and `derived/` are
-tracked. The current classification manifest contains its header only: no real
-dataset has been acquired, derived, or approved for training.
+tracked. Official AccidentDetection-9k and DATS_2022 candidate archives are
+present only in ignored raw storage. Their tracked review inventories contain
+real hashes and metadata, but all decisions are pending. The current
+classification manifest therefore contains its header only: no item has been
+approved for training.
 
 The source registry is the authority for dataset provenance and usage status.
 A repository code license must never be treated as a dataset-content license.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import unittest
 from collections import Counter
 from pathlib import Path
@@ -21,6 +22,42 @@ class VersionControlledConfigurationTest(unittest.TestCase):
         self.assertIsNone(source["dataset_content_license"])
         self.assertEqual(source["usage_status"], "REVIEW_REQUIRED")
         self.assertEqual(source["derived_data_status"], "REVIEW_REQUIRED")
+
+    def test_mendeley_sources_record_rights_and_semantic_limits(self) -> None:
+        registry = load_source_registry(MANIFEST_ROOT / "source_registry.v1.json")
+        accident = registry["accident-detection-9k-mendeley"]
+        dats = registry["dats-2022-mendeley"]
+
+        self.assertEqual(accident["doi"], "10.17632/4x5my8gbcs.2")
+        self.assertEqual(
+            accident["dataset_content_license"].split()[0:3],
+            ["CC", "BY", "4.0"],
+        )
+        self.assertEqual(accident["usage_status"], "REVIEW_REQUIRED")
+        self.assertTrue(
+            any("Google image searches" in note for note in accident["notes"])
+        )
+        self.assertFalse(accident["interactive_authentication_required"])
+
+        self.assertEqual(dats["doi"], "10.17632/nfc34n8svj.2")
+        self.assertEqual(dats["dataset_content_license"], "CC BY 4.0")
+        self.assertEqual(dats["usage_status"], "APPROVED")
+        self.assertIsNotNone(dats["data_acquired_at"])
+        self.assertEqual(
+            dats["downloaded_artifact_checksums"]["DATS_2022.zip"],
+            "f4ffe186ea9d9c72e2f141e76c285b6b8740b0f4de672e58330b8a80ae36629f",
+        )
+        self.assertTrue(
+            any("no image is automatically" in note for note in dats["notes"])
+        )
+        self.assertEqual(
+            sum(item["file_count"] for item in dats["public_file_inventory"]),
+            10245,
+        )
+        self.assertEqual(
+            sum(item["total_bytes"] for item in dats["public_file_inventory"]),
+            10737310801,
+        )
 
     def test_dota_category_policy_covers_observed_id_viewpoint_pairs(self) -> None:
         policy = load_category_policy(CONFIG_ROOT / "dota_category_policy.v1.json")
@@ -71,6 +108,28 @@ class VersionControlledConfigurationTest(unittest.TestCase):
             policy["targets"], {"train": 0.70, "validation": 0.15, "test": 0.15}
         )
         self.assertTrue(policy["preserve_external_test"])
+
+    def test_mendeley_review_policy_never_auto_labels_candidates(self) -> None:
+        policy = json.loads(
+            (CONFIG_ROOT / "mendeley_review_policy.v1.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertFalse(policy["dats_2022"]["automatic_non_accident_labelling"])
+        self.assertTrue(
+            policy["accident_detection_9k"]["human_semantic_review_required"]
+        )
+        self.assertTrue(
+            policy["accident_detection_9k"][
+                "underlying_image_rights_approval_required"
+            ]
+        )
+        self.assertFalse(
+            policy["manifest_gate"]["pending_review_rows_are_manifest_eligible"]
+        )
+        self.assertEqual(
+            policy["duplicate_policy"]["near_duplicate_hamming_threshold"], 4
+        )
 
 
 if __name__ == "__main__":

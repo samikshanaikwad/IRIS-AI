@@ -6,8 +6,10 @@ not used by the Flutter application.
 
 ## Environment
 
-Python 3.10 is the validated local interpreter. Use a project-local virtual
-environment and the single pinned image dependency:
+The reproducible project environment targets Python 3.10 with the single
+pinned image dependency below. The 2026-09-27 acquisition checkpoint was also
+validated with Python 3.13.7 and Pillow 11.1.0; use the pinned environment for
+future repeatable runs:
 
 ```powershell
 py -3.10 -m venv ml\classification\.venv
@@ -29,8 +31,31 @@ py -3.10 ml\classification\scripts\dataset_tool.py report
 ```
 
 The empty real manifest is expected to validate with zero errors but is not
-training-eligible. `report` must show zero real items until legitimate data is
-acquired and derived.
+training-eligible. AccidentDetection-9k and DATS_2022 candidate archives have
+been acquired into ignored local storage, but every candidate remains pending
+semantic review and no item has been promoted to the manifest. `report` must
+therefore continue to show zero manifest items.
+
+Inspect both official Mendeley archives, regenerate candidate inventories while
+preserving source-matched decisions, and validate each inventory:
+
+```powershell
+py -3.10 ml\classification\scripts\dataset_tool.py inspect-mendeley
+py -3.10 ml\classification\scripts\dataset_tool.py validate-reviews --review-inventory datasets\manifests\classification\accident_detection_9k_review.v1.csv
+py -3.10 ml\classification\scripts\dataset_tool.py validate-reviews --review-inventory datasets\manifests\classification\dats_2022_review.v1.csv
+```
+
+To review a bounded DATS batch, extract it under ignored raw storage, enter only
+real visual decisions in `review_batch.csv`, and apply it:
+
+```powershell
+py -3.10 ml\classification\scripts\dataset_tool.py create-review-batch --output-root datasets\raw\classification\review_batches\dats-v2-0000 --start 0 --limit 100
+py -3.10 ml\classification\scripts\dataset_tool.py apply-review-batch --batch datasets\raw\classification\review_batches\dats-v2-0000\review_batch.csv
+py -3.10 ml\classification\scripts\dataset_tool.py validate-reviews
+```
+
+The review tool never auto-labels DATS as `non_accident` or treats an
+AccidentDetection box as a completed IRIS semantic review.
 
 Inspect downloaded official DoTA metadata and, optionally, the frame tree:
 
