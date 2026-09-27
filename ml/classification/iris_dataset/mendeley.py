@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import html
 import json
 import re
 import xml.etree.ElementTree as element_tree
@@ -321,6 +322,37 @@ def validate_review_inventory(path: Path) -> dict[str, Any]:
     return validate_review_rows(load_review_inventory(path))
 
 
+def _write_review_contact_sheet(
+    output_root: Path, batch_rows: list[dict[str, str]]
+) -> Path:
+    """Write an ignored, decision-free visual index for a human review batch."""
+    cards = "\n".join(
+        "<article>"
+        f"<a href=\"{html.escape(row['review_file'], quote=True)}\">"
+        f"<img src=\"{html.escape(row['review_file'], quote=True)}\" "
+        f"alt=\"{html.escape(row['source_item'], quote=True)}\"></a>"
+        f"<p><code>{html.escape(row['source_item'])}</code></p>"
+        f"<p>SHA-256: <code>{html.escape(row['sha256'])}</code></p>"
+        "<p>Decision: pending — edit review_batch.csv only after visual review.</p>"
+        "</article>"
+        for row in batch_rows
+    )
+    document = f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>IRIS DATS review batch</title>
+<style>body{{background:#0b0f14;color:#f2f5f7;font-family:sans-serif;margin:24px}}
+main{{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}}
+article{{border:1px solid #26313d;border-radius:12px;padding:12px;background:#151d26}}
+img{{display:block;width:100%;height:180px;object-fit:contain;background:#111820}}
+p{{overflow-wrap:anywhere;font-size:12px}}code{{color:#a8b3bf}}</style></head>
+<body><h1>IRIS DATS visual review batch</h1>
+<p>This generated index records no semantic decision. Record only observed decisions in review_batch.csv.</p>
+<main>{cards}</main></body></html>
+"""
+    path = output_root / "review_sheet.html"
+    path.write_text(document, encoding="utf-8")
+    return path
+
+
 def create_review_batch(
     archive_path: Path,
     review_inventory_path: Path,
@@ -387,11 +419,13 @@ def create_review_batch(
         )
         writer.writeheader()
         writer.writerows(batch_rows)
+    contact_sheet_path = _write_review_contact_sheet(output_root, batch_rows)
     return {
         "available_pending_rows": len(rows),
         "batch_start": start,
         "batch_items": len(batch_rows),
         "batch_path": batch_path.as_posix(),
+        "contact_sheet_path": contact_sheet_path.as_posix(),
     }
 
 

@@ -78,9 +78,18 @@ class VersionControlledConfigurationTest(unittest.TestCase):
             any("near-misses" in note for note in nexar["notes"])
         )
 
-        self.assertEqual(tumtraf["dataset_content_license"], "CC BY-NC-SA 4.0")
-        self.assertEqual(tumtraf["usage_status"], "APPROVED")
-        self.assertEqual(tumtraf["redistribution_status"], "RESTRICTED")
+        self.assertTrue(
+            tumtraf["dataset_content_license"].startswith(
+                "CONFLICT_REQUIRES_CONFIRMATION:"
+            )
+        )
+        self.assertEqual(tumtraf["usage_status"], "REVIEW_REQUIRED")
+        self.assertEqual(tumtraf["derived_data_status"], "REVIEW_REQUIRED")
+        self.assertFalse(tumtraf["interactive_authentication_required"])
+        self.assertEqual(
+            sum(item["total_bytes"] for item in tumtraf["public_file_inventory"]),
+            46587516755,
+        )
         self.assertTrue(
             any("first-party academic project" in note for note in tumtraf["notes"])
         )

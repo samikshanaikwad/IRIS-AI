@@ -34,7 +34,7 @@ All source records, terms, and access state below were inspected on
 
 | Candidate | Authoritative source and publisher | Media / scale / grouping | Content rights and downstream status | Still-image suitability | IRIS status |
 | --- | --- | --- | --- | --- | --- |
-| **TUM Traffic Accid3nD (TUMTraf-Accid3nD)** | [Official TUM project](https://accident-dataset.github.io/), Zimmer et al.; [paper](https://arxiv.org/abs/2503.12095) | First-party roadside camera/LiDAR collection at the A9 Digital Test Field, Munich. Project reports 111,945 labeled frames, four cameras plus LiDAR at 25 Hz, 2,634,233 labels, and OpenLABEL. The site does not state an archive byte size. Sequences/events and multi-camera views must be indivisible groups after acquisition. | The project explicitly states **CC BY-NC-SA 4.0** for the dataset. It permits sharing and adaptation with attribution, non-commercial use, and ShareAlike. Local derived stills are permitted under those conditions. Source/derived-media redistribution is restricted by NC/SA obligations. The project does not separately state trained-model distribution terms; obtain licence-compliance review before distributing such a model. The development kit's MIT license applies to code only. | Strong positive provenance: project-recorded real collisions, rollovers, and fires. Frames need human selection because pre-event/transition frames do not establish a visible accident; possible negatives require separate review. | **QUALIFIED_WITH_RESTRICTIONS** |
+| **TUM Traffic Accid3nD (TUMTraf-Accid3nD)** | [Official TUM project](https://accident-dataset.github.io/), Zimmer et al.; [paper](https://arxiv.org/abs/2503.12095) | First-party roadside camera/LiDAR collection at the A9 Digital Test Field, Munich. Project reports 111,945 labeled frames, four cameras plus LiDAR at 25 Hz, 2,634,233 labels, and OpenLABEL. Official WebDAV metadata lists five ZIP archives totaling 46,587,516,755 bytes. Sequences/events and multi-camera views must be indivisible groups after acquisition. | The source-specific project page says **CC BY-NC-SA 4.0**, but the official generic TUMTraf development-kit README says **CC BY-NC-ND 4.0**. That conflict is material: IRIS does not infer derived-still, training, redistribution, or model-release permission until TUM confirms the terms governing Accid3nD. The development kit's MIT license applies to code only. | Strong positive provenance: project-recorded real collisions, rollovers, and fires. Frames need human selection because pre-event/transition frames do not establish a visible accident; possible negatives require separate review. | **REVIEW_REQUIRED** |
 | **Nexar Collision Prediction Dataset** | [Official Nexar Hugging Face record](https://huggingface.co/datasets/nexar-ai/nexar_collision_prediction), Nexar Inc.; [dataset paper](https://arxiv.org/abs/2503.03848); [dataset license](https://huggingface.co/datasets/nexar-ai/nexar_collision_prediction/blob/main/LICENSE) | Nexar dashcam video: 1,500 1280x720, 30 fps videos, typically about 40 seconds; official repository reports 31.4 GB. Half are event-positive and half regular driving. One video ID must be one split group; frames may not be randomly split. | Copyright 2025 Nexar Inc. The Nexar Open Data License explicitly permits use, copying, modification, and distribution with required attribution/notices; it prohibits resale/profit redistribution and imposes ethical/privacy restrictions. Access is gated: an account must agree to share contact information and accept the terms. The license does not expressly address trained-model distribution, so that remains a release review item. | Useful positives only after visual selection: the source treats actual collisions **and near-misses/imminent collisions** as positive. IRIS excludes the latter from `accident`. Regular-driving videos are negative candidates only after individual-frame review. | **QUALIFIED_WITH_RESTRICTIONS** |
 | **DADA-2000 / DADA** | [Official author repository](https://github.com/JWFangit/LOTVS-DADA); Fang et al., [paper](https://arxiv.org/abs/1912.03077) | Crowdsourced accident-scenario video. The paper reports 2,000 clips, about 658,476 frames, 54 accident types, temporal accident windows, and spatial crash-object annotations. The author repository advertises roughly 53 GB compressed training/test data and roughly 116 GB compressed full data through Drive/Baidu links. Clip ID is an appropriate future group. | The author repository invites use/share and asks for paper citation, but it has no published dataset-content license and gives no explicit permission for training, derived frames, source-media redistribution, or trained-model distribution. No download was attempted. | Temporal accident context is not a still label. Accident-visible windows could be reproducibly proposed from annotations, then reviewed. Pre-impact and precursor frames cannot automatically become either class. | **REVIEW_REQUIRED** |
 | **DoTA** | [Official repository](https://github.com/MoonBlvd/Detection-of-Traffic-Anomaly), inspected at commit `f8f603b8c06a946bc314752947ed480a4f33f82a`; [paper](https://arxiv.org/abs/2004.03044) | YouTube-derived traffic anomaly clips; official metadata has 4,677 clips and describes approximately 55 GB of extracted frames. Original source-video grouping is recoverable and must replace the publisher clip split. | The repository's MIT text is a **code** license. The README says the authors obtained authority from original channel authors to share clips, but current official README/repository/issue inspection supplied no separate content license or explicit local derived-frame/training/model-distribution terms. No new clarification was found; an unanswered or closed issue is not permission. | The anomaly start can precede visible impact, so frames require a reviewed collision-visible window. Some anomaly types are not collisions. | **REVIEW_REQUIRED** |
@@ -45,16 +45,17 @@ All source records, terms, and access state below were inspected on
 
 ### TUMTraf-Accid3nD
 
-This is the strongest currently located first-party academic positive source.
+This remains the strongest currently located first-party academic positive
+source by provenance, but it is not currently acquisition-approved by IRIS.
 The official project says its own roadside sensors recorded real highway
 accidents, which resolves the web-aggregation provenance problem found in
-AccidentDetection-9k. Its stated CC BY-NC-SA 4.0 data license allows the
-planned non-commercial academic use and local frame extraction, provided the
-attribution, change-marking, and ShareAlike obligations are met. The Creative
-Commons license does not eliminate possible privacy or other third-party
-rights, and the project does not separately state rights for a released trained
-model. IRIS must preserve the license notice and obtain a release-specific
-review before distributing any model or dataset-derived material.
+AccidentDetection-9k. However, source-specific terms require clarification:
+the Accid3nD project page says CC BY-NC-SA 4.0, while the official generic
+TUMTraf development kit says CC BY-NC-ND 4.0. Those licences have materially
+different rules for adaptations. Until TUM confirms which terms govern the
+Accid3nD archive, IRIS cannot treat derived stills, training, redistribution,
+or model release as permitted. The Creative Commons licence language also does
+not by itself settle privacy or other third-party rights.
 
 ### Nexar
 
@@ -79,11 +80,11 @@ authoritative provenance chain for the underlying media.
 
 ## Required future acquisition and qualification procedure
 
-The technically appropriate next acquisition is **TUMTraf-Accid3nD**, using
-only its official project data link under CC BY-NC-SA 4.0. It should be
-acquired only when the next approved task includes storage planning and the
-licence-compliance workflow. Do not automatically acquire it from this
-qualification checkpoint.
+The technically appropriate next step is to obtain a written confirmation from
+TUM identifying the licence that governs the five Accid3nD archives and whether
+local frame extraction/training and model distribution are allowed. Do not
+download it before that confirmation. The official acquisition-plan document
+records the exact archive inventory and the proposed leakage-safe workflow.
 
 After acquisition, the dataset inspector must record actual archive size,
 checksums, file structure, sequence/event/camera grouping fields, readable

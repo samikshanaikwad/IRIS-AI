@@ -20,6 +20,10 @@ acquisition findings for DADA-2000, DoTA, AccidentDetection-9k, the Roboflow
 binary record, Nexar Collision Prediction, and TUMTraf-Accid3nD. It does not
 admit any new source image to the manifest.
 
+The current [TUMTraf acquisition plan](TUMTRAF_ACQUISITION_PLAN.md) records
+the official five-archive inventory and blocks acquisition until TUM resolves
+the source-specific license conflict found during planning.
+
 ## Label contract
 
 `accident` is permitted only when the still image itself contains visible
@@ -240,6 +244,11 @@ py -3.10 ml\classification\scripts\dataset_tool.py create-review-batch --output-
 py -3.10 ml\classification\scripts\dataset_tool.py apply-review-batch --batch datasets\raw\classification\review_batches\dats-v2-0000\review_batch.csv
 py -3.10 ml\classification\scripts\dataset_tool.py validate-reviews
 ```
+
+Each generated batch also has `review_sheet.html`, an ignored local contact
+sheet containing only its extracted source images, source identifiers, hashes,
+and `pending` status. It records no decision; the human reviewer must enter
+observed decisions and rationale in `review_batch.csv` before applying it.
 
 Applying a batch persists only explicit decisions whose source item and
 SHA-256 still match. Reinspection preserves valid prior decisions. Review

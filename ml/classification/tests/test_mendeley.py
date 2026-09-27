@@ -265,6 +265,9 @@ class MendeleySourceInspectionTest(unittest.TestCase):
                 limit=1,
             )
             self.assertEqual(result["batch_items"], 1)
+            contact_sheet = batch_root / "review_sheet.html"
+            self.assertTrue(contact_sheet.is_file())
+            self.assertIn(member_name, contact_sheet.read_text(encoding="utf-8"))
             self.assertEqual(
                 validate_review_inventory(inventory_path)["decision_counts"],
                 {"pending": 1},

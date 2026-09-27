@@ -186,25 +186,33 @@
       "data_acquired_at": null,
       "code_license": "MIT (development kit only)",
       "code_license_reference": "https://github.com/tum-traffic-dataset/tum-traffic-dataset-dev-kit",
-      "dataset_content_license": "CC BY-NC-SA 4.0",
+      "dataset_content_license": "CONFLICT_REQUIRES_CONFIRMATION: Accid3nD project page states CC BY-NC-SA 4.0; generic TUMTraf development-kit README states CC BY-NC-ND 4.0.",
       "dataset_terms_reference": "https://accident-dataset.github.io/",
-      "license_reference": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-      "usage_status": "APPROVED",
-      "redistribution_status": "RESTRICTED",
-      "derived_data_status": "APPROVED",
-      "attribution_requirements": "Give attribution, link CC BY-NC-SA 4.0, indicate changes, use only non-commercially, and share adaptations under the same license.",
-      "acquisition_method": "Official project website data link; no download was attempted during qualification.",
+      "license_reference": null,
+      "usage_status": "REVIEW_REQUIRED",
+      "redistribution_status": "REVIEW_REQUIRED",
+      "derived_data_status": "REVIEW_REQUIRED",
+      "attribution_requirements": "Do not finalize attribution, derived-still, source redistribution, or model-release obligations until TUM confirms which dataset-content license governs Accid3nD.",
+      "acquisition_method": "Official project direct-download link resolves to an unauthenticated public WebDAV collection containing five ZIP archives; no archive was downloaded during planning.",
       "acquisition_urls": [
-        "https://accident-dataset.github.io/"
+        "https://accident-dataset.github.io/",
+        "https://nx21496.your-storageshare.de/s/Zd4rwsMwwXMaXiK/download"
       ],
-      "interactive_authentication_required": null,
+      "interactive_authentication_required": false,
       "local_raw_path": "datasets/raw/classification/tumtraf_accid3nd",
-      "task_suitability": "QUALIFIED_WITH_RESTRICTIONS_AFTER_ACQUISITION_AND_VISUAL_STILL_REVIEW",
+      "public_file_inventory": [
+        {"name": "accid3nd_dataset/train1.zip", "file_count": 1, "total_bytes": 9436619494, "content_type": "application/zip"},
+        {"name": "accid3nd_dataset/train2.zip", "file_count": 1, "total_bytes": 9436522698, "content_type": "application/zip"},
+        {"name": "accid3nd_dataset/train3.zip", "file_count": 1, "total_bytes": 9436612632, "content_type": "application/zip"},
+        {"name": "accid3nd_dataset/train4.zip", "file_count": 1, "total_bytes": 9435983723, "content_type": "application/zip"},
+        {"name": "accid3nd_dataset/train5.zip", "file_count": 1, "total_bytes": 8841778208, "content_type": "application/zip"}
+      ],
+      "task_suitability": "ACQUISITION_PLAN_BLOCKED_PENDING_SOURCE_SPECIFIC_LICENSE_CONFIRMATION",
       "notes": [
         "The first-party academic project states that its roadside cameras and LiDARs captured real highway collisions, rollovers, and fires at the A9 Digital Test Field in Munich. This is materially stronger provenance than web-search aggregation.",
-        "The official project reports 111,945 labeled frames from four roadside cameras and LiDARs at 25 Hz, with 2,634,233 labels and OpenLABEL annotations. The public project page does not state the archive byte size; no size is inferred.",
-        "Frames are temporally correlated. Keep every frame from a sequence/event and its multi-camera views in one source group. The project page visibly identifies sequences, but the exact extractable grouping fields must be verified after acquisition.",
-        "CC BY-NC-SA 4.0 permits sharing and adaptation with attribution, non-commercial use, and ShareAlike obligations. This qualifies academic/research training and local derived stills, but an intended model release requires a licence-compliance review because the project does not separately state trained-model distribution terms.",
+        "The official project reports 111,945 labeled frames from four roadside cameras and LiDARs at 25 Hz, with 2,634,233 labels and OpenLABEL annotations. Its official WebDAV collection lists five ZIP archives totaling 46,587,516,755 bytes; no server-published SHA-256 values or independently downloadable camera-only archive were found.",
+        "The supplementary material reports 12 sequences recorded from four roadside cameras. Frames are temporally correlated; retain each physical event, sequence, and synchronized camera view in one source group. Exact archive-internal identifier fields must be verified after acquisition.",
+        "The source-specific Accid3nD page states CC BY-NC-SA 4.0, while the generic TUMTraf development-kit README states CC BY-NC-ND 4.0. This apparent conflict means IRIS must not infer permission to create derived stills, train, redistribute data, or distribute a model until TUM confirms the governing Accid3nD terms.",
         "Only frames individually reviewed as visibly depicting an IRIS accident may become positives. Pre-event normal frames may be candidates for non_accident only after separate review and must not be treated as independent from the event sequence."
       ]
     },
