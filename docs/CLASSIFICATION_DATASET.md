@@ -14,6 +14,12 @@ semantic review, AccidentDetection-9k has an unresolved underlying-image rights
 limitation, and the production manifest remains header-only. No classifier has
 been trained, evaluated, exported, or integrated into Flutter.
 
+The separate [accident-positive source qualification](ACCIDENT_DATASET_QUALIFICATION.md)
+records the authoritative rights, provenance, still-image suitability, and
+acquisition findings for DADA-2000, DoTA, AccidentDetection-9k, the Roboflow
+binary record, Nexar Collision Prediction, and TUMTraf-Accid3nD. It does not
+admit any new source image to the manifest.
+
 ## Label contract
 
 `accident` is permitted only when the still image itself contains visible

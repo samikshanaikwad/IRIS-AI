@@ -59,6 +59,37 @@ class VersionControlledConfigurationTest(unittest.TestCase):
             10737310801,
         )
 
+    def test_qualified_sources_separate_content_rights_from_still_labels(self) -> None:
+        registry = load_source_registry(MANIFEST_ROOT / "source_registry.v1.json")
+        dada = registry["dada-2000-official"]
+        nexar = registry["nexar-collision-prediction"]
+        tumtraf = registry["tumtraf-accid3nd"]
+        roboflow = registry["roboflow-dataset-klasifikasi-kecelakaan"]
+
+        self.assertEqual(dada["usage_status"], "REVIEW_REQUIRED")
+        self.assertIsNone(dada["dataset_content_license"])
+
+        self.assertEqual(
+            nexar["dataset_content_license"], "Nexar Open Data License (Copyright 2025 Nexar Inc.)"
+        )
+        self.assertTrue(nexar["interactive_authentication_required"])
+        self.assertEqual(nexar["redistribution_status"], "RESTRICTED")
+        self.assertTrue(
+            any("near-misses" in note for note in nexar["notes"])
+        )
+
+        self.assertEqual(tumtraf["dataset_content_license"], "CC BY-NC-SA 4.0")
+        self.assertEqual(tumtraf["usage_status"], "APPROVED")
+        self.assertEqual(tumtraf["redistribution_status"], "RESTRICTED")
+        self.assertTrue(
+            any("first-party academic project" in note for note in tumtraf["notes"])
+        )
+
+        self.assertEqual(roboflow["usage_status"], "PROHIBITED")
+        self.assertTrue(
+            any("chain of rights" in note for note in roboflow["notes"])
+        )
+
     def test_dota_category_policy_covers_observed_id_viewpoint_pairs(self) -> None:
         policy = load_category_policy(CONFIG_ROOT / "dota_category_policy.v1.json")
         categories = policy["categories"]

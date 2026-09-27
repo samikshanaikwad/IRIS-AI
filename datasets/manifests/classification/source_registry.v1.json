@@ -113,6 +113,131 @@
       ]
     },
     {
+      "dataset_id": "dada-2000-official",
+      "official_name": "DADA-2000: Driver Attention Prediction in Driving Accident Scenarios",
+      "official_reference": "https://github.com/JWFangit/LOTVS-DADA",
+      "citation": "Jianwu Fang, Dingxin Yan, Jiahuan Qiao, Jianru Xue, and Hongkai Yu, DADA: Driver Attention Prediction in Driving Accident Scenarios, IEEE Transactions on Intelligent Transportation Systems, 2022.",
+      "paper_reference": "https://arxiv.org/abs/1912.03077",
+      "dataset_version": "official-repository-unversioned-inspected-2026-09-27",
+      "metadata_inspection_date": "2026-09-27",
+      "data_acquired_at": null,
+      "code_license": null,
+      "code_license_reference": null,
+      "dataset_content_license": null,
+      "dataset_terms_reference": null,
+      "usage_status": "REVIEW_REQUIRED",
+      "redistribution_status": "REVIEW_REQUIRED",
+      "derived_data_status": "REVIEW_REQUIRED",
+      "attribution_requirements": "The official repository requests citation of the DADA paper; any additional content-rightsholder attribution remains unknown.",
+      "acquisition_method": "Official author repository links to Baidu Pan and Google Drive archives; no download was attempted during qualification.",
+      "acquisition_urls": [
+        "https://github.com/JWFangit/LOTVS-DADA"
+      ],
+      "interactive_authentication_required": null,
+      "local_raw_path": "datasets/raw/classification/dada_2000",
+      "task_suitability": "REVIEW_REQUIRED_RIGHTS_AND_VISUAL_STILL_SELECTION",
+      "notes": [
+        "The author repository describes a roughly 53 GB compressed training/testing release and a roughly 116 GB compressed full benchmark, but does not publish a dataset-content license or explicit terms for derived stills or trained-model distribution.",
+        "The paper describes 2,000 crowdsourced accident clips, approximately 658,476 frames, 54 accident types, temporal accident windows, and spatial crash-object annotations.",
+        "Clip identity can provide a source grouping unit, but DADA is an accident-scenario video dataset rather than a binary still-image dataset. A temporal accident label or pre-impact frame never establishes an IRIS still-image label; visible-collision review remains required.",
+        "No formal permission to train, derive frames, redistribute media, or distribute a trained model was found in the inspected authoritative materials."
+      ]
+    },
+    {
+      "dataset_id": "nexar-collision-prediction",
+      "official_name": "Nexar Collision Prediction Dataset",
+      "official_reference": "https://huggingface.co/datasets/nexar-ai/nexar_collision_prediction",
+      "citation": "Daniel C. Moura, Shizhan Zhu, and Orly Zvitia, Nexar Dashcam Collision Prediction Dataset and Challenge, 2025, arXiv:2503.03848.",
+      "paper_reference": "https://arxiv.org/abs/2503.03848",
+      "dataset_version": "main-ed1ffff7c2dfb9014ff476f079ba5acefc71c72c",
+      "metadata_inspection_date": "2026-09-27",
+      "data_acquired_at": null,
+      "code_license": null,
+      "code_license_reference": null,
+      "dataset_content_license": "Nexar Open Data License (Copyright 2025 Nexar Inc.)",
+      "dataset_terms_reference": "https://huggingface.co/datasets/nexar-ai/nexar_collision_prediction/blob/main/LICENSE",
+      "usage_status": "APPROVED",
+      "redistribution_status": "RESTRICTED",
+      "derived_data_status": "APPROVED",
+      "attribution_requirements": "Cite Nexar Inc. and the dataset citation stated in the Nexar Open Data License; retain required notices and disclaimers in any dataset redistribution.",
+      "acquisition_method": "Official Nexar Hugging Face repository; the content is access-gated and requires account login plus acceptance of conditions/contact-information sharing.",
+      "acquisition_urls": [
+        "https://huggingface.co/datasets/nexar-ai/nexar_collision_prediction",
+        "https://huggingface.co/datasets/nexar-ai/nexar_collision_prediction/blob/main/LICENSE"
+      ],
+      "interactive_authentication_required": true,
+      "local_raw_path": "datasets/raw/classification/nexar_collision_prediction",
+      "task_suitability": "QUALIFIED_WITH_RESTRICTIONS_AFTER_GATED_ACQUISITION_AND_VISUAL_REVIEW",
+      "notes": [
+        "The official record reports 1,500 1280x720 30 fps dashcam videos, approximately 40 seconds each, and a total repository size of 31.4 GB. Half are positive collision-or-imminent-collision events and half are regular driving.",
+        "The license expressly permits use, copying, modification, and distribution subject to attribution, no-resale and ethical-use restrictions. It does not separately state whether trained-model distribution is permitted; obtain legal review before distributing a model trained on this source.",
+        "The source labels collisions and near-misses equally positive. IRIS must select only human-reviewed frames with a visible collision, rollover, or clearly accident-damaged road-vehicle context; imminent/near-miss frames are not IRIS accident positives.",
+        "Use one video identifier as the indivisible source group. The source must not be randomly frame-split."
+      ]
+    },
+    {
+      "dataset_id": "tumtraf-accid3nd",
+      "official_name": "TUM Traffic Accid3nD (TUMTraf-Accid3nD)",
+      "official_reference": "https://accident-dataset.github.io/",
+      "citation": "Walter Zimmer et al., Towards Vision Zero: The TUM Traffic Accid3nD Dataset, ICCV Workshops, 2025.",
+      "paper_reference": "https://arxiv.org/abs/2503.12095",
+      "dataset_version": "official-project-site-unversioned-inspected-2026-09-27",
+      "metadata_inspection_date": "2026-09-27",
+      "data_acquired_at": null,
+      "code_license": "MIT (development kit only)",
+      "code_license_reference": "https://github.com/tum-traffic-dataset/tum-traffic-dataset-dev-kit",
+      "dataset_content_license": "CC BY-NC-SA 4.0",
+      "dataset_terms_reference": "https://accident-dataset.github.io/",
+      "license_reference": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+      "usage_status": "APPROVED",
+      "redistribution_status": "RESTRICTED",
+      "derived_data_status": "APPROVED",
+      "attribution_requirements": "Give attribution, link CC BY-NC-SA 4.0, indicate changes, use only non-commercially, and share adaptations under the same license.",
+      "acquisition_method": "Official project website data link; no download was attempted during qualification.",
+      "acquisition_urls": [
+        "https://accident-dataset.github.io/"
+      ],
+      "interactive_authentication_required": null,
+      "local_raw_path": "datasets/raw/classification/tumtraf_accid3nd",
+      "task_suitability": "QUALIFIED_WITH_RESTRICTIONS_AFTER_ACQUISITION_AND_VISUAL_STILL_REVIEW",
+      "notes": [
+        "The first-party academic project states that its roadside cameras and LiDARs captured real highway collisions, rollovers, and fires at the A9 Digital Test Field in Munich. This is materially stronger provenance than web-search aggregation.",
+        "The official project reports 111,945 labeled frames from four roadside cameras and LiDARs at 25 Hz, with 2,634,233 labels and OpenLABEL annotations. The public project page does not state the archive byte size; no size is inferred.",
+        "Frames are temporally correlated. Keep every frame from a sequence/event and its multi-camera views in one source group. The project page visibly identifies sequences, but the exact extractable grouping fields must be verified after acquisition.",
+        "CC BY-NC-SA 4.0 permits sharing and adaptation with attribution, non-commercial use, and ShareAlike obligations. This qualifies academic/research training and local derived stills, but an intended model release requires a licence-compliance review because the project does not separately state trained-model distribution terms.",
+        "Only frames individually reviewed as visibly depicting an IRIS accident may become positives. Pre-event normal frames may be candidates for non_accident only after separate review and must not be treated as independent from the event sequence."
+      ]
+    },
+    {
+      "dataset_id": "roboflow-dataset-klasifikasi-kecelakaan",
+      "official_name": "Dataset Klasifikasi Kecelakaan",
+      "official_reference": "https://universe.roboflow.com/asraf/dataset-klasifikasi-kecelakaan",
+      "dataset_version": "Roboflow-Universe-record-two-versions-inspected-2026-09-27",
+      "metadata_inspection_date": "2026-09-27",
+      "data_acquired_at": null,
+      "code_license": null,
+      "code_license_reference": null,
+      "dataset_content_license": "CC BY 4.0 declaration on the Roboflow record; underlying-image provenance is not documented.",
+      "dataset_terms_reference": "https://universe.roboflow.com/asraf/dataset-klasifikasi-kecelakaan",
+      "license_reference": "https://creativecommons.org/licenses/by/4.0/",
+      "usage_status": "PROHIBITED",
+      "redistribution_status": "PROHIBITED",
+      "derived_data_status": "PROHIBITED",
+      "attribution_requirements": "No authoritative original-source attribution was found beyond the Roboflow uploader identity (Asraf).",
+      "acquisition_method": "Roboflow Universe community record; no download was attempted during qualification.",
+      "acquisition_urls": [
+        "https://universe.roboflow.com/asraf/dataset-klasifikasi-kecelakaan"
+      ],
+      "interactive_authentication_required": null,
+      "local_raw_path": "datasets/raw/classification/roboflow_dataset_klasifikasi_kecelakaan",
+      "task_suitability": "REJECTED_UNRESOLVED_UNDERLYING_MEDIA_PROVENANCE",
+      "notes": [
+        "The public record exposed an accident/no-accident classification dataset, 6,279 images, two versions, a CC BY 4.0 label, and uploader identity Asraf.",
+        "The inspected record does not document whether the uploader owns the underlying images, their original sources, a chain of rights, or any first-party academic publisher. No authoritative non-Roboflow source was found in this qualification.",
+        "IRIS treats the Roboflow record-level CC BY declaration as insufficient to establish underlying-media rights or provenance. This is an internal no-use decision, not a claim about the uploader's legal rights."
+      ]
+    },
+    {
       "dataset_id": "dats-2022-mendeley",
       "official_name": "DATS_2022",
       "official_reference": "https://data.mendeley.com/datasets/nfc34n8svj/2",

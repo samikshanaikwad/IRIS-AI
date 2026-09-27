@@ -12,7 +12,7 @@ Status values are updated only after implementation and verification.
 | 05 Camera / evidence quality | COMPLETE |
 | 06 Analysis job engine | NOT STARTED |
 | 07 Location / maps | NOT STARTED |
-| 08 Incident classifier | PARTIAL — REAL CANDIDATE SOURCES ACQUIRED/INSPECTED; SEMANTIC/RIGHTS REVIEW, TRAINING, AND APP INTEGRATION NOT COMPLETE |
+| 08 Incident classifier | PARTIAL — REAL CANDIDATE SOURCES ACQUIRED/INSPECTED; POSITIVE-SOURCE QUALIFICATION RECORDED; SEMANTIC REVIEW, ACQUISITION OF NEW QUALIFIED SOURCES, TRAINING, AND APP INTEGRATION NOT COMPLETE |
 | 09 Detection | NOT STARTED |
 | 10 Segmentation | NOT STARTED |
 | 11 Damage / evidence intelligence | NOT STARTED |
@@ -32,4 +32,4 @@ Status values are updated only after implementation and verification.
 | 25 End-to-end testing | NOT STARTED |
 | 26 Release APK | NOT STARTED |
 
-The verified application scope includes project governance, the Flutter/Android foundation, the design/navigation shell, offline SQLite case management, camera/gallery evidence acquisition with immutable managed originals, and deterministic schema-v3 evidence quality assessment. TASK 005 has been human accepted. TASK 006 now has tested dataset-preparation infrastructure plus locally acquired and inspected real candidate archives; all semantic decisions remain pending, no production manifest item is approved, and no classifier has been trained or integrated. No accident conclusion, reconstruction, physics result, scenario, or report is implemented.
+The verified application scope includes project governance, the Flutter/Android foundation, the design/navigation shell, offline SQLite case management, camera/gallery evidence acquisition with immutable managed originals, and deterministic schema-v3 evidence quality assessment. TASK 005 has been human accepted. TASK 006 now has tested dataset-preparation infrastructure, locally acquired and inspected real candidate archives, and documented source qualification; all semantic decisions remain pending, no production manifest item is approved, and no classifier has been trained or integrated. No accident conclusion, reconstruction, physics result, scenario, or report is implemented.
