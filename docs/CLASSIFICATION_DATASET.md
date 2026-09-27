@@ -20,6 +20,12 @@ acquisition findings for DADA-2000, DoTA, AccidentDetection-9k, the Roboflow
 binary record, Nexar Collision Prediction, and TUMTraf-Accid3nD. It does not
 admit any new source image to the manifest.
 
+The separate [pretrained-model qualification](PRETRAINED_ACCIDENT_MODEL_QUALIFICATION.md)
+records the authority, weights, semantics, deployment, and rights review for
+candidate pretrained classifiers. It identifies no qualifying direct
+accident-versus-non-accident still-image model and does not add a model artifact
+or a manifest item.
+
 The current [TUMTraf acquisition plan](TUMTRAF_ACQUISITION_PLAN.md) records
 the official five-archive inventory and blocks acquisition until TUM resolves
 the source-specific license conflict found during planning.
