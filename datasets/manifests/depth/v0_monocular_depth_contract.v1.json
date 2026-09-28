@@ -1,0 +1,61 @@
+{
+  "contract_version": "v1",
+  "status": "QUALIFIED_WITH_RESTRICTIONS",
+  "capability": "monocular_relative_depth",
+  "model": {
+    "name": "Depth-Anything-V2-Small",
+    "architecture": "ViT-S / DPT",
+    "parameters": 24800000,
+    "source_repository": "https://github.com/DepthAnything/Depth-Anything-V2",
+    "source_commit": "a561b849ebae10a6f5ef49e26c83cbbcd36c71bf",
+    "checkpoint_filename": "depth_anything_v2_vits.pth",
+    "checkpoint_sha256": "715FADE13BE8F229F8A70CC02066F656F2423A59EFFD0579197BBF57860E1378",
+    "checkpoint_size_bytes": 99218434,
+    "semantics": "relative depth; not meters; larger values represent nearer/foreground structure"
+  },
+  "mobile_artifact": {
+    "format": "ONNX Runtime ORT format",
+    "filename": "depth_vits_518.ort",
+    "relative_path": ".local-tools/ort-depth/depth_vits_518.ort",
+    "size_bytes": 99187856,
+    "sha256": "f983ac210c302d37e0c07b075575426a4694a2b6eed6414fe66339bcb75a6830",
+    "runtime": "ONNX Runtime Mobile / Android",
+    "onnx_intermediate_sha256": "06c2ce123167b8f55717748deee72aec4ad7c898bb461100e133e4faa4c27d1b",
+    "opset": 18
+  },
+  "input": {
+    "shape": [1, 3, 518, 518],
+    "dtype": "float32",
+    "layout": "NCHW",
+    "color_order": "RGB",
+    "preprocessing": "Decode orientation-corrected RGB; resize aspect-preserving to fit 518x518; center-pad with normalized-zero (ImageNet-mean) pixels; divide RGB by 255; normalize mean [0.485,0.456,0.406] and std [0.229,0.224,0.225]."
+  },
+  "output": {
+    "name": "relative_depth",
+    "shape": [1, 518, 518],
+    "dtype": "float32",
+    "postprocessing": "Remove the recorded centered padding, then bilinearly resize the numerical map to original evidence dimensions. Colorization is visualization only."
+  },
+  "parity": {
+    "images": 6,
+    "sets": "three square accident-review images and three portrait DATS images",
+    "source_vs_onnx_max_normalized_mae": 0.0000006069,
+    "source_vs_ort_max_normalized_mae": 0.0000005705,
+    "source_vs_ort_min_correlation": 0.9999999999979,
+    "finite_outputs": true,
+    "shape_match": true,
+    "near_far_order_preserved": true
+  },
+  "rights": {
+    "code_license": "Project states Apache-2.0 for the Small model.",
+    "checkpoint_status": "Suitable for current local academic/development qualification; retain source attribution.",
+    "training_data_status": "Training-data provenance and terms remain separate from the checkpoint/code license and require compliance review.",
+    "converted_artifact_status": "Local development qualification only; public APK/model redistribution requires separate review."
+  },
+  "limitations": [
+    "Relative depth is not metric distance and does not establish forensic ground truth.",
+    "No arbitrary scale, vehicle distance, ground plane, camera pose, or 3D coordinates are provided.",
+    "TASK 007 boxes can later be sampled robustly, but boxes may contain background because TASK 008 masks are deferred.",
+    "Realme latency and memory have not been measured; those belong to TASK 009B."
+  ]
+}
