@@ -535,6 +535,10 @@ def create_review_batch(
         if row["source_dataset_id"] == source_dataset_id
         and row["review_decision"] == "pending"
         and row["technical_status"] == "READABLE"
+        and (
+            source_dataset_id != "accident-detection-9k-mendeley"
+            or row["annotation_status"] == "VALID_ACCIDENT_ANNOTATION"
+        )
         and (not excluded_source_items or row["source_item"] not in excluded_source_items)
         and (not excluded_hashes or row["sha256"] not in excluded_hashes)
         and (

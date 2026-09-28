@@ -481,6 +481,121 @@ class MendeleySourceInspectionTest(unittest.TestCase):
             self.assertIn("valid Accident annotation", sheet)
             self.assertIn("Decision: pending", sheet)
 
+    def test_positive_batch_excludes_empty_missing_and_orphan_annotations(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            archive_path = root / "accident.zip"
+            inventory_path = root / "accident-review.csv"
+            batch_root = root / "batch"
+            image = _png_bytes((30, 60, 90), (16, 12))
+            members = [
+                "Accident_Detection/Dataset/train/images/valid.jpg",
+                "Accident_Detection/Dataset/train/images/empty.jpg",
+                "Accident_Detection/Dataset/train/images/missing.jpg",
+                "Accident_Detection/Dataset/train/images/orphan.jpg",
+            ]
+            with zipfile.ZipFile(archive_path, "w") as archive:
+                for member in members:
+                    archive.writestr(member, image + member.encode("utf-8"))
+                archive.writestr(
+                    "Accident_Detection/Dataset/train/labels/valid.txt",
+                    "0 0.5 0.5 0.4 0.4\n",
+                )
+                archive.writestr(
+                    "Accident_Detection/Dataset/train/labels/empty.txt", "\n"
+                )
+                archive.writestr(
+                    "Accident_Detection/Dataset/train/labels/orphan.txt",
+                    "0 0.5 0.5 0.4 0.4\n",
+                )
+
+            _, rows = inspect_accident_detection_archive(archive_path)
+            orphan_row = next(row for row in rows if row["source_item"].endswith("orphan.jpg"))
+            orphan_row["annotation_status"] = "ORPHAN"
+            write_review_inventory(inventory_path, rows)
+
+            result = create_review_batch(
+                archive_path,
+                inventory_path,
+                batch_root,
+                "accident-detection-9k-mendeley",
+                start=0,
+                limit=100,
+            )
+
+            self.assertEqual(result["batch_items"], 1)
+            with (batch_root / "review_batch.csv").open(
+                "r", encoding="utf-8", newline=""
+            ) as handle:
+                batch_rows = list(csv.DictReader(handle))
+            self.assertTrue(batch_rows[0]["source_item"].endswith("valid.jpg"))
+            self.assertEqual(batch_rows[0]["review_decision"], "pending")
+
+    def test_positive_batch_selection_is_deterministic_and_excludes_prior_group(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            archive_path = root / "accident.zip"
+            inventory_path = root / "accident-review.csv"
+            first_root = root / "first"
+            second_root = root / "second"
+            members = [
+                f"Accident_Detection/Dataset/train/images/source-{index}.jpg"
+                for index in range(3)
+            ]
+            with zipfile.ZipFile(archive_path, "w") as archive:
+                for index, member in enumerate(members):
+                    fixture = Image.new("RGB", (64, 64), (20, 40, 60))
+                    for x in range(64):
+                        for y in range(64):
+                            if (x * 13 + y * 7 + index * 53) % 101 < 50:
+                                fixture.putpixel((x, y), (220, 180, 40))
+                    encoded = io.BytesIO()
+                    fixture.save(encoded, format="PNG")
+                    archive.writestr(member, encoded.getvalue())
+                    archive.writestr(
+                        member.replace("/images/", "/labels/").replace(
+                            ".jpg", ".txt"
+                        ),
+                        "0 0.5 0.5 0.4 0.4\n",
+                    )
+
+            _, rows = inspect_accident_detection_archive(archive_path)
+            write_review_inventory(inventory_path, rows)
+            first = create_review_batch(
+                archive_path,
+                inventory_path,
+                first_root,
+                "accident-detection-9k-mendeley",
+                start=0,
+                limit=1,
+            )
+            with (first_root / "review_batch.csv").open(
+                "r", encoding="utf-8", newline=""
+            ) as handle:
+                first_row = next(csv.DictReader(handle))
+            inventory_by_item = {row["source_item"]: row for row in rows}
+            selected = inventory_by_item[first_row["source_item"]]
+            second = create_review_batch(
+                archive_path,
+                inventory_path,
+                second_root,
+                "accident-detection-9k-mendeley",
+                start=0,
+                limit=1,
+                excluded_source_items={first_row["source_item"]},
+                excluded_hashes={first_row["sha256"]},
+                excluded_source_groups={selected["source_group_id"]},
+            )
+            with (second_root / "review_batch.csv").open(
+                "r", encoding="utf-8", newline=""
+            ) as handle:
+                second_row = next(csv.DictReader(handle))
+            self.assertEqual(first["batch_items"], 1)
+            self.assertEqual(second["batch_items"], 1)
+            self.assertNotEqual(first_row["source_item"], second_row["source_item"])
+            self.assertNotEqual(first_row["sha256"], second_row["sha256"])
+            self.assertEqual(second_row["review_decision"], "pending")
+
 
 if __name__ == "__main__":
     unittest.main()
