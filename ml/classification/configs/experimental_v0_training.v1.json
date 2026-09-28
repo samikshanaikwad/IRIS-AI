@@ -1,0 +1,15 @@
+{
+  "config_version": "iris-experimental-v0-training-v1",
+  "seed": 6006,
+  "architecture": "MobileNetV3Small",
+  "initialization": "official torchvision ImageNet MobileNet_V3_Small_Weights.IMAGENET1K_V1",
+  "optimizer": "AdamW classifier head only",
+  "learning_rate": 0.001,
+  "weight_decay": 0.0001,
+  "batch_size": 8,
+  "maximum_epochs": 8,
+  "augmentation": "none",
+  "checkpoint_selection": "minimum validation loss",
+  "threshold_selection": "maximum validation balanced accuracy; deterministic ties nearest 0.5",
+  "test_policy": "Locked held-out test is evaluated only after architecture, checkpoint, preprocessing, class mapping, and threshold are written to decisions_locked.json."
+}

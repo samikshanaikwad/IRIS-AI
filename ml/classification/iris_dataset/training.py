@@ -8,9 +8,11 @@ validated manifest contains approved samples from both classes.
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import random
 import re
+import zipfile
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -81,7 +83,7 @@ def load_training_config(path: Path) -> TrainingConfig:
     if preprocess.input_width <= 0 or preprocess.input_height <= 0:
         raise DatasetConfigurationError("Preprocess dimensions must be positive")
     initialization = payload.get("initialization")
-    if initialization not in {"random", "approved_checkpoint"}:
+    if initialization not in {"random", "approved_checkpoint", "official_imagenet"}:
         raise DatasetConfigurationError(
             "initialization must be 'random' or 'approved_checkpoint'"
         )
@@ -334,7 +336,7 @@ def build_mobilenet_v3_small(initialization: str = "random", checkpoint: Path | 
 
     try:
         import torch.nn as nn
-        from torchvision.models import mobilenet_v3_small
+        from torchvision.models import MobileNet_V3_Small_Weights, mobilenet_v3_small
     except ImportError as error:
         raise TrainingBlockedError(
             "PyTorch and torchvision are optional and must be installed for actual training"
@@ -345,6 +347,8 @@ def build_mobilenet_v3_small(initialization: str = "random", checkpoint: Path | 
         weights = None
     elif initialization == "random":
         weights = None
+    elif initialization == "official_imagenet":
+        weights = MobileNet_V3_Small_Weights.IMAGENET1K_V1
     else:
         raise TrainingBlockedError(f"Unsupported initialization: {initialization}")
     model = mobilenet_v3_small(weights=weights)
@@ -354,6 +358,206 @@ def build_mobilenet_v3_small(initialization: str = "random", checkpoint: Path | 
 
         model.load_state_dict(torch.load(checkpoint, map_location="cpu"))
     return model
+
+
+def train_authorized_experimental_v0(
+    freeze_rows: list[dict[str, str]],
+    split_rows: list[dict[str, str]],
+    output_dir: Path,
+    *,
+    seed: int = 6006,
+    epochs: int = 8,
+    batch_size: int = 32,
+    learning_rate: float = 0.001,
+    weight_decay: float = 0.0001,
+) -> dict[str, Any]:
+    """Run the authorized archive-backed V0 experiment using real torchvision weights.
+
+    This function intentionally accepts the frozen split rather than the
+    production manifest. It must only be called after the experimental
+    authorization preflight has passed.
+    """
+    try:
+        import torch
+        from torch.utils.data import DataLoader, Dataset
+        from torchvision.models import MobileNet_V3_Small_Weights
+    except ImportError as error:
+        raise TrainingBlockedError("PyTorch and torchvision are required") from error
+    if output_dir.exists():
+        raise TrainingBlockedError(f"Experimental output directory already exists: {output_dir}")
+    freeze_by_item = {row["item_id"]: row for row in freeze_rows}
+    if len(freeze_by_item) != 1000 or len(split_rows) != 1000:
+        raise TrainingBlockedError("Authorized V0 training requires exactly 1000 frozen rows")
+    rows: list[dict[str, str]] = []
+    for split_row in split_rows:
+        frozen = freeze_by_item.get(split_row["item_id"])
+        if frozen is None or frozen["sha256"] != split_row["sha256"]:
+            raise TrainingBlockedError("Split does not match the authorized freeze")
+        rows.append({**frozen, "split": split_row["split"]})
+    if {row["split"] for row in rows} != {"train", "validation", "test"}:
+        raise TrainingBlockedError("Authorized V0 split is incomplete")
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.set_num_threads(1)
+    torch.use_deterministic_algorithms(True, warn_only=True)
+    if torch.backends.cudnn.is_available():
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    weights = MobileNet_V3_Small_Weights.IMAGENET1K_V1
+    model = build_mobilenet_v3_small(initialization="official_imagenet")
+    for parameter in model.features.parameters():
+        parameter.requires_grad = False
+    model.to(device)
+
+    class ArchiveDataset(Dataset):
+        def __init__(self, dataset_rows: list[dict[str, str]]) -> None:
+            self.rows = dataset_rows
+            self.archives: dict[str, zipfile.ZipFile] = {}
+
+        def __len__(self) -> int:
+            return len(self.rows)
+
+        def __getitem__(self, index: int):
+            row = self.rows[index]
+            archive_path, member = row["source_reference"].split("::", 1)
+            archive = self.archives.get(archive_path)
+            if archive is None:
+                archive = zipfile.ZipFile(archive_path)
+                self.archives[archive_path] = archive
+            data = archive.read(member)
+            if hashlib.sha256(data).hexdigest() != row["sha256"]:
+                raise TrainingBlockedError(f"Archive source hash mismatch: {row['item_id']}")
+            with Image.open(io.BytesIO(data)) as source:
+                image = source.convert("RGB")
+            contained = ImageOps.contain(image, (224, 224), method=Image.Resampling.BILINEAR)
+            canvas = Image.new("RGB", (224, 224), (0, 0, 0))
+            canvas.paste(contained, ((224 - contained.width) // 2, (224 - contained.height) // 2))
+            pixels = torch.frombuffer(bytearray(canvas.tobytes()), dtype=torch.uint8)
+            pixels = pixels.reshape(224, 224, 3).permute(2, 0, 1).float().div_(255.0)
+            mean = torch.tensor((0.485, 0.456, 0.406)).reshape(3, 1, 1)
+            std = torch.tensor((0.229, 0.224, 0.225)).reshape(3, 1, 1)
+            label = 1.0 if row["label"] == "accident" else 0.0
+            return (pixels - mean) / std, torch.tensor([label]), row["item_id"]
+
+    train_rows = [row for row in rows if row["split"] == "train"]
+    validation_rows = [row for row in rows if row["split"] == "validation"]
+    test_rows = [row for row in rows if row["split"] == "test"]
+    if (len(train_rows), len(validation_rows), len(test_rows)) != (700, 150, 150):
+        raise TrainingBlockedError("Authorized V0 split counts are invalid")
+    generator = torch.Generator().manual_seed(seed)
+    train_loader = DataLoader(ArchiveDataset(train_rows), batch_size=batch_size, shuffle=True, generator=generator)
+    validation_loader = DataLoader(ArchiveDataset(validation_rows), batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(ArchiveDataset(test_rows), batch_size=batch_size, shuffle=False)
+    optimizer = torch.optim.AdamW(
+        (parameter for parameter in model.parameters() if parameter.requires_grad),
+        lr=learning_rate,
+        weight_decay=weight_decay,
+    )
+    loss_function = torch.nn.BCEWithLogitsLoss()
+
+    def infer(loader: Any) -> tuple[list[int], list[float], list[str], float]:
+        model.eval()
+        labels: list[int] = []
+        scores: list[float] = []
+        item_ids: list[str] = []
+        total_loss = 0.0
+        with torch.no_grad():
+            for images, batch_labels, batch_ids in loader:
+                images, batch_labels = images.to(device), batch_labels.to(device)
+                logits = model(images)
+                total_loss += float(loss_function(logits, batch_labels).detach().cpu())
+                scores.extend(torch.sigmoid(logits).reshape(-1).cpu().tolist())
+                labels.extend(int(value) for value in batch_labels.reshape(-1).cpu().tolist())
+                item_ids.extend(batch_ids)
+        return labels, scores, item_ids, total_loss / max(1, len(loader))
+
+    output_dir.mkdir(parents=True)
+    print("IRIS experimental run: training started", flush=True)
+    history: list[dict[str, float]] = []
+    best_epoch = 0
+    best_validation_loss = float("inf")
+    checkpoint_path = output_dir / "best_model.pt"
+    for epoch in range(1, epochs + 1):
+        model.train()
+        total_train_loss = 0.0
+        for images, labels, _ids in train_loader:
+            images, labels = images.to(device), labels.to(device)
+            optimizer.zero_grad(set_to_none=True)
+            loss = loss_function(model(images), labels)
+            loss.backward()
+            optimizer.step()
+            total_train_loss += float(loss.detach().cpu())
+        validation_labels, validation_scores, _validation_ids, validation_loss = infer(validation_loader)
+        history.append({"epoch": epoch, "train_loss": total_train_loss / len(train_loader), "validation_loss": validation_loss})
+        print(
+            f"IRIS experimental run: epoch={epoch} train_loss={history[-1]['train_loss']:.6f} validation_loss={validation_loss:.6f}",
+            flush=True,
+        )
+        if validation_loss < best_validation_loss:
+            best_validation_loss = validation_loss
+            best_epoch = epoch
+            torch.save(model.state_dict(), checkpoint_path)
+    model.load_state_dict(torch.load(checkpoint_path, map_location=device, weights_only=True))
+    validation_labels, validation_scores, _validation_ids, validation_loss = infer(validation_loader)
+    threshold = select_validation_threshold(validation_labels, validation_scores)
+    validation_predictions = [1 if score >= threshold["threshold"] else 0 for score in validation_scores]
+    validation_metrics = binary_metrics(validation_labels, validation_predictions)
+    decisions = {
+        "architecture": "MobileNetV3Small",
+        "weights_identifier": "MobileNet_V3_Small_Weights.IMAGENET1K_V1",
+        "weights_source": weights.url,
+        "weights_meta": weights.meta,
+        "preprocess": {"decode": "RGB", "resize": "aspect-preserving contain", "size": [224, 224], "padding": "centered black", "normalization": "ImageNet mean/std"},
+        "class_mapping": {"non_accident": 0, "accident": 1},
+        "best_epoch": best_epoch,
+        "best_checkpoint_selection": "minimum validation loss",
+        "best_validation_loss": best_validation_loss,
+        "threshold": threshold,
+        "test_locked_before_evaluation": True,
+    }
+    (output_dir / "decisions_locked.json").write_text(json.dumps(decisions, indent=2) + "\n", encoding="utf-8")
+    print("IRIS experimental run: decisions locked; evaluating held-out test", flush=True)
+    test_labels, test_scores, test_ids, test_loss = infer(test_loader)
+    test_predictions = [1 if score >= threshold["threshold"] else 0 for score in test_scores]
+    test_metrics = binary_metrics(test_labels, test_predictions)
+    test_metrics["accuracy"] = sum(prediction == label for prediction, label in zip(test_predictions, test_labels)) / len(test_labels)
+    errors: list[dict[str, Any]] = []
+    for item_id, label, score, prediction in zip(test_ids, test_labels, test_scores, test_predictions):
+        if label == prediction:
+            continue
+        row = freeze_by_item[item_id]
+        errors.append({"item_id": item_id, "source_dataset_id": row["source_dataset_id"], "source_reference": row["source_reference"], "true_label": row["label"], "model_score": score, "predicted_label": "accident" if prediction else "non_accident", "threshold": threshold["threshold"]})
+    with (output_dir / "held_out_test_errors.csv").open("w", encoding="utf-8", newline="") as handle:
+        import csv
+        fields = ("item_id", "source_dataset_id", "source_reference", "true_label", "model_score", "predicted_label", "threshold")
+        writer = csv.DictWriter(handle, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(errors)
+    checkpoint_hash = sha256_file(checkpoint_path)
+    metadata = {
+        "status": "COMPLETE_EXPERIMENTAL_ONLY",
+        "device": str(device),
+        "cuda_available": torch.cuda.is_available(),
+        "torch_version": torch.__version__,
+        "torchvision_version": __import__("torchvision").__version__,
+        "seed": seed,
+        "optimizer": "AdamW classifier head only",
+        "learning_rate": learning_rate,
+        "weight_decay": weight_decay,
+        "batch_size": batch_size,
+        "maximum_epochs": epochs,
+        "epochs_completed": len(history),
+        "augmentation": "none",
+        "history": history,
+        "validation": {"loss": validation_loss, "metrics": validation_metrics, "threshold": threshold},
+        "held_out_test": {"loss": test_loss, "metrics": test_metrics, "misclassifications": len(errors)},
+        "checkpoint": {"path": checkpoint_path.as_posix(), "sha256": checkpoint_hash},
+        "decisions_locked_before_test": decisions,
+    }
+    write_run_metadata(output_dir, metadata)
+    print("IRIS experimental run: held-out evaluation complete", flush=True)
+    return metadata
 
 
 def train_mobilenet_v3_small(
