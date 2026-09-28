@@ -424,7 +424,7 @@ def build_parser() -> argparse.ArgumentParser:
     apply_review_batches_parser.add_argument(
         "--batch", type=Path, action="append", required=True
     )
-    apply_review_batches_parser.add_argument("--ineligible-review", type=Path, required=True)
+    apply_review_batches_parser.add_argument("--ineligible-review", type=Path)
     apply_review_batches_parser.add_argument(
         "--propagate-exact-duplicates", action="store_true"
     )

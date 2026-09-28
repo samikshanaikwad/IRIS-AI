@@ -754,29 +754,31 @@ def apply_review_batch(
 def apply_review_batches_atomically(
     review_inventory_path: Path,
     batch_paths: list[Path],
-    ineligible_review_path: Path,
+    ineligible_review_path: Path | None = None,
     propagate_exact_duplicates: bool = False,
 ) -> dict[str, Any]:
     """Apply eligible positive-review batches with one final inventory write."""
     master_rows = load_review_inventory(review_inventory_path)
     master_by_item = {row["source_item"]: row for row in master_rows}
-    with ineligible_review_path.open("r", encoding="utf-8-sig", newline="") as handle:
-        reader = csv.DictReader(handle)
-        required_fields = {
-            "source_item",
-            "sha256",
-            "human_review_decision",
-            "publisher_annotation_status",
-            "eligibility_status",
-        }
-        if not required_fields.issubset(set(reader.fieldnames or ())):
-            raise SourceInspectionError(
-                f"Ineligible review quarantine header is invalid: {ineligible_review_path}"
-            )
-        quarantine_rows = [
-            {field: (row.get(field) or "").strip() for field in (reader.fieldnames or ())}
-            for row in reader
-        ]
+    quarantine_rows: list[dict[str, str]] = []
+    if ineligible_review_path is not None:
+        with ineligible_review_path.open("r", encoding="utf-8-sig", newline="") as handle:
+            reader = csv.DictReader(handle)
+            required_fields = {
+                "source_item",
+                "sha256",
+                "human_review_decision",
+                "publisher_annotation_status",
+                "eligibility_status",
+            }
+            if not required_fields.issubset(set(reader.fieldnames or ())):
+                raise SourceInspectionError(
+                    f"Ineligible review quarantine header is invalid: {ineligible_review_path}"
+                )
+            quarantine_rows = [
+                {field: (row.get(field) or "").strip() for field in (reader.fieldnames or ())}
+                for row in reader
+            ]
     quarantined: dict[str, dict[str, str]] = {}
     for row in quarantine_rows:
         source_item = row["source_item"]
@@ -818,14 +820,19 @@ def apply_review_batches_atomically(
             source_item = batch_row["source_item"]
             if decision == "pending":
                 continue
-            if decision not in POSITIVE_REVIEW_DECISIONS:
-                raise SourceInspectionError(
-                    f"Unsupported review_decision {decision!r} for {source_item}"
-                )
             master_row = master_by_item.get(source_item)
             if master_row is None:
                 raise SourceInspectionError(
                     f"Review batch item is absent from inventory: {source_item}"
+                )
+            allowed_decisions = (
+                DATS_REVIEW_DECISIONS
+                if master_row["source_dataset_id"] == "dats-2022-mendeley"
+                else POSITIVE_REVIEW_DECISIONS
+            )
+            if decision not in allowed_decisions:
+                raise SourceInspectionError(
+                    f"Unsupported review_decision {decision!r} for {source_item}"
                 )
             if source_item in quarantined:
                 if decision != "accident":
@@ -844,7 +851,10 @@ def apply_review_batches_atomically(
                 )
             if master_row["technical_status"] != "READABLE":
                 raise SourceInspectionError(f"Positive review source is not readable: {source_item}")
-            if master_row["annotation_status"] != "VALID_ACCIDENT_ANNOTATION":
+            if (
+                master_row["source_dataset_id"] == "accident-detection-9k-mendeley"
+                and master_row["annotation_status"] != "VALID_ACCIDENT_ANNOTATION"
+            ):
                 raise SourceInspectionError(
                     f"Positive review source annotation is not valid: {source_item}"
                 )
