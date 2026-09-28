@@ -23,6 +23,7 @@ from iris_dataset.mendeley import (
     inspect_accident_detection_archive,
     inspect_dats_archive,
     load_review_inventory,
+    validate_review_batch,
     validate_review_inventory,
     write_review_inventory,
 )
@@ -465,6 +466,10 @@ class MendeleySourceInspectionTest(unittest.TestCase):
             )
 
             self.assertEqual(result["batch_items"], 1)
+            batch_validation = validate_review_batch(
+                archive_path, inventory_path, batch_root / "review_batch.csv", batch_root
+            )
+            self.assertEqual(batch_validation["validation_errors"], [])
             with (batch_root / "review_batch.csv").open(
                 "r", encoding="utf-8", newline=""
             ) as handle:

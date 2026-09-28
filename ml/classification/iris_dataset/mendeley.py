@@ -9,6 +9,7 @@ import xml.etree.ElementTree as element_tree
 import zipfile
 from collections import Counter, defaultdict
 from dataclasses import dataclass, replace
+from datetime import date
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterable
 
@@ -332,6 +333,111 @@ def validate_review_inventory(path: Path) -> dict[str, Any]:
     return validate_review_rows(load_review_inventory(path))
 
 
+def validate_review_batch(
+    archive_path: Path,
+    review_inventory_path: Path,
+    batch_path: Path,
+    output_root: Path,
+) -> dict[str, Any]:
+    """Validate a generated human-review batch without changing the inventory."""
+    errors: list[str] = []
+    decisions: Counter[str] = Counter()
+    inventory = {
+        row["source_item"]: row for row in load_review_inventory(review_inventory_path)
+    }
+    with batch_path.open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        if tuple(reader.fieldnames or ()) != REVIEW_BATCH_FIELDS:
+            return {
+                "rows": 0,
+                "decision_counts": {},
+                "validation_errors": [f"Review batch header is invalid: {batch_path}"],
+            }
+        batch_rows = [
+            {field: (row.get(field) or "").strip() for field in REVIEW_BATCH_FIELDS}
+            for row in reader
+        ]
+
+    seen_items: set[str] = set()
+    seen_hashes: set[str] = set()
+    with zipfile.ZipFile(archive_path) as archive:
+        archive_members = {
+            _normalise_member_name(member.filename): member
+            for member in archive.infolist()
+            if not member.is_dir()
+        }
+        for row_number, row in enumerate(batch_rows, start=2):
+            source_item = row["source_item"]
+            decision = row["review_decision"]
+            decisions[decision] += 1
+            if not source_item:
+                errors.append(f"row {row_number}: source_item is required")
+                continue
+            if source_item in seen_items:
+                errors.append(f"row {row_number}: duplicate source_item {source_item!r}")
+            seen_items.add(source_item)
+            if source_item not in inventory:
+                errors.append(f"row {row_number}: source_item is absent from inventory")
+                continue
+            inventory_row = inventory[source_item]
+            if row["sha256"] != inventory_row["sha256"]:
+                errors.append(f"row {row_number}: SHA-256 differs from inventory")
+            if row["sha256"] in seen_hashes:
+                errors.append(f"row {row_number}: duplicate SHA-256 in batch")
+            seen_hashes.add(row["sha256"])
+            if decision not in POSITIVE_REVIEW_DECISIONS:
+                errors.append(f"row {row_number}: unsupported positive decision {decision!r}")
+
+            review_file = Path(row["review_file"])
+            if review_file.is_absolute() or ".." in review_file.parts:
+                errors.append(f"row {row_number}: review_file escapes batch directory")
+            else:
+                review_path = (output_root / review_file).resolve()
+                try:
+                    review_path.relative_to(output_root.resolve())
+                except ValueError:
+                    errors.append(f"row {row_number}: review_file escapes batch directory")
+                else:
+                    if not review_path.is_file():
+                        errors.append(f"row {row_number}: review_file is missing")
+                    else:
+                        if sha256_file(review_path) != row["sha256"]:
+                            errors.append(f"row {row_number}: review_file hash mismatch")
+
+            archive_member = archive_members.get(source_item)
+            if archive_member is None:
+                errors.append(f"row {row_number}: source item is absent from archive")
+            elif _sha256_bytes(archive.read(archive_member)) != row["sha256"]:
+                errors.append(f"row {row_number}: archive source hash mismatch")
+
+            editable_fields = ("label_basis", "reviewer", "review_date", "rationale")
+            if decision == "pending":
+                for field in editable_fields:
+                    if row[field]:
+                        errors.append(
+                            f"row {row_number}: pending decision must leave {field} blank"
+                        )
+            else:
+                for field in editable_fields:
+                    if not row[field]:
+                        errors.append(
+                            f"row {row_number}: {field} is required for {decision}"
+                        )
+                if row["review_date"]:
+                    try:
+                        date.fromisoformat(row["review_date"])
+                    except ValueError:
+                        errors.append(
+                            f"row {row_number}: review_date must use YYYY-MM-DD"
+                        )
+
+    return {
+        "rows": len(batch_rows),
+        "decision_counts": dict(sorted(decisions.items())),
+        "validation_errors": errors,
+    }
+
+
 def _write_review_contact_sheet(
     output_root: Path,
     batch_rows: list[dict[str, str]],
@@ -414,6 +520,9 @@ def create_review_batch(
     source_dataset_id: str,
     start: int,
     limit: int,
+    excluded_source_items: set[str] | None = None,
+    excluded_hashes: set[str] | None = None,
+    excluded_source_groups: set[str] | None = None,
 ) -> dict[str, Any]:
     if start < 0 or limit <= 0:
         raise SourceInspectionError(
@@ -426,6 +535,12 @@ def create_review_batch(
         if row["source_dataset_id"] == source_dataset_id
         and row["review_decision"] == "pending"
         and row["technical_status"] == "READABLE"
+        and (not excluded_source_items or row["source_item"] not in excluded_source_items)
+        and (not excluded_hashes or row["sha256"] not in excluded_hashes)
+        and (
+            not excluded_source_groups
+            or row["source_group_id"] not in excluded_source_groups
+        )
     ]
     exact_duplicate_counts = Counter(
         row["sha256"]

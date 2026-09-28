@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import sys
 from pathlib import Path
@@ -26,6 +27,8 @@ from .mendeley import (
     apply_review_batch,
     create_review_batch,
     inspect_mendeley_sources,
+    load_review_inventory,
+    validate_review_batch,
     validate_review_inventory,
 )
 from .reporting import build_report, format_report
@@ -224,6 +227,36 @@ def _inspect_mendeley_command(args: argparse.Namespace) -> int:
 
 
 def _create_review_batch_command(args: argparse.Namespace) -> int:
+    excluded_items: set[str] = set()
+    excluded_hashes: set[str] = set()
+    excluded_groups: set[str] = set()
+    if args.exclude_batch:
+        inventory_rows = load_review_inventory(args.review_inventory)
+        inventory_by_item = {row["source_item"]: row for row in inventory_rows}
+        for excluded_batch in args.exclude_batch:
+            with excluded_batch.open("r", encoding="utf-8-sig", newline="") as handle:
+                reader = csv.DictReader(handle)
+                if tuple(reader.fieldnames or ()) != (
+                    "source_item",
+                    "sha256",
+                    "review_file",
+                    "review_decision",
+                    "label_basis",
+                    "reviewer",
+                    "review_date",
+                    "rationale",
+                ):
+                    raise SourceInspectionError(
+                        f"Review batch header is invalid: {excluded_batch}"
+                    )
+                for row in reader:
+                    source_item = (row.get("source_item") or "").strip()
+                    digest = (row.get("sha256") or "").strip()
+                    excluded_items.add(source_item)
+                    excluded_hashes.add(digest)
+                    inventory_row = inventory_by_item.get(source_item)
+                    if inventory_row is not None:
+                        excluded_groups.add(inventory_row["source_group_id"])
     result = create_review_batch(
         archive_path=args.archive,
         review_inventory_path=args.review_inventory,
@@ -231,6 +264,9 @@ def _create_review_batch_command(args: argparse.Namespace) -> int:
         source_dataset_id=args.source_dataset_id,
         start=args.start,
         limit=args.limit,
+        excluded_source_items=excluded_items,
+        excluded_hashes=excluded_hashes,
+        excluded_source_groups=excluded_groups,
     )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0
@@ -248,6 +284,17 @@ def _apply_review_batch_command(args: argparse.Namespace) -> int:
 
 def _validate_reviews_command(args: argparse.Namespace) -> int:
     result = validate_review_inventory(args.review_inventory)
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 1 if result["validation_errors"] else 0
+
+
+def _validate_review_batch_command(args: argparse.Namespace) -> int:
+    result = validate_review_batch(
+        archive_path=args.archive,
+        review_inventory_path=args.review_inventory,
+        batch_path=args.batch,
+        output_root=args.output_root,
+    )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 1 if result["validation_errors"] else 0
 
@@ -334,6 +381,13 @@ def build_parser() -> argparse.ArgumentParser:
     review_batch_parser.add_argument("--output-root", type=Path, required=True)
     review_batch_parser.add_argument("--start", type=int, default=0)
     review_batch_parser.add_argument("--limit", type=int, default=100)
+    review_batch_parser.add_argument(
+        "--exclude-batch",
+        type=Path,
+        action="append",
+        default=[],
+        help="Previously generated batch whose items, hashes, and groups must be excluded.",
+    )
     review_batch_parser.set_defaults(handler=_create_review_batch_command)
 
     apply_review_parser = subparsers.add_parser("apply-review-batch")
@@ -356,6 +410,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--review-inventory", type=Path, default=DEFAULT_DATS_REVIEW
     )
     validate_review_parser.set_defaults(handler=_validate_reviews_command)
+
+    validate_batch_parser = subparsers.add_parser("validate-review-batch")
+    validate_batch_parser.add_argument("--archive", type=Path, required=True)
+    validate_batch_parser.add_argument("--review-inventory", type=Path, required=True)
+    validate_batch_parser.add_argument("--batch", type=Path, required=True)
+    validate_batch_parser.add_argument("--output-root", type=Path, required=True)
+    validate_batch_parser.set_defaults(handler=_validate_review_batch_command)
     return parser
 
 
