@@ -20,6 +20,9 @@ import '../features/classification/domain/evidence_classification_repository.dar
 import '../features/detection/application/evidence_detection_controller.dart';
 import '../features/detection/application/evidence_detection_service.dart';
 import '../features/detection/data/sqlite_evidence_detection_repository.dart';
+import '../features/depth/application/evidence_depth_controller.dart';
+import '../features/depth/application/evidence_depth_service.dart';
+import '../features/depth/data/sqlite_evidence_depth_repository.dart';
 
 class IrisApplicationServices {
   IrisApplicationServices({
@@ -31,6 +34,7 @@ class IrisApplicationServices {
     this.evidenceQuality,
     this.evidenceClassification,
     this.evidenceDetection,
+    this.evidenceDepth,
     Future<void> Function()? close,
   }) : _close = close;
 
@@ -58,6 +62,11 @@ class IrisApplicationServices {
         SqliteEvidenceClassificationRepository(database);
     final SqliteEvidenceDetectionRepository detectionRepository =
         SqliteEvidenceDetectionRepository(database);
+    final EvidenceDepthService depthService = EvidenceDepthService(
+      repository: SqliteEvidenceDepthRepository(database),
+      storage: storage,
+      quality: qualityService,
+    );
     final EvidenceDetectionService detectionService = EvidenceDetectionService(
       repository: detectionRepository,
       storage: storage,
@@ -82,6 +91,7 @@ class IrisApplicationServices {
         quality: qualityService,
       ),
       evidenceDetection: detectionService,
+      evidenceDepth: depthService,
       close: database.close,
     );
   }
@@ -94,6 +104,7 @@ class IrisApplicationServices {
   final EvidenceQualityOperations? evidenceQuality;
   final EvidenceClassificationOperations? evidenceClassification;
   final EvidenceDetectionOperations? evidenceDetection;
+  final EvidenceDepthOperations? evidenceDepth;
   final Future<void> Function()? _close;
 
   EvidenceController evidenceControllerFor(String caseId) {
@@ -148,6 +159,12 @@ class IrisApplicationServices {
       evidence: evidence,
       operations: operations,
     );
+  }
+
+  EvidenceDepthController evidenceDepthControllerFor(EvidenceImage evidence) {
+    final operations = evidenceDepth;
+    if (operations == null) throw StateError('Depth services are not configured.');
+    return EvidenceDepthController(evidence: evidence, operations: operations);
   }
 
   Future<void> close() async {

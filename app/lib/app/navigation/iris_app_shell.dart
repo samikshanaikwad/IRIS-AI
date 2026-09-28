@@ -54,9 +54,10 @@ class _IrisAppShellState extends State<IrisAppShell> {
     final evidenceQuality = widget.services.evidenceQuality;
     final evidenceClassification = widget.services.evidenceClassification;
     final evidenceDetection = widget.services.evidenceDetection;
+    final evidenceDepth = widget.services.evidenceDepth;
     if (evidenceQuality == null ||
         evidenceClassification == null ||
-        evidenceDetection == null) {
+        evidenceDetection == null || evidenceDepth == null) {
       throw StateError('Evidence quality services are not configured.');
     }
     Navigator.of(context).push<void>(
@@ -69,6 +70,7 @@ class _IrisAppShellState extends State<IrisAppShell> {
             evidenceQuality: evidenceQuality,
             evidenceClassification: evidenceClassification,
             evidenceDetection: evidenceDetection,
+            evidenceDepth: evidenceDepth,
           );
         },
       ),

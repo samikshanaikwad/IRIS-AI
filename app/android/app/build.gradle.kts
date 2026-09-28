@@ -44,6 +44,7 @@ android {
 
 dependencies {
     implementation("org.tensorflow:tensorflow-lite:2.16.1")
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.30.0")
     implementation("androidx.exifinterface:exifinterface:1.3.7")
 }
 
@@ -122,6 +123,21 @@ tasks.named("preBuild").configure {
     dependsOn(verifyIrisGeneratedPluginRegistration)
     dependsOn(verifyIrisClassifierModel)
     dependsOn(verifyIrisDetectorModel)
+    dependsOn(verifyIrisDepthModel)
+}
+
+val verifyIrisDepthModel by tasks.registering {
+    group = "verification"
+    description = "Verifies the qualified ORT depth model asset hash."
+    doLast {
+        val asset = file("src/main/assets/models/iris_v0_depth_vits_518.ort")
+        check(asset.isFile) { "Required V0 depth asset is missing." }
+        val digest = MessageDigest.getInstance("SHA-256").digest(asset.readBytes())
+            .joinToString("") { "%02x".format(it) }
+        check(digest == "f983ac210c302d37e0c07b075575426a4694a2b6eed6414fe66339bcb75a6830") {
+            "V0 depth asset hash mismatch."
+        }
+    }
 }
 
 val verifyIrisDetectorModel by tasks.registering {

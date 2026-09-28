@@ -17,6 +17,8 @@ import '../../classification/application/evidence_classification_controller.dart
 import '../../classification/application/evidence_classification_service.dart';
 import '../../detection/application/evidence_detection_controller.dart';
 import '../../detection/application/evidence_detection_service.dart';
+import '../../depth/application/evidence_depth_controller.dart';
+import '../../depth/application/evidence_depth_service.dart';
 import '../application/evidence_acquisition_service.dart';
 import '../application/evidence_controller.dart';
 import '../data/evidence_picker_gateway.dart';
@@ -30,6 +32,7 @@ class CaseEvidenceSection extends StatefulWidget {
     required this.qualityOperations,
     required this.classificationOperations,
     required this.detectionOperations,
+    required this.depthOperations,
     this.picker,
     super.key,
   });
@@ -38,6 +41,7 @@ class CaseEvidenceSection extends StatefulWidget {
   final EvidenceQualityOperations qualityOperations;
   final EvidenceClassificationOperations classificationOperations;
   final EvidenceDetectionOperations detectionOperations;
+  final EvidenceDepthOperations depthOperations;
   final EvidencePickerGateway? picker;
 
   @override
@@ -318,6 +322,10 @@ class _CaseEvidenceSectionState extends State<CaseEvidenceSection> {
                         detectionController: EvidenceDetectionController(
                           evidence: evidence,
                           operations: widget.detectionOperations,
+                        ),
+                        depthController: EvidenceDepthController(
+                          evidence: evidence,
+                          operations: widget.depthOperations,
                         ),
                       ),
                     ),

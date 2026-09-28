@@ -19,12 +19,38 @@ Future<void> migrateDatabase(
         await _createVersionFour(database);
       case 5:
         await _createVersionFive(database);
+      case 6:
+        await _createVersionSix(database);
       default:
         throw StateError(
           'No database migration registered for version $version.',
         );
     }
   }
+}
+
+Future<void> _createVersionSix(Database database) async {
+  await database.execute('''
+    CREATE TABLE ${IrisDatabaseConstants.evidenceDepthAnalysesTable} (
+      evidence_id TEXT PRIMARY KEY NOT NULL,
+      model_id TEXT NOT NULL,
+      artifact_sha256 TEXT NOT NULL CHECK(length(artifact_sha256) = 64),
+      contract_version TEXT NOT NULL,
+      source_evidence_sha256 TEXT NOT NULL CHECK(length(source_evidence_sha256) = 64),
+      analyzed_at INTEGER NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('complete', 'error')),
+      input_width INTEGER NOT NULL,
+      input_height INTEGER NOT NULL,
+      output_width INTEGER NOT NULL,
+      output_height INTEGER NOT NULL,
+      depth_min REAL,
+      depth_max REAL,
+      depth_mean REAL,
+      depth_file_relative_path TEXT,
+      inference_ms INTEGER,
+      FOREIGN KEY(evidence_id) REFERENCES ${IrisDatabaseConstants.evidenceTable}(id) ON DELETE CASCADE
+    )
+  ''');
 }
 
 Future<void> _createVersionFive(Database database) async {

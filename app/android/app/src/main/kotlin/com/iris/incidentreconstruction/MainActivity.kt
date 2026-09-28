@@ -11,6 +11,7 @@ import io.flutter.plugins.GeneratedPluginRegistrant
 class MainActivity : FlutterActivity() {
     private var classifierRuntime: IrisClassifierRuntime? = null
     private var objectDetectorRuntime: IrisObjectDetectorRuntime? = null
+    private var depthRuntime: IrisDepthRuntime? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         // FlutterActivity normally reaches this registrant through reflection.
@@ -28,6 +29,10 @@ class MainActivity : FlutterActivity() {
         objectDetectorRuntime = detector
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, detectorChannel)
             .setMethodCallHandler { call, result -> if (!detector.handle(call, result)) result.notImplemented() }
+        val depth = IrisDepthRuntime(applicationContext)
+        depthRuntime = depth
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, depthChannel)
+            .setMethodCallHandler { call, result -> if (!depth.handle(call, result)) result.notImplemented() }
 
         if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
             installPluginRegistrationDiagnostics(
@@ -42,6 +47,8 @@ class MainActivity : FlutterActivity() {
         classifierRuntime = null
         objectDetectorRuntime?.close()
         objectDetectorRuntime = null
+        depthRuntime?.close()
+        depthRuntime = null
         super.onDestroy()
     }
 
@@ -108,6 +115,7 @@ class MainActivity : FlutterActivity() {
         const val diagnosticsMethod = "getRegistrationState"
         const val classifierChannel = "com.iris.classifier/v1"
         const val detectorChannel = "com.iris.detector/v1"
+        const val depthChannel = "com.iris.depth/v1"
         internal val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
         const val sqflitePluginClassName = "com.tekartik.sqflite.SqflitePlugin"
         val pluginClassNames = mapOf(
