@@ -42,6 +42,7 @@ All source records, terms, and access state below were inspected on
 | **AccidentDetection-9k v2** | [Official Mendeley record](https://data.mendeley.com/datasets/4x5my8gbcs/2), DOI `10.17632/4x5my8gbcs.2` | Locally acquired/inspected: 9,002 readable images; 8,853 technical `Accident` annotation candidates. Extensive exact and perceptual duplicates cross its publisher splits. | The record declares CC BY 4.0, but the publisher says imagery was collected through Google image search and its README retains rights with original creators/rightsholders. The record does not independently establish rights for each web image. | Bounding-box annotation does not replace IRIS visible-accident review; technical candidates remain pending. | **REVIEW_REQUIRED** |
 | **Dataset Klasifikasi Kecelakaan** (Roboflow) | [Roboflow Universe record](https://universe.roboflow.com/asraf/dataset-klasifikasi-kecelakaan), uploader shown as Asraf | Record exposes accident/no-accident classification, 6,279 images and two versions. No data was downloaded; no original non-Roboflow publisher was located. | The page displays CC BY 4.0, but provides no documented ownership, original image sources, chain of rights, or evidence that the uploader originated the media. A host-level label alone is insufficient for IRIS. | Its binary labels and duplicate/leakage properties cannot be trusted without source provenance and direct inspection. | **REJECTED** |
 | **CCTV Traffic Accident Object Detection Dataset** | [Hugging Face derivative](https://huggingface.co/datasets/justjuu/traffic-accident-cctv-object-detection), uploader `justjuu`; [original Roboflow record](https://universe.roboflow.com/accident-and-nonaccident/accident-and-non-accident-label-image-dataset), publisher `Accident and Nonaccident` | HF card reports 1,485 unique CCTV frames, approximately 3,000 expanded rows, 640x640 letterboxed images, COCO-style boxes, and a current viewer total of 2,763 rows / 1.01 GB. The derivative is split into train/validation/test and contains image/object records, but no disclosed source video, camera, event, or timestamp identifiers. | HF declares **CC0-1.0** and says the original was designated Public Domain. The original Roboflow record says **Public Domain**. Neither page documents who owns or captured the underlying CCTV media, upstream URLs, releases, or authority to dedicate third-party material to the public domain. The HF declaration cannot cure an unresolved upstream rights chain. | Object annotations define `accident` regions and `non_accident` regions; one frame may contain both. Accident boxes can identify image-level positive candidates for human review, but a non-accident box never proves the whole image is non-accident. The card describes offline resize/padding, flips, and brightness augmentation; it does not provide a reliable original-to-derivative mapping. | **REVIEW_REQUIRED** |
+| **DHPR (Driving Hazard Prediction and Reasoning)** | [Official DHPR repository](https://github.com/DHPR-dataset/DHPR-dataset), DHPR-dataset authors; [paper/preprint](https://arxiv.org/abs/2310.04671); [official dataset card](https://huggingface.co/datasets/DHPR/Driving-Hazard-Prediction-and-Reasoning) | 14,975 single dashcam street-scene images, split 12,975/1,000/1,000. The paper states that the source images came from the accident-free BDD100K and ECP datasets. The released task is image plus vehicle speed, hypothesized hazard text, visual-entity boxes, and source identifiers; it is not an accident video/event collection. | The repository README declares the dataset **CC BY-NC 4.0**; the repository code `LICENSE` is BSD-3-Clause and must not be confused with the dataset terms. The paper identifies BDD100K and ECP as the visual sources, so the repository declaration does not by itself establish that the authors could relicense every underlying image or that model/TFLite distribution is authorized. Attribution and noncommercial compliance would be required, with upstream terms still requiring review. | The official paper explicitly says the source images are accident-free and that annotations describe hypothesized accidents that could occur a few seconds later. These images can support hazard-anticipation research, but they do not provide documented visible collisions, post-impact scenes, rollovers, or accident-damaged vehicles for IRIS's `accident` label. No automatic positive extraction is permitted. | **REJECTED** |
 
 ## Rights and provenance findings
 
@@ -150,6 +151,43 @@ manifests, trained-weight distribution, TFLite conversion, and bundling in a
 noncommercial Android project all remain subject to the unresolved underlying
 media rights and source-group limitations. No data was downloaded.
 
+### DHPR (Driving Hazard Prediction and Reasoning)
+
+The authoritative DHPR repository describes a dataset of 14,975 street scenes
+and states that the dataset is licensed under **CC BY-NC 4.0**. Its repository
+`LICENSE` file is BSD-3-Clause, which applies to the repository/code and is not
+treated as the dataset-content license. The official paper identifies the
+visual sources as the accident-free BDD100K and ECP datasets and describes the
+DHPR contribution as human annotations of potential hazards from those still
+images. The official dataset card exposes fields such as image, hazard,
+bounding box, plausible speed, and `image_source`.
+
+This provenance is materially different from an accident-positive dataset.
+The paper says the source images are accident-free and that annotators
+describe accidents that could occur a few seconds later. A scene containing a
+vehicle, pedestrian, merge, braking situation, or other hazard is not evidence
+that a collision is visibly present in that still. The hypothetical hazard
+text, including collision language, must not be converted into an IRIS
+`accident` label. The dataset also does not document accident intervals,
+impact timestamps, collision-visible frames, post-impact frames, or an event
+ID scheme suitable for extracting physical accident groups. `image_source`
+may be retained as source metadata if a future task inspects the files, but it
+must not be promoted to an invented event identifier.
+
+The CC BY-NC declaration may support noncommercial research use of the DHPR
+dataset as distributed, subject to attribution and the actual upstream terms.
+It does not settle whether BDD100K/ECP image rights permit IRIS's intended
+derived training set, trained-weight distribution, or TFLite bundling. Those
+questions are secondary here because the source fails the required semantic
+criterion: it does not supply documented visible accident-positive stills.
+The official repository's linked image archive was unavailable at the access
+check, and no smaller accident-only subset is documented. IRIS therefore does
+not acquire DHPR for this purpose.
+
+DHPR status: **REJECTED** for the IRIS accident-positive source role. This is
+not a claim that DHPR is invalid for its published hazard-prediction task; it
+is a task-specific rejection for binary visible-accident classification.
+
 ## Current route decision
 
 | Route | Status | Why |
@@ -157,6 +195,7 @@ media rights and source-group limitations. No data was downloaded.
 | TUMTraf-Accid3nD | **REVIEW_REQUIRED** | First-party real accident capture, but the source-specific CC BY-NC-SA 4.0 statement conflicts with the generic development-kit CC BY-NC-ND 4.0 statement. Written TUM clarification is required before downloading or deriving frames. |
 | ACCIDENT benchmark real subset | **REVIEW_REQUIRED** | Stronger documented clip-selection policy and canonical provenance, but Kaggle-gated acquisition, clip-level upstream terms, research/privacy restrictions, and trained-model/TFLite distribution are not fully settled for IRIS's intended release. |
 | CCTV Traffic Accident Object Detection Dataset | **REVIEW_REQUIRED** | Explicit HF/Roboflow public-domain declarations exist, but authority over underlying CCTV imagery, original-vs-augmented mapping, and physical-event grouping are undocumented. |
+| DHPR | **REJECTED** | Its documented source images are accident-free BDD100K/ECP scenes with hypothetical future-hazard annotations, not visibly occurring accidents. The CC BY-NC statement and upstream rights do not change that semantic mismatch. |
 
 ## Required future acquisition and qualification procedure
 
@@ -182,6 +221,11 @@ must first establish whether original frames can be separated from offline
 augmentations, then compute exact hashes/dHashes, inspect all available
 metadata for grouping, and human-review only frames containing a visible
 accident context. If those facts cannot be established, do not use the source.
+
+For DHPR, the acquisition decision is **C — do not acquire** for the
+accident-positive route. The source's stated content is accident-free
+dashcam imagery plus hypothetical hazard annotations. It cannot be converted
+into genuine visible-accident positives without fabricating the target label.
 
 After acquisition, the dataset inspector must record actual archive size,
 checksums, file structure, sequence/event/camera grouping fields, readable
