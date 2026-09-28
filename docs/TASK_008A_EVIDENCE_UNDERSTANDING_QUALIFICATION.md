@@ -71,3 +71,15 @@ Community CarDD-trained examples were not accepted as qualified pretrained model
 Do not begin Android integration from this qualification alone. The strongest technically useful route is to qualify an exact Cityscapes-trained lightweight semantic-segmentation TFLite artifact for road/ground labels, including its artifact hash and rights. In parallel, request/obtain the required CarDD consent if visible car-damage localization remains necessary. MobileSAM should remain a secondary research option because prompt-based masks and the deployment-license burden do not yet provide a clean IRIS V0 contract.
 
 TASK 008A remains qualification-only. TASK 009 must not start until a separately approved capability and contract exist.
+
+## TASK 008A.1 focused scene-segmentation qualification
+
+Primary candidate investigated: **TensorFlow DeepLab `mobilenetv3_small_cityscapes_trainfine`** from the official TensorFlow DeepLab model zoo. The model zoo identifies the exact MobileNetV3 Small Cityscapes checkpoint, Cityscapes train-fine training, 19 decoder classes, approximately 5 MB checkpoint size, and a reported 68.99% Cityscapes validation mIoU. Cityscapes is an urban road-scene dataset and its taxonomy includes `road`; the class mapping must be carried with the actual exported artifact rather than guessed in IRIS.
+
+The authoritative distribution exposes research checkpoints/frozen inference graphs and TensorFlow export instructions. It does **not** provide a directly downloadable, artifact-hashed TFLite model with a verified Android input/output contract. The official export code uses TensorFlow graph tooling and a frozen `SemanticPredictions` output; conversion to TFLite would be a separate engineering step requiring a supported conversion environment and numerical parity validation. No conversion was attempted in this focused qualification, and no model artifact or real-image inference was produced.
+
+Rights remain separate: TensorFlow model code is covered by the repository's Apache 2.0 license, but that does not itself grant unrestricted rights to the trained weights or Cityscapes imagery. Cityscapes has its own registration/use terms, and no artifact-specific redistribution permission sufficient for bundling a converted IRIS model was established here.
+
+**TASK 008A.1 decision: `BLOCKED` / not qualified.** The missing ready-to-inspect artifact, unverified converted tensor contract, absent real inference, and unresolved weight/dataset redistribution terms are essential-gate failures. The candidate must not receive a versioned IRIS scene-segmenter contract or Android integration.
+
+This focused result is not a claim that Cityscapes DeepLab is technically unusable; it is a decision that the evidence required for IRIS qualification was not established within the bounded one-candidate investigation. No fallback was pursued because doing so would expand the task beyond its stated limit.
