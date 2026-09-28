@@ -27,6 +27,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -46,6 +47,11 @@ dependencies {
     implementation("org.tensorflow:tensorflow-lite:2.16.1")
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.30.0")
     implementation("androidx.exifinterface:exifinterface:1.3.7")
+    // Official OpenCV Android AAR from Maven Central; infrastructure only.
+    implementation("org.opencv:opencv:4.10.0")
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test:runner:1.2.0")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
 }
 
 flutter {
