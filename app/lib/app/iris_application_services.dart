@@ -22,6 +22,8 @@ import '../features/detection/application/evidence_detection_service.dart';
 import '../features/detection/data/sqlite_evidence_detection_repository.dart';
 import '../features/depth/application/evidence_depth_controller.dart';
 import '../features/depth/application/evidence_depth_service.dart';
+import '../features/geometry/application/relative_geometry_service.dart';
+import '../features/geometry/data/sqlite_geometry_repository.dart';
 import '../features/depth/data/sqlite_evidence_depth_repository.dart';
 
 class IrisApplicationServices {
@@ -35,6 +37,7 @@ class IrisApplicationServices {
     this.evidenceClassification,
     this.evidenceDetection,
     this.evidenceDepth,
+    this.relativeGeometry,
     Future<void> Function()? close,
   }) : _close = close;
 
@@ -67,6 +70,11 @@ class IrisApplicationServices {
       storage: storage,
       quality: qualityService,
     );
+    final RelativeGeometryService geometryService = RelativeGeometryService(
+      repository: SqliteGeometryRepository(database),
+      storage: storage,
+      depth: depthService,
+    );
     final EvidenceDetectionService detectionService = EvidenceDetectionService(
       repository: detectionRepository,
       storage: storage,
@@ -92,6 +100,7 @@ class IrisApplicationServices {
       ),
       evidenceDetection: detectionService,
       evidenceDepth: depthService,
+      relativeGeometry: geometryService,
       close: database.close,
     );
   }
@@ -105,6 +114,7 @@ class IrisApplicationServices {
   final EvidenceClassificationOperations? evidenceClassification;
   final EvidenceDetectionOperations? evidenceDetection;
   final EvidenceDepthOperations? evidenceDepth;
+  final RelativeGeometryOperations? relativeGeometry;
   final Future<void> Function()? _close;
 
   EvidenceController evidenceControllerFor(String caseId) {

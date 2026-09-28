@@ -20,6 +20,8 @@ import '../../detection/domain/evidence_detection.dart';
 import '../../detection/presentation/evidence_detection_section.dart';
 import '../../depth/application/evidence_depth_controller.dart';
 import '../../depth/presentation/evidence_depth_section.dart';
+import '../../geometry/application/relative_geometry_controller.dart';
+import '../../geometry/presentation/relative_geometry_section.dart';
 
 class EvidenceDetailScreen extends StatefulWidget {
   const EvidenceDetailScreen({
@@ -29,6 +31,7 @@ class EvidenceDetailScreen extends StatefulWidget {
     required this.classificationController,
     required this.detectionController,
     required this.depthController,
+    required this.geometryController,
     super.key,
   });
 
@@ -38,6 +41,7 @@ class EvidenceDetailScreen extends StatefulWidget {
   final EvidenceClassificationController classificationController;
   final EvidenceDetectionController detectionController;
   final EvidenceDepthController depthController;
+  final RelativeGeometryController geometryController;
 
   @override
   State<EvidenceDetailScreen> createState() => _EvidenceDetailScreenState();
@@ -52,6 +56,7 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
   void initState() {
     super.initState();
     unawaited(widget.depthController.load());
+    unawaited(widget.geometryController.load());
     widget.controller.absolutePath(widget.evidence).then((String value) async {
       final bool exists = await File(value).exists();
       if (mounted) {
@@ -215,6 +220,8 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
           EvidenceDetectionSection(controller: widget.detectionController),
           const SizedBox(height: IrisSpacing.md),
           EvidenceDepthSection(controller: widget.depthController),
+          const SizedBox(height: IrisSpacing.md),
+          RelativeGeometrySection(controller: widget.geometryController),
           const SizedBox(height: IrisSpacing.md),
           IrisSecondaryButton(
             key: const ValueKey<String>('detail-remove-evidence-button'),
