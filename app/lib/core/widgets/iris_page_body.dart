@@ -23,14 +23,17 @@ class IrisPageBody extends StatelessWidget {
           return Center(
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: maxContentWidth),
-              child: ListView(
+              child: SingleChildScrollView(
                 padding: EdgeInsets.fromLTRB(
                   IrisSpacing.pageHorizontal(constraints.maxWidth),
                   IrisSpacing.md,
                   IrisSpacing.pageHorizontal(constraints.maxWidth),
                   IrisSpacing.lg,
                 ),
-                children: children,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: children,
+                ),
               ),
             ),
           );
