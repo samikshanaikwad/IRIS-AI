@@ -41,6 +41,7 @@ All source records, terms, and access state below were inspected on
 | **DoTA** | [Official repository](https://github.com/MoonBlvd/Detection-of-Traffic-Anomaly), inspected at commit `f8f603b8c06a946bc314752947ed480a4f33f82a`; [paper](https://arxiv.org/abs/2004.03044) | YouTube-derived traffic anomaly clips; official metadata has 4,677 clips and describes approximately 55 GB of extracted frames. Original source-video grouping is recoverable and must replace the publisher clip split. | The repository's MIT text is a **code** license. The README says the authors obtained authority from original channel authors to share clips, but current official README/repository/issue inspection supplied no separate content license or explicit local derived-frame/training/model-distribution terms. No new clarification was found; an unanswered or closed issue is not permission. | The anomaly start can precede visible impact, so frames require a reviewed collision-visible window. Some anomaly types are not collisions. | **REVIEW_REQUIRED** |
 | **AccidentDetection-9k v2** | [Official Mendeley record](https://data.mendeley.com/datasets/4x5my8gbcs/2), DOI `10.17632/4x5my8gbcs.2` | Locally acquired/inspected: 9,002 readable images; 8,853 technical `Accident` annotation candidates. Extensive exact and perceptual duplicates cross its publisher splits. | The record declares CC BY 4.0, but the publisher says imagery was collected through Google image search and its README retains rights with original creators/rightsholders. The record does not independently establish rights for each web image. | Bounding-box annotation does not replace IRIS visible-accident review; technical candidates remain pending. | **REVIEW_REQUIRED** |
 | **Dataset Klasifikasi Kecelakaan** (Roboflow) | [Roboflow Universe record](https://universe.roboflow.com/asraf/dataset-klasifikasi-kecelakaan), uploader shown as Asraf | Record exposes accident/no-accident classification, 6,279 images and two versions. No data was downloaded; no original non-Roboflow publisher was located. | The page displays CC BY 4.0, but provides no documented ownership, original image sources, chain of rights, or evidence that the uploader originated the media. A host-level label alone is insufficient for IRIS. | Its binary labels and duplicate/leakage properties cannot be trusted without source provenance and direct inspection. | **REJECTED** |
+| **CCTV Traffic Accident Object Detection Dataset** | [Hugging Face derivative](https://huggingface.co/datasets/justjuu/traffic-accident-cctv-object-detection), uploader `justjuu`; [original Roboflow record](https://universe.roboflow.com/accident-and-nonaccident/accident-and-non-accident-label-image-dataset), publisher `Accident and Nonaccident` | HF card reports 1,485 unique CCTV frames, approximately 3,000 expanded rows, 640x640 letterboxed images, COCO-style boxes, and a current viewer total of 2,763 rows / 1.01 GB. The derivative is split into train/validation/test and contains image/object records, but no disclosed source video, camera, event, or timestamp identifiers. | HF declares **CC0-1.0** and says the original was designated Public Domain. The original Roboflow record says **Public Domain**. Neither page documents who owns or captured the underlying CCTV media, upstream URLs, releases, or authority to dedicate third-party material to the public domain. The HF declaration cannot cure an unresolved upstream rights chain. | Object annotations define `accident` regions and `non_accident` regions; one frame may contain both. Accident boxes can identify image-level positive candidates for human review, but a non-accident box never proves the whole image is non-accident. The card describes offline resize/padding, flips, and brightness augmentation; it does not provide a reliable original-to-derivative mapping. | **REVIEW_REQUIRED** |
 
 ## Rights and provenance findings
 
@@ -108,12 +109,54 @@ frames, and event/video-group-aware splitting. The real subset is the only
 part relevant to real positive-image qualification; synthetic data remains
 separate and must not be silently mixed into the real-data manifest.
 
+### CCTV Traffic Accident Object Detection Dataset
+
+This Hugging Face dataset traces directly to the Roboflow project named
+“Accident and Non-accident label Image Dataset.” The Hugging Face card states
+that it contains 1,485 unique CCTV frames and approximately 3,000 rows after
+offline augmentation. The currently displayed dataset totals are 2,763 rows
+and 1.01 GB. The card declares CC0-1.0 and says the original authors
+designated the source Public Domain. The Roboflow record independently shows
+the same two classes, 1,485 images, five dataset versions, and a Public Domain
+label.
+
+Those declarations are not sufficient to establish rights in the underlying
+images. Neither page identifies the CCTV/video owners, capture source, source
+URLs, contributor releases, or evidence that the publisher had authority to
+dedicate every image to the public domain. No upstream provenance beyond the
+Roboflow project was disclosed during this qualification. This is a material
+uncertainty, not a finding that the publisher's claim is false.
+
+The annotations are object-level: an `accident` box marks an involved region,
+while a `non_accident` box marks an uninvolved visible vehicle/region. The
+card explicitly allows both classes in one frame. Therefore an image with at
+least one accident box can be a candidate for human image-level review, but
+the box label must not be promoted automatically to an IRIS production label.
+An image containing only non-accident boxes is not automatically a whole-scene
+`non_accident` example.
+
+The card describes offline letterboxing, horizontal flips, and brightness
+adjustments. It reports original and expanded counts, but does not document a
+stable parent-image identifier, augmentation-family field, or a mapping from
+the approximately 3,000 expanded rows to the 1,485 originals. The visible
+Hugging Face records also do not expose source video IDs, camera IDs, event IDs,
+timestamps, or sequence/frame identifiers. Event-aware splitting therefore
+cannot be established before authorized acquisition and inspection; it must
+not be invented. Exact SHA-256, dHash, and any recoverable augmentation-family
+grouping would be required, with all members of a group kept in one split.
+
+The route is `REVIEW_REQUIRED`. Local academic training, frame/image-derived
+manifests, trained-weight distribution, TFLite conversion, and bundling in a
+noncommercial Android project all remain subject to the unresolved underlying
+media rights and source-group limitations. No data was downloaded.
+
 ## Current route decision
 
 | Route | Status | Why |
 | --- | --- | --- |
 | TUMTraf-Accid3nD | **REVIEW_REQUIRED** | First-party real accident capture, but the source-specific CC BY-NC-SA 4.0 statement conflicts with the generic development-kit CC BY-NC-ND 4.0 statement. Written TUM clarification is required before downloading or deriving frames. |
 | ACCIDENT benchmark real subset | **REVIEW_REQUIRED** | Stronger documented clip-selection policy and canonical provenance, but Kaggle-gated acquisition, clip-level upstream terms, research/privacy restrictions, and trained-model/TFLite distribution are not fully settled for IRIS's intended release. |
+| CCTV Traffic Accident Object Detection Dataset | **REVIEW_REQUIRED** | Explicit HF/Roboflow public-domain declarations exist, but authority over underlying CCTV imagery, original-vs-augmented mapping, and physical-event grouping are undocumented. |
 
 ## Required future acquisition and qualification procedure
 
@@ -130,6 +173,15 @@ frame extraction for the intended academic use, IRIS may acquire only the
 real subset, preserve metadata and source URLs, and perform human-reviewed
 event-group extraction. Written clarification is still required before
 redistributing an IRIS-trained model or bundling a TFLite artifact for users.
+
+For the CCTV Traffic Accident Object Detection Dataset, the current decision
+is **B — acquire only for further rights/provenance inspection** if a later
+task authorizes acquisition. Do not promote it to the production manifest on
+the basis of the CC0/Public Domain labels alone. Any authorized inspection
+must first establish whether original frames can be separated from offline
+augmentations, then compute exact hashes/dHashes, inspect all available
+metadata for grouping, and human-review only frames containing a visible
+accident context. If those facts cannot be established, do not use the source.
 
 After acquisition, the dataset inspector must record actual archive size,
 checksums, file structure, sequence/event/camera grouping fields, readable
