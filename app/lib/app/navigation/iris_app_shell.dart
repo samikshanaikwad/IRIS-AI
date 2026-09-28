@@ -56,9 +56,10 @@ class _IrisAppShellState extends State<IrisAppShell> {
     final evidenceDetection = widget.services.evidenceDetection;
     final evidenceDepth = widget.services.evidenceDepth;
     final relativeGeometry = widget.services.relativeGeometry;
+    final multiView = widget.services.multiView;
     if (evidenceQuality == null ||
         evidenceClassification == null ||
-        evidenceDetection == null || evidenceDepth == null || relativeGeometry == null) {
+        evidenceDetection == null || evidenceDepth == null || relativeGeometry == null || multiView == null) {
       throw StateError('Evidence quality services are not configured.');
     }
     Navigator.of(context).push<void>(
@@ -73,6 +74,7 @@ class _IrisAppShellState extends State<IrisAppShell> {
             evidenceDetection: evidenceDetection,
             evidenceDepth: evidenceDepth,
             relativeGeometry: relativeGeometry,
+            multiView: multiView,
           );
         },
       ),

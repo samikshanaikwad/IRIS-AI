@@ -23,12 +23,46 @@ Future<void> migrateDatabase(
         await _createVersionSix(database);
       case 7:
         await _createVersionSeven(database);
+      case 8:
+        await _createVersionEight(database);
       default:
         throw StateError(
           'No database migration registered for version $version.',
         );
     }
   }
+}
+
+Future<void> _createVersionEight(Database database) async {
+  await database.execute('''
+    CREATE TABLE ${IrisDatabaseConstants.multiViewPairAnalysesTable} (
+      id TEXT PRIMARY KEY NOT NULL,
+      case_id TEXT NOT NULL,
+      evidence_a_id TEXT NOT NULL,
+      evidence_b_id TEXT NOT NULL,
+      evidence_a_sha256 TEXT NOT NULL CHECK(length(evidence_a_sha256) = 64),
+      evidence_b_sha256 TEXT NOT NULL CHECK(length(evidence_b_sha256) = 64),
+      algorithm_version TEXT NOT NULL,
+      orb_policy TEXT NOT NULL,
+      matching_policy TEXT NOT NULL,
+      geometric_policy TEXT NOT NULL,
+      feature_count_a INTEGER NOT NULL CHECK(feature_count_a >= 0),
+      feature_count_b INTEGER NOT NULL CHECK(feature_count_b >= 0),
+      candidate_match_count INTEGER NOT NULL CHECK(candidate_match_count >= 0),
+      accepted_match_count INTEGER NOT NULL CHECK(accepted_match_count >= 0),
+      verified_inlier_count INTEGER NOT NULL CHECK(verified_inlier_count >= 0),
+      inlier_ratio REAL NOT NULL CHECK(inlier_ratio >= 0.0 AND inlier_ratio <= 1.0),
+      geometric_model TEXT NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('VERIFIED_CORRESPONDENCE', 'INSUFFICIENT_FEATURES', 'INSUFFICIENT_MATCHES', 'GEOMETRIC_VERIFICATION_FAILED', 'ERROR')),
+      correspondence_json TEXT NOT NULL,
+      analyzed_at INTEGER NOT NULL,
+      FOREIGN KEY(case_id) REFERENCES ${IrisDatabaseConstants.casesTable}(id) ON DELETE CASCADE,
+      FOREIGN KEY(evidence_a_id) REFERENCES ${IrisDatabaseConstants.evidenceTable}(id) ON DELETE CASCADE,
+      FOREIGN KEY(evidence_b_id) REFERENCES ${IrisDatabaseConstants.evidenceTable}(id) ON DELETE CASCADE,
+      CHECK(evidence_a_id <> evidence_b_id),
+      UNIQUE(evidence_a_id, evidence_b_id)
+    )
+  ''');
 }
 
 Future<void> _createVersionSeven(Database database) async {

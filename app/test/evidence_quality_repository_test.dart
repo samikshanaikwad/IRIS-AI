@@ -75,7 +75,7 @@ void main() {
       qualityRepository = SqliteEvidenceQualityRepository(database);
       final Database migrated = await database.open();
 
-      expect(await migrated.getVersion(), 7);
+      expect(await migrated.getVersion(), IrisDatabaseConstants.schemaVersion);
       expect(
         await migrated.rawQuery(
           "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (?, ?, ?)",

@@ -25,6 +25,8 @@ import '../features/depth/application/evidence_depth_service.dart';
 import '../features/geometry/application/relative_geometry_service.dart';
 import '../features/geometry/data/sqlite_geometry_repository.dart';
 import '../features/depth/data/sqlite_evidence_depth_repository.dart';
+import '../features/multiview/application/multiview_service.dart';
+import '../features/multiview/data/sqlite_multiview_repository.dart';
 
 class IrisApplicationServices {
   IrisApplicationServices({
@@ -38,6 +40,7 @@ class IrisApplicationServices {
     this.evidenceDetection,
     this.evidenceDepth,
     this.relativeGeometry,
+    this.multiView,
     Future<void> Function()? close,
   }) : _close = close;
 
@@ -75,6 +78,7 @@ class IrisApplicationServices {
       storage: storage,
       depth: depthService,
     );
+    final MultiViewService multiViewService = MultiViewService(repository: SqliteMultiViewRepository(database), storage: storage);
     final EvidenceDetectionService detectionService = EvidenceDetectionService(
       repository: detectionRepository,
       storage: storage,
@@ -101,6 +105,7 @@ class IrisApplicationServices {
       evidenceDetection: detectionService,
       evidenceDepth: depthService,
       relativeGeometry: geometryService,
+      multiView: multiViewService,
       close: database.close,
     );
   }
@@ -115,6 +120,7 @@ class IrisApplicationServices {
   final EvidenceDetectionOperations? evidenceDetection;
   final EvidenceDepthOperations? evidenceDepth;
   final RelativeGeometryOperations? relativeGeometry;
+  final MultiViewService? multiView;
   final Future<void> Function()? _close;
 
   EvidenceController evidenceControllerFor(String caseId) {
