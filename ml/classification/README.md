@@ -1,8 +1,13 @@
 # IRIS classification dataset tooling
 
 This package prepares and validates a future real still-image dataset for the
-binary labels `accident` and `non_accident`. It does not train a model and is
-not used by the Flutter application.
+binary labels `accident` and `non_accident`. Its optional training path is
+rights-gated and is not used by the Flutter application.
+
+The reproducible training gate and optional MobileNetV3Small training path are
+documented in [CLASSIFICATION_TRAINING_PIPELINE](../../docs/CLASSIFICATION_TRAINING_PIPELINE.md).
+The current production manifest has no approved accident-positive rows, so
+training safely refuses to start.
 
 ## Environment
 

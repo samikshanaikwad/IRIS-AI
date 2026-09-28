@@ -1,0 +1,33 @@
+{
+  "config_version": "iris-classifier-training-v1",
+  "seed": 6006,
+  "architecture": "MobileNetV3Small",
+  "initialization": "random",
+  "pretrained_checkpoint": null,
+  "epochs": 20,
+  "batch_size": 32,
+  "learning_rate": 0.001,
+  "weight_decay": 0.0001,
+  "preprocess": {
+    "input_width": 224,
+    "input_height": 224,
+    "resize": "aspect-preserving contain with centered padding",
+    "pad_value": [0, 0, 0],
+    "normalization": {
+      "mean": [0.485, 0.456, 0.406],
+      "std": [0.229, 0.224, 0.225]
+    }
+  },
+  "augmentation": {
+    "training_only": true,
+    "policy": "none until validated; no geometric or photometric augmentation is enabled by default"
+  },
+  "threshold": {
+    "source_split": "validation",
+    "method": "maximum balanced accuracy",
+    "score_name": "model score",
+    "calibration": "not implemented"
+  },
+  "split_policy": "ml/classification/configs/split_policy.v1.json",
+  "notes": "Random initialization is explicit because no pretrained checkpoint has been approved for IRIS."
+}

@@ -12,7 +12,7 @@ Status values are updated only after implementation and verification.
 | 05 Camera / evidence quality | COMPLETE |
 | 06 Analysis job engine | NOT STARTED |
 | 07 Location / maps | NOT STARTED |
-| 08 Incident classifier | PARTIAL — REAL CANDIDATE SOURCES ACQUIRED/INSPECTED; POSITIVE-SOURCE, TUM-ACQUISITION, AND PRETRAINED-MODEL QUALIFICATION RECORDED; NO DIRECT PRETRAINED STILL-IMAGE CLASSIFIER QUALIFIES; LICENSE CONFIRMATION, SEMANTIC REVIEW, ACQUISITION OF NEW SOURCES, TRAINING, AND APP INTEGRATION NOT COMPLETE |
+| 08 Incident classifier | PARTIAL — REAL CANDIDATE SOURCES ACQUIRED/INSPECTED; POSITIVE-SOURCE, TUM-ACQUISITION, AND PRETRAINED-MODEL QUALIFICATION RECORDED; REPRODUCIBLE GROUP-SPLIT/LEAKAGE-CHECKED TRAINING PIPELINE IMPLEMENTED BUT BLOCKED BY ZERO APPROVED ACCIDENT-POSITIVE SAMPLES; TRAINING AND APP INTEGRATION NOT COMPLETE |
 | 09 Detection | NOT STARTED |
 | 10 Segmentation | NOT STARTED |
 | 11 Damage / evidence intelligence | NOT STARTED |
@@ -32,4 +32,4 @@ Status values are updated only after implementation and verification.
 | 25 End-to-end testing | NOT STARTED |
 | 26 Release APK | NOT STARTED |
 
-The verified application scope includes project governance, the Flutter/Android foundation, the design/navigation shell, offline SQLite case management, camera/gallery evidence acquisition with immutable managed originals, and deterministic schema-v3 evidence quality assessment. TASK 005 has been human accepted. TASK 006 now has tested dataset-preparation infrastructure, locally acquired and inspected real candidate archives, and documented source/model qualification; all semantic decisions remain pending, no production manifest item is approved, no direct pretrained classifier qualifies, and no classifier has been trained or integrated. No accident conclusion, reconstruction, physics result, scenario, or report is implemented.
+The verified application scope includes project governance, the Flutter/Android foundation, the design/navigation shell, offline SQLite case management, camera/gallery evidence acquisition with immutable managed originals, and deterministic schema-v3 evidence quality assessment. TASK 005 has been human accepted. TASK 006 now has tested dataset-preparation infrastructure, locally acquired and inspected real candidate archives, documented source/model qualification, and a reproducible training/evaluation pipeline whose production gate is blocked by missing approved accident-positive data; no direct pretrained classifier qualifies, and no classifier has been trained or integrated. No accident conclusion, reconstruction, physics result, scenario, or report is implemented.
