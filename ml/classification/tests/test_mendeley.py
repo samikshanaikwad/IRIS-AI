@@ -18,6 +18,7 @@ from iris_dataset.mendeley import (
     REVIEW_VERSION,
     SourceInspectionError,
     apply_review_batch,
+    apply_review_batches_atomically,
     apply_cross_source_leakage_groups,
     create_review_batch,
     inspect_accident_detection_archive,
@@ -438,6 +439,73 @@ class MendeleySourceInspectionTest(unittest.TestCase):
                 "Exact SHA-256 duplicate decision propagated",
                 loaded[1]["rationale"],
             )
+
+    def test_atomic_positive_application_skips_audited_ineligible_rows(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            inventory_path = root / "review.csv"
+            quarantine_path = root / "quarantine.csv"
+            valid_item = "Images/valid.png"
+            invalid_item = "Images/invalid.png"
+            valid_hash = "a" * 64
+            invalid_hash = "b" * 64
+            rows = []
+            for item, digest, annotation in (
+                (valid_item, valid_hash, "VALID_ACCIDENT_ANNOTATION"),
+                (invalid_item, invalid_hash, "EMPTY"),
+            ):
+                rows.append(
+                    {
+                        **{field: "" for field in REVIEW_FIELDS},
+                        "review_version": REVIEW_VERSION,
+                        "inspection_tool_version": INSPECTION_VERSION,
+                        "source_dataset_id": "accident-detection-9k-mendeley",
+                        "source_dataset_version": "test-v2",
+                        "source_item": item,
+                        "source_group_id": f"group-{item}",
+                        "group_basis": "test-only",
+                        "annotation_status": annotation,
+                        "technical_status": "READABLE",
+                        "rights_status": "REVIEW_REQUIRED",
+                        "sha256": digest,
+                        "review_decision": "pending",
+                    }
+                )
+            write_review_inventory(inventory_path, rows)
+
+            batch_root = root / "batch"
+            batch_root.mkdir()
+            batch_path = batch_root / "review_batch.csv"
+            with batch_path.open("w", encoding="utf-8", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=REVIEW_BATCH_FIELDS)
+                writer.writeheader()
+                for item, digest in ((valid_item, valid_hash), (invalid_item, invalid_hash)):
+                    writer.writerow(
+                        {
+                            "source_item": item,
+                            "sha256": digest,
+                            "review_file": "images/review.png",
+                            "review_decision": "accident",
+                            "label_basis": "Human visual review found visible accident evidence.",
+                            "reviewer": "test-reviewer",
+                            "review_date": "2026-09-28",
+                            "rationale": "Test-only controlled review.",
+                        }
+                    )
+            quarantine_path.write_text(
+                "source_item,sha256,human_review_decision,publisher_annotation_status,eligibility_status\n"
+                f"{invalid_item},{invalid_hash},accident,EMPTY,EXCLUDED_SOURCE_INELIGIBLE\n",
+                encoding="utf-8",
+            )
+
+            result = apply_review_batches_atomically(
+                inventory_path, [batch_path], quarantine_path
+            )
+            loaded = load_review_inventory(inventory_path)
+            self.assertEqual(result["applied_decisions"], 1)
+            self.assertEqual(result["quarantined_rows"], 1)
+            self.assertEqual(loaded[0]["review_decision"], "accident")
+            self.assertEqual(loaded[1]["review_decision"], "pending")
 
     def test_accident_positive_review_batch_stays_pending_and_uses_positive_policy(
         self,

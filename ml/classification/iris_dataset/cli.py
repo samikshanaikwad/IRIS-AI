@@ -25,6 +25,7 @@ from .manifest import (
 from .mendeley import (
     SourceInspectionError,
     apply_review_batch,
+    apply_review_batches_atomically,
     create_review_batch,
     inspect_mendeley_sources,
     load_review_inventory,
@@ -282,6 +283,17 @@ def _apply_review_batch_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _apply_review_batches_command(args: argparse.Namespace) -> int:
+    result = apply_review_batches_atomically(
+        review_inventory_path=args.review_inventory,
+        batch_paths=args.batch,
+        ineligible_review_path=args.ineligible_review,
+        propagate_exact_duplicates=args.propagate_exact_duplicates,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
 def _validate_reviews_command(args: argparse.Namespace) -> int:
     result = validate_review_inventory(args.review_inventory)
     print(json.dumps(result, indent=2, sort_keys=True))
@@ -404,6 +416,19 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     apply_review_parser.set_defaults(handler=_apply_review_batch_command)
+
+    apply_review_batches_parser = subparsers.add_parser("apply-review-batches-atomic")
+    apply_review_batches_parser.add_argument(
+        "--review-inventory", type=Path, default=DEFAULT_ACCIDENT_REVIEW
+    )
+    apply_review_batches_parser.add_argument(
+        "--batch", type=Path, action="append", required=True
+    )
+    apply_review_batches_parser.add_argument("--ineligible-review", type=Path, required=True)
+    apply_review_batches_parser.add_argument(
+        "--propagate-exact-duplicates", action="store_true"
+    )
+    apply_review_batches_parser.set_defaults(handler=_apply_review_batches_command)
 
     validate_review_parser = subparsers.add_parser("validate-reviews")
     validate_review_parser.add_argument(

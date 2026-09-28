@@ -737,6 +737,165 @@ def apply_review_batch(
     }
 
 
+def apply_review_batches_atomically(
+    review_inventory_path: Path,
+    batch_paths: list[Path],
+    ineligible_review_path: Path,
+    propagate_exact_duplicates: bool = False,
+) -> dict[str, Any]:
+    """Apply eligible positive-review batches with one final inventory write."""
+    master_rows = load_review_inventory(review_inventory_path)
+    master_by_item = {row["source_item"]: row for row in master_rows}
+    with ineligible_review_path.open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        required_fields = {
+            "source_item",
+            "sha256",
+            "human_review_decision",
+            "publisher_annotation_status",
+            "eligibility_status",
+        }
+        if not required_fields.issubset(set(reader.fieldnames or ())):
+            raise SourceInspectionError(
+                f"Ineligible review quarantine header is invalid: {ineligible_review_path}"
+            )
+        quarantine_rows = [
+            {field: (row.get(field) or "").strip() for field in (reader.fieldnames or ())}
+            for row in reader
+        ]
+    quarantined: dict[str, dict[str, str]] = {}
+    for row in quarantine_rows:
+        source_item = row["source_item"]
+        inventory_row = master_by_item.get(source_item)
+        if source_item in quarantined:
+            raise SourceInspectionError(
+                f"Duplicate source_item in ineligible review quarantine: {source_item}"
+            )
+        if inventory_row is None or inventory_row["sha256"] != row["sha256"]:
+            raise SourceInspectionError(
+                f"Ineligible review quarantine does not match inventory: {source_item}"
+            )
+        if row["human_review_decision"] != "accident":
+            raise SourceInspectionError(
+                f"Ineligible review quarantine decision is not accident: {source_item}"
+            )
+        if inventory_row["annotation_status"] == "VALID_ACCIDENT_ANNOTATION":
+            raise SourceInspectionError(f"Quarantine row is source-eligible: {source_item}")
+        quarantined[source_item] = row
+
+    applied_items: set[str] = set()
+    batch_results: list[dict[str, Any]] = []
+    total_applied = 0
+    total_propagated = 0
+    for batch_path in batch_paths:
+        with batch_path.open("r", encoding="utf-8-sig", newline="") as handle:
+            reader = csv.DictReader(handle)
+            if tuple(reader.fieldnames or ()) != REVIEW_BATCH_FIELDS:
+                raise SourceInspectionError(f"Review batch header is invalid: {batch_path}")
+            batch_rows = [
+                {field: (row.get(field) or "").strip() for field in REVIEW_BATCH_FIELDS}
+                for row in reader
+            ]
+        batch_applied = 0
+        batch_propagated = 0
+        skipped_quarantine = 0
+        for batch_row in batch_rows:
+            decision = batch_row["review_decision"]
+            source_item = batch_row["source_item"]
+            if decision == "pending":
+                continue
+            if decision not in POSITIVE_REVIEW_DECISIONS:
+                raise SourceInspectionError(
+                    f"Unsupported review_decision {decision!r} for {source_item}"
+                )
+            master_row = master_by_item.get(source_item)
+            if master_row is None:
+                raise SourceInspectionError(
+                    f"Review batch item is absent from inventory: {source_item}"
+                )
+            if source_item in quarantined:
+                if decision != "accident":
+                    raise SourceInspectionError(
+                        f"Quarantined source has changed decision: {source_item}"
+                    )
+                skipped_quarantine += 1
+                continue
+            if source_item in applied_items:
+                raise SourceInspectionError(
+                    f"Review source item appears in multiple application batches: {source_item}"
+                )
+            if batch_row["sha256"] != master_row["sha256"]:
+                raise SourceInspectionError(
+                    f"Review batch source hash no longer matches inventory: {source_item}"
+                )
+            if master_row["technical_status"] != "READABLE":
+                raise SourceInspectionError(f"Positive review source is not readable: {source_item}")
+            if master_row["annotation_status"] != "VALID_ACCIDENT_ANNOTATION":
+                raise SourceInspectionError(
+                    f"Positive review source annotation is not valid: {source_item}"
+                )
+            for field in ("label_basis", "reviewer", "review_date", "rationale"):
+                if not batch_row[field]:
+                    raise SourceInspectionError(f"{field} is required for {source_item}")
+            for field in (
+                "review_decision",
+                "label_basis",
+                "reviewer",
+                "review_date",
+                "rationale",
+            ):
+                master_row[field] = batch_row[field]
+            applied_items.add(source_item)
+            batch_applied += 1
+            if not propagate_exact_duplicates:
+                continue
+            for duplicate_row in master_rows:
+                if (
+                    duplicate_row is master_row
+                    or duplicate_row["sha256"] != batch_row["sha256"]
+                    or duplicate_row["source_dataset_id"] != master_row["source_dataset_id"]
+                    or duplicate_row["source_group_id"] != master_row["source_group_id"]
+                    or duplicate_row["review_decision"] != "pending"
+                ):
+                    continue
+                duplicate_row["review_decision"] = decision
+                duplicate_row["label_basis"] = batch_row["label_basis"]
+                duplicate_row["reviewer"] = batch_row["reviewer"]
+                duplicate_row["review_date"] = batch_row["review_date"]
+                provenance = (
+                    "Exact SHA-256 duplicate decision propagated from "
+                    f"{source_item} after explicit reviewer request."
+                )
+                duplicate_row["rationale"] = " ".join(
+                    value for value in (batch_row["rationale"], provenance) if value
+                )
+                batch_propagated += 1
+        total_applied += batch_applied
+        total_propagated += batch_propagated
+        batch_results.append(
+            {
+                "batch": batch_path.as_posix(),
+                "applied_decisions": batch_applied,
+                "quarantined_rows_skipped": skipped_quarantine,
+                "propagated_exact_duplicate_decisions": batch_propagated,
+            }
+        )
+    validation = validate_review_rows(master_rows)
+    if validation["validation_errors"]:
+        raise SourceInspectionError(
+            "Review decisions are invalid: "
+            + "; ".join(validation["validation_errors"][:10])
+        )
+    write_review_inventory(review_inventory_path, master_rows)
+    return {
+        "batches": batch_results,
+        "applied_decisions": total_applied,
+        "quarantined_rows": len(quarantined),
+        "propagated_exact_duplicate_decisions": total_propagated,
+        **validation,
+    }
+
+
 def _duplicate_summary(images: list[InspectedImage]) -> dict[str, Any]:
     hashes: dict[str, list[int]] = defaultdict(list)
     source_groups: set[str] = set()
