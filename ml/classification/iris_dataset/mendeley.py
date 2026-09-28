@@ -67,6 +67,15 @@ POSITIVE_REVIEW_DECISIONS = {
     "exclude_corrupt",
 }
 
+DATS_REVIEW_DECISIONS = {
+    "pending",
+    "non_accident",
+    "exclude_visible_accident",
+    "exclude_ambiguous",
+    "exclude_irrelevant",
+    "exclude_corrupt",
+}
+
 REVIEW_BATCH_FIELDS = (
     "source_item",
     "sha256",
@@ -385,8 +394,13 @@ def validate_review_batch(
             if row["sha256"] in seen_hashes:
                 errors.append(f"row {row_number}: duplicate SHA-256 in batch")
             seen_hashes.add(row["sha256"])
-            if decision not in POSITIVE_REVIEW_DECISIONS:
-                errors.append(f"row {row_number}: unsupported positive decision {decision!r}")
+            allowed_decisions = (
+                DATS_REVIEW_DECISIONS
+                if inventory_row["source_dataset_id"] == "dats-2022-mendeley"
+                else POSITIVE_REVIEW_DECISIONS
+            )
+            if decision not in allowed_decisions:
+                errors.append(f"row {row_number}: unsupported review decision {decision!r}")
 
             review_file = Path(row["review_file"])
             if review_file.is_absolute() or ".." in review_file.parts:
