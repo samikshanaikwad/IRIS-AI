@@ -1,0 +1,42 @@
+{
+  "authorization_version": "iris-v0-experimental-authorization-v1",
+  "scope": {
+    "task": "TASK 006",
+    "dataset": "IRIS V0 accident/non-accident classifier",
+    "freeze_manifest": "datasets/manifests/classification/v0_candidate_freeze.v1.csv",
+    "freeze_manifest_sha256": "dbab98defad49c7dd05ba0688e0430110287975860773fa06bb10bcc5fb1f561",
+    "selected_sample_digest": "36903d9151869e484765211a544d12c03af344b9c59753cba2479363c2f5b61b",
+    "use": "local experimental academic/research model development only",
+    "production_release": false
+  },
+  "rights": {
+    "accident_detection_status": "REVIEW_REQUIRED",
+    "dats_status": "APPROVED",
+    "provenance_warning": "AccidentDetection-9k underlying individual-image provenance is unresolved because source imagery was reported as collected through Google Image Search.",
+    "does_not_imply_production_or_release_clearance": true
+  },
+  "counts": {
+    "total": 1000,
+    "accident": 500,
+    "non_accident": 500
+  },
+  "split": {
+    "seed": 6006,
+    "near_duplicate_pairs": 24,
+    "near_duplicate_components": 983,
+    "counts": {
+      "accident_train": 350,
+      "accident_validation": 75,
+      "accident_test": 75,
+      "non_accident_train": 350,
+      "non_accident_validation": 75,
+      "non_accident_test": 75
+    },
+    "test_locked": true,
+    "integrity": {
+      "verified_files": 1000,
+      "total_files": 1000
+    }
+  },
+  "test_policy": "Test labels are locked before training and may only be used for one final held-out evaluation after model and threshold decisions are frozen."
+}
