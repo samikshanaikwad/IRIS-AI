@@ -13,6 +13,8 @@ import '../../../core/widgets/iris_status_chip.dart';
 import '../../evidence_quality/application/evidence_quality_controller.dart';
 import '../../evidence_quality/application/evidence_quality_service.dart';
 import '../../evidence_quality/domain/evidence_quality_assessment.dart';
+import '../../classification/application/evidence_classification_controller.dart';
+import '../../classification/application/evidence_classification_service.dart';
 import '../application/evidence_acquisition_service.dart';
 import '../application/evidence_controller.dart';
 import '../data/evidence_picker_gateway.dart';
@@ -24,12 +26,14 @@ class CaseEvidenceSection extends StatefulWidget {
   const CaseEvidenceSection({
     required this.controller,
     required this.qualityOperations,
+    required this.classificationOperations,
     this.picker,
     super.key,
   });
 
   final EvidenceController controller;
   final EvidenceQualityOperations qualityOperations;
+  final EvidenceClassificationOperations classificationOperations;
   final EvidencePickerGateway? picker;
 
   @override
@@ -302,6 +306,11 @@ class _CaseEvidenceSectionState extends State<CaseEvidenceSection> {
                           evidence: evidence,
                           operations: widget.qualityOperations,
                         ),
+                        classificationController:
+                            EvidenceClassificationController(
+                              evidence: evidence,
+                              operations: widget.classificationOperations,
+                            ),
                       ),
                     ),
                   );

@@ -52,7 +52,8 @@ class _IrisAppShellState extends State<IrisAppShell> {
 
   void _openCase(String caseId) {
     final evidenceQuality = widget.services.evidenceQuality;
-    if (evidenceQuality == null) {
+    final evidenceClassification = widget.services.evidenceClassification;
+    if (evidenceQuality == null || evidenceClassification == null) {
       throw StateError('Evidence quality services are not configured.');
     }
     Navigator.of(context).push<void>(
@@ -63,6 +64,7 @@ class _IrisAppShellState extends State<IrisAppShell> {
             caseController: widget.caseController,
             evidenceController: widget.services.evidenceControllerFor(caseId),
             evidenceQuality: evidenceQuality,
+            evidenceClassification: evidenceClassification,
           );
         },
       ),

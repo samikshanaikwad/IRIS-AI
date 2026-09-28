@@ -7,6 +7,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:iris/core/database/database_constants.dart';
 import 'package:iris/core/database/iris_database.dart';
 import 'package:iris/core/database/migrations/database_migrations.dart';
+import 'package:iris/features/classification/data/sqlite_evidence_classification_repository.dart';
+import 'package:iris/features/classification/domain/evidence_classification.dart';
 import 'package:iris/features/evidence/data/sqlite_evidence_repository.dart';
 import 'package:iris/features/evidence_quality/data/sqlite_evidence_quality_repository.dart';
 import 'package:iris/features/evidence_quality/domain/evidence_quality_assessment.dart';
@@ -38,13 +40,13 @@ void main() {
   });
 
   test(
-    'v2 to v3 preserves case and evidence without fabricating results',
+    'v3 to v4 preserves cases, evidence, and quality without fabricating classifications',
     () async {
       final String databasePath = path.join(directory.path, 'migration.db');
       final Database old = await databaseFactoryFfi.openDatabase(
         databasePath,
         options: OpenDatabaseOptions(
-          version: 2,
+          version: 3,
           onCreate: (Database db, int version) =>
               migrateDatabase(db, 0, version),
         ),
@@ -55,6 +57,7 @@ void main() {
         id: 'existing-evidence',
         caseId: 'existing-case',
       );
+      await _insertQuality(old, 'existing-evidence');
       final String originalHash =
           (await old.query(
                 IrisDatabaseConstants.evidenceTable,
@@ -72,7 +75,7 @@ void main() {
       qualityRepository = SqliteEvidenceQualityRepository(database);
       final Database migrated = await database.open();
 
-      expect(await migrated.getVersion(), 3);
+      expect(await migrated.getVersion(), 4);
       expect(
         await migrated.query(
           IrisDatabaseConstants.casesTable,
@@ -93,7 +96,15 @@ void main() {
       );
       expect(preservedEvidence.single['sha256'], originalHash);
       expect(
-        await migrated.query(IrisDatabaseConstants.evidenceQualityTable),
+        await migrated.query(
+          IrisDatabaseConstants.evidenceQualityTable,
+          where: 'evidence_id = ?',
+          whereArgs: <Object?>['existing-evidence'],
+        ),
+        hasLength(1),
+      );
+      expect(
+        await migrated.query(IrisDatabaseConstants.evidenceClassificationTable),
         isEmpty,
       );
     },
@@ -158,6 +169,38 @@ void main() {
   });
 
   test(
+    'classification persists per evidence and cascades with evidence',
+    () async {
+      final Database db = await database.open();
+      await _insertCase(db, 'case-a');
+      await _insertEvidence(db, id: 'evidence-a', caseId: 'case-a');
+      final SqliteEvidenceClassificationRepository classifications =
+          SqliteEvidenceClassificationRepository(database);
+      final EvidenceClassification expected = EvidenceClassification(
+        evidenceId: 'evidence-a',
+        evidenceSha256: 'a' * 64,
+        modelId: 'iris-v0',
+        modelTfliteSha256: 'b' * 64,
+        modelContractVersion: 'v1',
+        rawLogit: 1.25,
+        modelScore: 0.777299861,
+        threshold: 0.8611480594,
+        label: EvidenceClassificationLabel.nonAccident,
+        analyzedAt: DateTime.utc(2026, 9, 28),
+      );
+
+      await classifications.save(expected);
+      final EvidenceClassification loaded = (await classifications
+          .getForEvidence('evidence-a'))!;
+      expect(loaded.modelScore, closeTo(expected.modelScore, 0.0000001));
+      expect(loaded.label, EvidenceClassificationLabel.nonAccident);
+
+      await SqliteEvidenceRepository(database).delete('evidence-a');
+      expect(await classifications.getForEvidence('evidence-a'), isNull);
+    },
+  );
+
+  test(
     'deleting a case cascades assessments and preserves another case',
     () async {
       final Database db = await database.open();
@@ -218,6 +261,32 @@ Future<void> _insertEvidence(
     'file_size_bytes': 1024,
     'sha256': hashCharacter * 64,
   });
+}
+
+Future<void> _insertQuality(Database database, String evidenceId) async {
+  await database
+      .insert(IrisDatabaseConstants.evidenceQualityTable, <String, Object?>{
+        'evidence_id': evidenceId,
+        'assessed_at': DateTime.utc(2026, 9, 27).millisecondsSinceEpoch,
+        'algorithm_version': 'iris-image-quality-v1',
+        'expected_sha256': 'a' * 64,
+        'assessed_sha256': 'a' * 64,
+        'file_state': 'available',
+        'decode_state': 'decoded',
+        'integrity_state': 'verified',
+        'readiness_state': 'ready',
+        'file_size_bytes': 1024,
+        'original_width': 1280,
+        'original_height': 720,
+        'analysis_width': 1024,
+        'analysis_height': 576,
+        'orientation': 'landscape',
+        'sharpness_value': 120.0,
+        'mean_luminance': 128.0,
+        'dark_clipped_fraction': 0.0,
+        'bright_clipped_fraction': 0.0,
+        'findings_json': '[]',
+      });
 }
 
 EvidenceQualityAssessment _assessment({

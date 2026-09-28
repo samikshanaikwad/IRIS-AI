@@ -13,6 +13,10 @@ import '../features/evidence_quality/application/evidence_quality_service.dart';
 import '../features/evidence_quality/data/sqlite_evidence_quality_repository.dart';
 import '../features/evidence_quality/domain/evidence_quality_repository.dart';
 import '../features/evidence_quality/processing/image_quality_analyzer.dart';
+import '../features/classification/application/evidence_classification_controller.dart';
+import '../features/classification/application/evidence_classification_service.dart';
+import '../features/classification/data/sqlite_evidence_classification_repository.dart';
+import '../features/classification/domain/evidence_classification_repository.dart';
 
 class IrisApplicationServices {
   IrisApplicationServices({
@@ -22,6 +26,7 @@ class IrisApplicationServices {
     this.evidenceAcquisition,
     this.evidenceQualityRepository,
     this.evidenceQuality,
+    this.evidenceClassification,
     Future<void> Function()? close,
   }) : _close = close;
 
@@ -45,6 +50,8 @@ class IrisApplicationServices {
       storage: storage,
       analyzer: FlutterImageQualityAnalyzer(),
     );
+    final EvidenceClassificationRepository classificationRepository =
+        SqliteEvidenceClassificationRepository(database);
     return IrisApplicationServices(
       caseRepository: ManagedCaseRepository(
         SqliteCaseRepository(database),
@@ -58,6 +65,11 @@ class IrisApplicationServices {
       ),
       evidenceQualityRepository: qualityRepository,
       evidenceQuality: qualityService,
+      evidenceClassification: EvidenceClassificationService(
+        repository: classificationRepository,
+        storage: storage,
+        quality: qualityService,
+      ),
       close: database.close,
     );
   }
@@ -68,6 +80,7 @@ class IrisApplicationServices {
   final EvidenceAcquisitionService? evidenceAcquisition;
   final EvidenceQualityRepository? evidenceQualityRepository;
   final EvidenceQualityOperations? evidenceQuality;
+  final EvidenceClassificationOperations? evidenceClassification;
   final Future<void> Function()? _close;
 
   EvidenceController evidenceControllerFor(String caseId) {
@@ -93,6 +106,19 @@ class IrisApplicationServices {
       throw StateError('Evidence quality services are not configured.');
     }
     return EvidenceQualityController(
+      evidence: evidence,
+      operations: operations,
+    );
+  }
+
+  EvidenceClassificationController evidenceClassificationControllerFor(
+    EvidenceImage evidence,
+  ) {
+    final EvidenceClassificationOperations? operations = evidenceClassification;
+    if (operations == null) {
+      throw StateError('Classification services are not configured.');
+    }
+    return EvidenceClassificationController(
       evidence: evidence,
       operations: operations,
     );

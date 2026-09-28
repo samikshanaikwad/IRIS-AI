@@ -19,6 +19,8 @@ import 'package:iris/features/evidence/application/evidence_acquisition_service.
 import 'package:iris/features/evidence/data/evidence_storage.dart';
 import 'package:iris/features/evidence/domain/evidence_image.dart';
 import 'package:iris/features/evidence_quality/domain/evidence_quality_assessment.dart';
+import 'package:iris/features/classification/application/evidence_classification_service.dart';
+import 'package:iris/features/classification/domain/evidence_classification.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -28,6 +30,9 @@ void main() {
     (WidgetTester tester) async {
       const MethodChannel diagnosticsChannel = MethodChannel(
         'com.iris.debug/plugin_registration',
+      );
+      const MethodChannel classifierChannel = MethodChannel(
+        'com.iris.classifier/v1',
       );
       final Map<Object?, Object?>? registration = await diagnosticsChannel
           .invokeMapMethod<Object?, Object?>('getRegistrationState');
@@ -56,6 +61,14 @@ void main() {
           reason: '$name registered on MainActivity engine',
         );
       }
+      final Map<Object?, Object?>? classifierContract = await classifierChannel
+          .invokeMapMethod<Object?, Object?>('smoke');
+      expect(
+        classifierContract?['modelSha256'],
+        EvidenceClassificationService.modelSha256,
+      );
+      expect(classifierContract?['inputShape'], <int>[1, 224, 224, 3]);
+      expect(classifierContract?['outputShape'], <int>[1, 1]);
 
       final String databaseDirectory = await getDatabasesPath();
       final Directory applicationSupport =
@@ -166,6 +179,20 @@ void main() {
       expect(quality.readiness, EvidenceReadiness.usableWithLimitations);
       expect(await managedEvidence.readAsBytes(), originalBytes);
 
+      final EvidenceClassification classification = await services
+          .evidenceClassification!
+          .analyze(evidence);
+      expect(classification.modelTfliteSha256, isNotEmpty);
+      expect(classification.rawLogit.isFinite, isTrue);
+      expect(classification.modelScore.isFinite, isTrue);
+      expect(
+        classification.label,
+        anyOf(
+          EvidenceClassificationLabel.accident,
+          EvidenceClassificationLabel.nonAccident,
+        ),
+      );
+
       final Database opened = await database.open();
       expect(await opened.getVersion(), IrisDatabaseConstants.schemaVersion);
       final List<Map<String, Object?>> tables = await opened.rawQuery(
@@ -177,6 +204,13 @@ void main() {
         await opened.rawQuery(
           "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
           <Object?>[IrisDatabaseConstants.evidenceQualityTable],
+        ),
+        hasLength(1),
+      );
+      expect(
+        await opened.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+          <Object?>[IrisDatabaseConstants.evidenceClassificationTable],
         ),
         hasLength(1),
       );
@@ -210,6 +244,13 @@ void main() {
       expect(
         reopenedQuality.assessment?.integrityState,
         EvidenceIntegrityState.verified,
+      );
+      final EvidenceClassificationSnapshot reopenedClassification =
+          await services.evidenceClassification!.load(reopenedEvidence);
+      expect(reopenedClassification.state, EvidenceClassificationState.current);
+      expect(
+        reopenedClassification.classification?.evidenceSha256,
+        reopenedEvidence.sha256,
       );
     },
   );

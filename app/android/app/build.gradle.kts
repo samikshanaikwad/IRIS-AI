@@ -1,3 +1,5 @@
+import java.security.MessageDigest
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -34,6 +36,15 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    aaptOptions {
+        noCompress += "tflite"
+    }
+}
+
+dependencies {
+    implementation("org.tensorflow:tensorflow-lite:2.16.1")
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
 }
 
 flutter {
@@ -87,6 +98,27 @@ val verifyIrisGeneratedPluginRegistration by tasks.registering {
     }
 }
 
+val verifyIrisClassifierModel by tasks.registering {
+    group = "verification"
+    description = "Verifies bundled V0 classifier assets match the governed hash."
+
+    doLast {
+        val expected = "e98d17518b0296a484a0a94c21359a6703b11b56e5db53a1cc659b8b3a440c96"
+        val assets = listOf(
+            rootProject.file("../assets/models/iris_v0_experimental_mobilenet_v3_small.tflite"),
+            file("src/main/assets/models/iris_v0_experimental_mobilenet_v3_small.tflite"),
+        )
+        assets.forEach { asset ->
+            check(asset.isFile) { "Required V0 classifier asset is missing: ${asset.path}" }
+            val digest = MessageDigest.getInstance("SHA-256")
+                .digest(asset.readBytes())
+                .joinToString("") { "%02x".format(it) }
+            check(digest == expected) { "V0 classifier asset hash mismatch: ${asset.path}" }
+        }
+    }
+}
+
 tasks.named("preBuild").configure {
     dependsOn(verifyIrisGeneratedPluginRegistration)
+    dependsOn(verifyIrisClassifierModel)
 }

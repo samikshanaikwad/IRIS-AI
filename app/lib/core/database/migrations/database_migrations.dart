@@ -15,12 +15,34 @@ Future<void> migrateDatabase(
         await _createVersionTwo(database);
       case 3:
         await _createVersionThree(database);
+      case 4:
+        await _createVersionFour(database);
       default:
         throw StateError(
           'No database migration registered for version $version.',
         );
     }
   }
+}
+
+Future<void> _createVersionFour(Database database) async {
+  await database.execute('''
+    CREATE TABLE ${IrisDatabaseConstants.evidenceClassificationTable} (
+      evidence_id TEXT PRIMARY KEY NOT NULL,
+      evidence_sha256 TEXT NOT NULL CHECK(length(evidence_sha256) = 64),
+      model_id TEXT NOT NULL,
+      model_tflite_sha256 TEXT NOT NULL CHECK(length(model_tflite_sha256) = 64),
+      model_contract_version TEXT NOT NULL,
+      raw_logit REAL NOT NULL,
+      model_score REAL NOT NULL CHECK(model_score >= 0.0 AND model_score <= 1.0),
+      threshold REAL NOT NULL CHECK(threshold >= 0.0 AND threshold <= 1.0),
+      classification_label TEXT NOT NULL CHECK(classification_label IN ('accident', 'non_accident')),
+      analyzed_at INTEGER NOT NULL,
+      FOREIGN KEY(evidence_id)
+        REFERENCES ${IrisDatabaseConstants.evidenceTable}(id)
+        ON DELETE CASCADE
+    )
+  ''');
 }
 
 Future<void> _createVersionThree(Database database) async {

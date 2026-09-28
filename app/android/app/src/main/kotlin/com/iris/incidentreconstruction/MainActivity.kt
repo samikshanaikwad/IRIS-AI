@@ -9,12 +9,20 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugins.GeneratedPluginRegistrant
 
 class MainActivity : FlutterActivity() {
+    private var classifierRuntime: IrisClassifierRuntime? = null
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         // FlutterActivity normally reaches this registrant through reflection.
         // Invoke the generated app registrant directly so this engine has one
         // explicit, observable, standard registration path.
         GeneratedPluginRegistrant.registerWith(flutterEngine)
         val generatedRegistrantInvoked = true
+        val runtime = IrisClassifierRuntime(applicationContext)
+        classifierRuntime = runtime
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, classifierChannel)
+            .setMethodCallHandler { call, result ->
+                if (!runtime.handle(call, result)) result.notImplemented()
+            }
 
         if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
             installPluginRegistrationDiagnostics(
@@ -22,6 +30,12 @@ class MainActivity : FlutterActivity() {
                 generatedRegistrantInvoked,
             )
         }
+    }
+
+    override fun onDestroy() {
+        classifierRuntime?.close()
+        classifierRuntime = null
+        super.onDestroy()
     }
 
     private fun installPluginRegistrationDiagnostics(
@@ -85,6 +99,7 @@ class MainActivity : FlutterActivity() {
         const val diagnosticsTag = "IRISPluginRegistration"
         const val diagnosticsChannel = "com.iris.debug/plugin_registration"
         const val diagnosticsMethod = "getRegistrationState"
+        const val classifierChannel = "com.iris.classifier/v1"
         const val sqflitePluginClassName = "com.tekartik.sqflite.SqflitePlugin"
         val pluginClassNames = mapOf(
             "camera" to "io.flutter.plugins.camerax.CameraAndroidCameraxPlugin",
