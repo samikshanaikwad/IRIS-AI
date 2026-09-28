@@ -50,8 +50,18 @@ REVIEW_DECISIONS = {
     "pending",
     "accident",
     "non_accident",
+    "exclude_no_visible_accident",
     "exclude_ambiguous",
     "exclude_visible_accident",
+    "exclude_irrelevant",
+    "exclude_corrupt",
+}
+
+POSITIVE_REVIEW_DECISIONS = {
+    "pending",
+    "accident",
+    "exclude_no_visible_accident",
+    "exclude_ambiguous",
     "exclude_irrelevant",
     "exclude_corrupt",
 }
@@ -323,9 +333,38 @@ def validate_review_inventory(path: Path) -> dict[str, Any]:
 
 
 def _write_review_contact_sheet(
-    output_root: Path, batch_rows: list[dict[str, str]]
+    output_root: Path,
+    batch_rows: list[dict[str, str]],
+    source_dataset_id: str,
 ) -> Path:
     """Write an ignored, decision-free visual index for a human review batch."""
+    positive_candidate_review = source_dataset_id == "accident-detection-9k-mendeley"
+    title = (
+        "IRIS AccidentDetection-9k positive-candidate review batch"
+        if positive_candidate_review
+        else "IRIS DATS visual review batch"
+    )
+    decision_copy = (
+        "<code>pending</code>, <code>accident</code>, "
+        "<code>exclude_no_visible_accident</code>, "
+        "<code>exclude_ambiguous</code>, <code>exclude_irrelevant</code>, or "
+        "<code>exclude_corrupt</code>"
+        if positive_candidate_review
+        else "<code>pending</code>, <code>non_accident</code>, "
+        "<code>exclude_visible_accident</code>, <code>exclude_ambiguous</code>, "
+        "<code>exclude_irrelevant</code>, or <code>exclude_corrupt</code>"
+    )
+    annotation_copy = (
+        "The source dataset supplied a valid Accident annotation. This is only "
+        "a candidate signal; it is not an IRIS semantic decision."
+        if positive_candidate_review
+        else "The source annotations do not establish an IRIS semantic decision."
+    )
+    duplicate_inventory_label = (
+        "AccidentDetection-9k inventory"
+        if positive_candidate_review
+        else "DATS inventory"
+    )
     cards = "\n".join(
         "<article>"
         f"<a href=\"{html.escape(row['review_file'], quote=True)}\">"
@@ -334,9 +373,13 @@ def _write_review_contact_sheet(
         f"<p><code>{html.escape(row['source_item'])}</code></p>"
         f"<p>Group: <code>{html.escape(row['source_group_id'])}</code></p>"
         f"<p>Group basis: <code>{html.escape(row['group_basis'])}</code></p>"
-        f"<p>Exact-byte duplicates in DATS inventory: "
+        f"<p>Exact-byte duplicates in {duplicate_inventory_label}: "
         f"<code>{html.escape(row['exact_duplicate_count'])}</code></p>"
         f"<p>SHA-256: <code>{html.escape(row['sha256'])}</code></p>"
+        f"<p>Dimensions: <code>{html.escape(row.get('dimensions', 'unknown'))}</code> "
+        f"Format: <code>{html.escape(row.get('decoded_format', 'unknown'))}</code></p>"
+        f"<p>Annotation: <code>{html.escape(row.get('annotation_summary', ''))}</code></p>"
+        f"<p>{annotation_copy}</p>"
         "<p>Decision: pending — record only a human visual decision in "
         "review_batch.csv.</p>"
         "</article>"
@@ -349,15 +392,13 @@ main{{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap
 article{{border:1px solid #26313d;border-radius:12px;padding:12px;background:#151d26}}
 img{{display:block;width:100%;height:180px;object-fit:contain;background:#111820}}
 p{{overflow-wrap:anywhere;font-size:12px}}code{{color:#a8b3bf}}</style></head>
-<body><h1>IRIS DATS visual review batch</h1>
+<body><h1>{html.escape(title)}</h1>
 <p>This generated index records no semantic decision. The displayed group is a
 conservative leakage group; it can reflect source sequence, exact duplicates,
 or dHash-near candidates. Exact-byte duplicates are represented once in this
 batch. Review only what the still visibly supports.</p>
-<p>Record only observed decisions in review_batch.csv: <code>pending</code>,
-<code>non_accident</code>, <code>exclude_visible_accident</code>,
-<code>exclude_ambiguous</code>, <code>exclude_irrelevant</code>, or
-<code>exclude_corrupt</code>. A completed decision requires label_basis,
+<p>Record only observed decisions in review_batch.csv: {decision_copy}.
+A completed decision requires label_basis,
 reviewer, and review_date (YYYY-MM-DD).</p>
 <main>{cards}</main></body></html>
 """
@@ -398,6 +439,17 @@ def create_review_batch(
             continue
         seen_hashes.add(row["sha256"])
         unique_rows.append(row)
+    if source_dataset_id == "accident-detection-9k-mendeley":
+        group_representatives: list[dict[str, str]] = []
+        seen_groups: set[str] = set()
+        for row in unique_rows:
+            group_id = row["source_group_id"]
+            if group_id and group_id in seen_groups:
+                continue
+            if group_id:
+                seen_groups.add(group_id)
+            group_representatives.append(row)
+        unique_rows = group_representatives
     selected = unique_rows[start : start + limit]
     output_root.mkdir(parents=True, exist_ok=True)
     image_root = output_root / "images"
@@ -453,7 +505,23 @@ def create_review_batch(
                 for row in batch_rows
             ]
         )
-    contact_sheet_path = _write_review_contact_sheet(output_root, batch_rows)
+    for batch_row in batch_rows:
+        inventory_row = next(
+            item for item in selected if item["source_item"] == batch_row["source_item"]
+        )
+        batch_row["dimensions"] = (
+            f"{inventory_row['width']}x{inventory_row['height']}"
+            if inventory_row["width"] and inventory_row["height"]
+            else "unknown"
+        )
+        batch_row["decoded_format"] = inventory_row["decoded_format"] or "unknown"
+        batch_row["annotation_summary"] = (
+            f"{inventory_row['annotation_status']} "
+            f"({inventory_row['annotation_count']} box(es))"
+        )
+    contact_sheet_path = _write_review_contact_sheet(
+        output_root, batch_rows, source_dataset_id
+    )
     return {
         "available_pending_rows": len(rows),
         "available_pending_unique_content_rows": len(unique_rows),

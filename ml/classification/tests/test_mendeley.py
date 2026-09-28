@@ -438,6 +438,44 @@ class MendeleySourceInspectionTest(unittest.TestCase):
                 loaded[1]["rationale"],
             )
 
+    def test_accident_positive_review_batch_stays_pending_and_uses_positive_policy(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            archive_path = root / "accident.zip"
+            inventory_path = root / "accident-review.csv"
+            batch_root = root / "batch"
+            image = _png_bytes((120, 80, 40), (24, 16))
+            member_name = "Accident_Detection/Dataset/train/images/source.jpg"
+            label_name = "Accident_Detection/Dataset/train/labels/source.txt"
+            with zipfile.ZipFile(archive_path, "w") as archive:
+                archive.writestr(member_name, image)
+                archive.writestr(label_name, "0 0.5 0.5 0.4 0.4\n")
+
+            _, rows = inspect_accident_detection_archive(archive_path)
+            write_review_inventory(inventory_path, rows)
+            result = create_review_batch(
+                archive_path,
+                inventory_path,
+                batch_root,
+                "accident-detection-9k-mendeley",
+                start=0,
+                limit=100,
+            )
+
+            self.assertEqual(result["batch_items"], 1)
+            with (batch_root / "review_batch.csv").open(
+                "r", encoding="utf-8", newline=""
+            ) as handle:
+                batch_rows = list(csv.DictReader(handle))
+            self.assertEqual(batch_rows[0]["review_decision"], "pending")
+            self.assertEqual(batch_rows[0]["label_basis"], "")
+            sheet = (batch_root / "review_sheet.html").read_text(encoding="utf-8")
+            self.assertIn("AccidentDetection-9k positive-candidate", sheet)
+            self.assertIn("valid Accident annotation", sheet)
+            self.assertIn("Decision: pending", sheet)
+
 
 if __name__ == "__main__":
     unittest.main()
