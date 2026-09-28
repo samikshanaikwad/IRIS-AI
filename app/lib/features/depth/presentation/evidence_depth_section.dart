@@ -4,6 +4,7 @@ import '../../../core/widgets/iris_card.dart';
 import '../../../core/widgets/iris_button.dart';
 import '../application/evidence_depth_controller.dart';
 import '../domain/evidence_depth.dart';
+import 'depth_visualization_painter.dart';
 
 class EvidenceDepthSection extends StatelessWidget {
   const EvidenceDepthSection({required this.controller, super.key});
@@ -20,6 +21,22 @@ class EvidenceDepthSection extends StatelessWidget {
         const Text('Larger values indicate nearer scene structure.'),
         const Text('Relative depth is model-estimated scene structure, not measured distance.'),
         Text('Range: ${a.min.toStringAsFixed(3)} – ${a.max.toStringAsFixed(3)}'),
+        const SizedBox(height: IrisSpacing.sm),
+        if (controller.visualization != null) ...[
+          const Text('RELATIVE DEPTH VISUALIZATION', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: IrisSpacing.xs),
+          const Text('Brighter = nearer • darker = farther'),
+          const SizedBox(height: IrisSpacing.xs),
+          AspectRatio(
+            aspectRatio: 1,
+            child: ClipRRect(
+              borderRadius: BorderRadius.all(Radius.circular(8)),
+              child: CustomPaint(painter: DepthVisualizationPainter(controller.visualization!)),
+            ),
+          ),
+          const SizedBox(height: IrisSpacing.xs),
+          const Text('Visualization only — not measured distance.'),
+        ] else Text(controller.visualizationError == null ? 'Visualization unavailable.' : 'Visualization unavailable: ${controller.visualizationError}'),
       ],
       if (s.message != null) Text(s.message!),
       const SizedBox(height: IrisSpacing.sm),

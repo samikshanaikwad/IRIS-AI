@@ -8,10 +8,12 @@ import '../../evidence_quality/application/evidence_quality_service.dart';
 import '../../evidence_quality/domain/evidence_quality_assessment.dart';
 import '../data/sqlite_evidence_depth_repository.dart';
 import '../domain/evidence_depth.dart';
+import '../domain/depth_visualization.dart';
 
 abstract interface class EvidenceDepthOperations {
   Future<EvidenceDepthSnapshot> load(EvidenceImage evidence);
   Future<EvidenceDepthAnalysis> analyze(EvidenceImage evidence);
+  Future<EvidenceDepthVisualization> loadVisualization(EvidenceDepthAnalysis analysis);
 }
 
 class EvidenceDepthService implements EvidenceDepthOperations {
@@ -28,7 +30,7 @@ class EvidenceDepthService implements EvidenceDepthOperations {
     final a = await repository.get(evidence.id);
     if (a == null) return const EvidenceDepthSnapshot(DepthState.notAnalyzed);
     final current = await _hash(evidence);
-    if (current != evidence.sha256 || current != a.evidenceSha256 || a.artifactSha256 != artifactSha256 || !await File(await storage.absolutePath(a.depthPath)).exists()) return const EvidenceDepthSnapshot(DepthState.stale, message: 'Saved relative depth is stale and requires reanalysis.');
+    if (current != evidence.sha256 || current != a.evidenceSha256 || a.artifactSha256 != artifactSha256 || a.width != (evidence.widthPx ?? 0) || a.height != (evidence.heightPx ?? 0) || !await File(await storage.absolutePath(a.depthPath)).exists()) return const EvidenceDepthSnapshot(DepthState.stale, message: 'Saved relative depth is stale and requires reanalysis.');
     return EvidenceDepthSnapshot(DepthState.analyzed, analysis: a);
   }
   @override
@@ -50,6 +52,18 @@ class EvidenceDepthService implements EvidenceDepthOperations {
     final a = EvidenceDepthAnalysis(evidenceId: evidence.id, evidenceSha256: actual, artifactSha256: artifactSha256, analyzedAt: DateTime.now().toUtc(), width: evidence.widthPx ?? 0, height: evidence.heightPx ?? 0, depthWidth: 518, depthHeight: 518, depthPath: relativePath, min: values.reduce((a, b) => a < b ? a : b), max: values.reduce((a, b) => a > b ? a : b), mean: values.reduce((a, b) => a + b) / values.length, inferenceMs: (response['inferenceMs'] as num?)?.toInt());
     await repository.save(a);
     return a;
+  }
+  @override
+  Future<EvidenceDepthVisualization> loadVisualization(EvidenceDepthAnalysis analysis) async {
+    final file = File(await storage.absolutePath(analysis.depthPath));
+    final bytes = await file.readAsBytes();
+    return decodeDepthVisualization(
+      bytes: bytes,
+      tensorWidth: analysis.depthWidth,
+      tensorHeight: analysis.depthHeight,
+      originalWidth: analysis.width,
+      originalHeight: analysis.height,
+    );
   }
   Future<String> _hash(EvidenceImage e) async => (await sha256.bind(File(await storage.absolutePath(e.storedRelativePath)).openRead()).first).toString();
 }

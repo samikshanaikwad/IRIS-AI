@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -50,6 +51,7 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
   @override
   void initState() {
     super.initState();
+    unawaited(widget.depthController.load());
     widget.controller.absolutePath(widget.evidence).then((String value) async {
       final bool exists = await File(value).exists();
       if (mounted) {
