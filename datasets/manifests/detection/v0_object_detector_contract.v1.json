@@ -47,7 +47,8 @@
   },
   "policy": {
     "score_term": "Detection score",
-    "score_threshold": "No IRIS threshold is frozen by qualification; preserve model outputs and select an engineering threshold only during a later validated integration step.",
+    "score_threshold": 0.3,
+    "threshold_policy_version": "v1-score-threshold-0.30",
     "allowlist": ["person", "bicycle", "car", "motorcycle", "bus", "truck"],
     "limitations": [
       "General COCO detector, not accident-specific.",

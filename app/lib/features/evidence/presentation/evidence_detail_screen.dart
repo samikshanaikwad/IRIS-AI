@@ -14,6 +14,9 @@ import '../../evidence_quality/application/evidence_quality_controller.dart';
 import '../../evidence_quality/presentation/evidence_quality_section.dart';
 import '../../classification/application/evidence_classification_controller.dart';
 import '../../classification/presentation/evidence_classification_section.dart';
+import '../../detection/application/evidence_detection_controller.dart';
+import '../../detection/domain/evidence_detection.dart';
+import '../../detection/presentation/evidence_detection_section.dart';
 
 class EvidenceDetailScreen extends StatefulWidget {
   const EvidenceDetailScreen({
@@ -21,6 +24,7 @@ class EvidenceDetailScreen extends StatefulWidget {
     required this.controller,
     required this.qualityController,
     required this.classificationController,
+    required this.detectionController,
     super.key,
   });
 
@@ -28,6 +32,7 @@ class EvidenceDetailScreen extends StatefulWidget {
   final EvidenceController controller;
   final EvidenceQualityController qualityController;
   final EvidenceClassificationController classificationController;
+  final EvidenceDetectionController detectionController;
 
   @override
   State<EvidenceDetailScreen> createState() => _EvidenceDetailScreenState();
@@ -121,14 +126,40 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
                       child: Text('Stored evidence file is unavailable.'),
                     )
                   : InteractiveViewer(
-                      child: Image.file(
-                        File(_path!),
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, _, _) => const Center(
-                          child: Text(
-                            'This image cannot be displayed on this device.',
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: <Widget>[
+                          Image.file(
+                            File(_path!),
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, _, _) => const Center(
+                              child: Text(
+                                'This image cannot be displayed on this device.',
+                              ),
+                            ),
                           ),
-                        ),
+                          AnimatedBuilder(
+                            animation: widget.detectionController,
+                            builder: (BuildContext context, Widget? child) =>
+                                IgnorePointer(
+                                  child: CustomPaint(
+                                    painter: _DetectionOverlayPainter(
+                                      detections:
+                                          widget
+                                              .detectionController
+                                              .snapshot
+                                              .analysis
+                                              ?.detections ??
+                                          const <EvidenceDetection>[],
+                                      sourceSize: Size(
+                                        (evidence.widthPx ?? 1).toDouble(),
+                                        (evidence.heightPx ?? 1).toDouble(),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                          ),
+                        ],
                       ),
                     ),
             ),
@@ -175,6 +206,8 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
             controller: widget.classificationController,
           ),
           const SizedBox(height: IrisSpacing.md),
+          EvidenceDetectionSection(controller: widget.detectionController),
+          const SizedBox(height: IrisSpacing.md),
           IrisSecondaryButton(
             key: const ValueKey<String>('detail-remove-evidence-button'),
             label: _deleting ? 'Deleting evidence…' : 'Remove Evidence',
@@ -198,4 +231,45 @@ class _Metadata extends StatelessWidget {
     padding: const EdgeInsets.only(bottom: IrisSpacing.xs),
     child: SelectableText('$label: $value'),
   );
+}
+
+class _DetectionOverlayPainter extends CustomPainter {
+  const _DetectionOverlayPainter({
+    required this.detections,
+    required this.sourceSize,
+  });
+  final List<EvidenceDetection> detections;
+  final Size sourceSize;
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (detections.isEmpty || sourceSize.isEmpty) return;
+    final scale =
+        (size.width / sourceSize.width < size.height / sourceSize.height
+                ? size.width / sourceSize.width
+                : size.height / sourceSize.height)
+            .toDouble();
+    final imageSize = Size(sourceSize.width * scale, sourceSize.height * scale);
+    final offset = Offset(
+      (size.width - imageSize.width) / 2,
+      (size.height - imageSize.height) / 2,
+    );
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = Colors.amber;
+    for (final d in detections) {
+      final rect = Rect.fromLTRB(
+        offset.dx + d.xmin * imageSize.width,
+        offset.dy + d.ymin * imageSize.height,
+        offset.dx + d.xmax * imageSize.width,
+        offset.dy + d.ymax * imageSize.height,
+      );
+      canvas.drawRect(rect, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DetectionOverlayPainter oldDelegate) =>
+      oldDelegate.detections != detections ||
+      oldDelegate.sourceSize != sourceSize;
 }

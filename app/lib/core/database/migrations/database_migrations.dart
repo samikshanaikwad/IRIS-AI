@@ -17,12 +17,47 @@ Future<void> migrateDatabase(
         await _createVersionThree(database);
       case 4:
         await _createVersionFour(database);
+      case 5:
+        await _createVersionFive(database);
       default:
         throw StateError(
           'No database migration registered for version $version.',
         );
     }
   }
+}
+
+Future<void> _createVersionFive(Database database) async {
+  await database.execute('''
+    CREATE TABLE ${IrisDatabaseConstants.evidenceDetectionAnalysesTable} (
+      id TEXT PRIMARY KEY NOT NULL,
+      evidence_id TEXT NOT NULL,
+      evidence_sha256 TEXT NOT NULL CHECK(length(evidence_sha256) = 64),
+      detector_id TEXT NOT NULL,
+      detector_sha256 TEXT NOT NULL CHECK(length(detector_sha256) = 64),
+      contract_version TEXT NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('complete', 'error')),
+      analyzed_at INTEGER NOT NULL,
+      inference_ms INTEGER,
+      FOREIGN KEY(evidence_id) REFERENCES ${IrisDatabaseConstants.evidenceTable}(id) ON DELETE CASCADE
+    )
+  ''');
+  await database.execute('''
+    CREATE TABLE ${IrisDatabaseConstants.evidenceDetectionsTable} (
+      id TEXT PRIMARY KEY NOT NULL,
+      analysis_id TEXT NOT NULL,
+      detection_index INTEGER NOT NULL,
+      class_id INTEGER NOT NULL,
+      class_name TEXT NOT NULL,
+      detection_score REAL NOT NULL CHECK(detection_score >= 0.0 AND detection_score <= 1.0),
+      ymin REAL NOT NULL CHECK(ymin >= 0.0 AND ymin <= 1.0),
+      xmin REAL NOT NULL CHECK(xmin >= 0.0 AND xmin <= 1.0),
+      ymax REAL NOT NULL CHECK(ymax >= 0.0 AND ymax <= 1.0),
+      xmax REAL NOT NULL CHECK(xmax >= 0.0 AND xmax <= 1.0),
+      FOREIGN KEY(analysis_id) REFERENCES ${IrisDatabaseConstants.evidenceDetectionAnalysesTable}(id) ON DELETE CASCADE,
+      UNIQUE(analysis_id, detection_index)
+    )
+  ''');
 }
 
 Future<void> _createVersionFour(Database database) async {

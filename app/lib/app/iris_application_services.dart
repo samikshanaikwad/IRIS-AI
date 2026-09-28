@@ -17,6 +17,9 @@ import '../features/classification/application/evidence_classification_controlle
 import '../features/classification/application/evidence_classification_service.dart';
 import '../features/classification/data/sqlite_evidence_classification_repository.dart';
 import '../features/classification/domain/evidence_classification_repository.dart';
+import '../features/detection/application/evidence_detection_controller.dart';
+import '../features/detection/application/evidence_detection_service.dart';
+import '../features/detection/data/sqlite_evidence_detection_repository.dart';
 
 class IrisApplicationServices {
   IrisApplicationServices({
@@ -27,6 +30,7 @@ class IrisApplicationServices {
     this.evidenceQualityRepository,
     this.evidenceQuality,
     this.evidenceClassification,
+    this.evidenceDetection,
     Future<void> Function()? close,
   }) : _close = close;
 
@@ -52,6 +56,13 @@ class IrisApplicationServices {
     );
     final EvidenceClassificationRepository classificationRepository =
         SqliteEvidenceClassificationRepository(database);
+    final SqliteEvidenceDetectionRepository detectionRepository =
+        SqliteEvidenceDetectionRepository(database);
+    final EvidenceDetectionService detectionService = EvidenceDetectionService(
+      repository: detectionRepository,
+      storage: storage,
+      quality: qualityService,
+    );
     return IrisApplicationServices(
       caseRepository: ManagedCaseRepository(
         SqliteCaseRepository(database),
@@ -70,6 +81,7 @@ class IrisApplicationServices {
         storage: storage,
         quality: qualityService,
       ),
+      evidenceDetection: detectionService,
       close: database.close,
     );
   }
@@ -81,6 +93,7 @@ class IrisApplicationServices {
   final EvidenceQualityRepository? evidenceQualityRepository;
   final EvidenceQualityOperations? evidenceQuality;
   final EvidenceClassificationOperations? evidenceClassification;
+  final EvidenceDetectionOperations? evidenceDetection;
   final Future<void> Function()? _close;
 
   EvidenceController evidenceControllerFor(String caseId) {
@@ -119,6 +132,19 @@ class IrisApplicationServices {
       throw StateError('Classification services are not configured.');
     }
     return EvidenceClassificationController(
+      evidence: evidence,
+      operations: operations,
+    );
+  }
+
+  EvidenceDetectionController evidenceDetectionControllerFor(
+    EvidenceImage evidence,
+  ) {
+    final EvidenceDetectionOperations? operations = evidenceDetection;
+    if (operations == null) {
+      throw StateError('Detection services are not configured.');
+    }
+    return EvidenceDetectionController(
       evidence: evidence,
       operations: operations,
     );

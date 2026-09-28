@@ -17,6 +17,7 @@ import '../../evidence/application/evidence_controller.dart';
 import '../../evidence/presentation/case_evidence_section.dart';
 import '../../evidence_quality/application/evidence_quality_service.dart';
 import '../../classification/application/evidence_classification_service.dart';
+import '../../detection/application/evidence_detection_service.dart';
 import 'case_date_formatter.dart';
 import 'case_title_sheet.dart';
 
@@ -27,6 +28,7 @@ class CaseOverviewScreen extends StatefulWidget {
     required this.evidenceController,
     required this.evidenceQuality,
     required this.evidenceClassification,
+    required this.evidenceDetection,
     super.key,
   });
 
@@ -35,6 +37,7 @@ class CaseOverviewScreen extends StatefulWidget {
   final EvidenceController evidenceController;
   final EvidenceQualityOperations evidenceQuality;
   final EvidenceClassificationOperations evidenceClassification;
+  final EvidenceDetectionOperations evidenceDetection;
 
   @override
   State<CaseOverviewScreen> createState() => _CaseOverviewScreenState();
@@ -268,6 +271,7 @@ class _CaseOverviewScreenState extends State<CaseOverviewScreen> {
           controller: widget.evidenceController,
           qualityOperations: widget.evidenceQuality,
           classificationOperations: widget.evidenceClassification,
+          detectionOperations: widget.evidenceDetection,
         ),
         const SizedBox(height: IrisSpacing.md),
         const _WorkflowState(

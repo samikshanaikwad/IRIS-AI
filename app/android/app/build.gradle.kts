@@ -121,4 +121,15 @@ val verifyIrisClassifierModel by tasks.registering {
 tasks.named("preBuild").configure {
     dependsOn(verifyIrisGeneratedPluginRegistration)
     dependsOn(verifyIrisClassifierModel)
+    dependsOn(verifyIrisDetectorModel)
+}
+
+val verifyIrisDetectorModel by tasks.registering {
+    group = "verification"
+    doLast {
+        val asset = file("src/main/assets/models/iris_v0_efficientdet_lite0.tflite")
+        check(asset.isFile) { "Required V0 detector asset is missing." }
+        val digest = MessageDigest.getInstance("SHA-256").digest(asset.readBytes()).joinToString("") { "%02x".format(it) }
+        check(digest == "2e04c53bfeac0ac2a30c057c7e2a777594ce39baaac35a92f74fb1e8c4fc4e0b") { "V0 detector asset hash mismatch." }
+    }
 }

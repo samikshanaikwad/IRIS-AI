@@ -10,6 +10,7 @@ import io.flutter.plugins.GeneratedPluginRegistrant
 
 class MainActivity : FlutterActivity() {
     private var classifierRuntime: IrisClassifierRuntime? = null
+    private var objectDetectorRuntime: IrisObjectDetectorRuntime? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         // FlutterActivity normally reaches this registrant through reflection.
@@ -23,6 +24,10 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler { call, result ->
                 if (!runtime.handle(call, result)) result.notImplemented()
             }
+        val detector = IrisObjectDetectorRuntime(applicationContext)
+        objectDetectorRuntime = detector
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, detectorChannel)
+            .setMethodCallHandler { call, result -> if (!detector.handle(call, result)) result.notImplemented() }
 
         if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
             installPluginRegistrationDiagnostics(
@@ -35,6 +40,8 @@ class MainActivity : FlutterActivity() {
     override fun onDestroy() {
         classifierRuntime?.close()
         classifierRuntime = null
+        objectDetectorRuntime?.close()
+        objectDetectorRuntime = null
         super.onDestroy()
     }
 
@@ -100,6 +107,8 @@ class MainActivity : FlutterActivity() {
         const val diagnosticsChannel = "com.iris.debug/plugin_registration"
         const val diagnosticsMethod = "getRegistrationState"
         const val classifierChannel = "com.iris.classifier/v1"
+        const val detectorChannel = "com.iris.detector/v1"
+        internal val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
         const val sqflitePluginClassName = "com.tekartik.sqflite.SqflitePlugin"
         val pluginClassNames = mapOf(
             "camera" to "io.flutter.plugins.camerax.CameraAndroidCameraxPlugin",

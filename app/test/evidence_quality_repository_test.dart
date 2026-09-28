@@ -40,7 +40,7 @@ void main() {
   });
 
   test(
-    'v3 to v4 preserves cases, evidence, and quality without fabricating classifications',
+    'v3 to v5 preserves cases, evidence, quality, and empty detection tables',
     () async {
       final String databasePath = path.join(directory.path, 'migration.db');
       final Database old = await databaseFactoryFfi.openDatabase(
@@ -75,7 +75,17 @@ void main() {
       qualityRepository = SqliteEvidenceQualityRepository(database);
       final Database migrated = await database.open();
 
-      expect(await migrated.getVersion(), 4);
+      expect(await migrated.getVersion(), 5);
+      expect(
+        await migrated.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (?, ?)",
+          <Object?>[
+            IrisDatabaseConstants.evidenceDetectionAnalysesTable,
+            IrisDatabaseConstants.evidenceDetectionsTable,
+          ],
+        ),
+        hasLength(2),
+      );
       expect(
         await migrated.query(
           IrisDatabaseConstants.casesTable,
