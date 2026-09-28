@@ -1,0 +1,74 @@
+{
+  "model_version": "iris-v0-experimental-mobilenet-v3-small-tflite-v1",
+  "status": "EXPERIMENTAL_NON_PRODUCTION",
+  "architecture": "MobileNetV3Small",
+  "initialization": "official torchvision MobileNet_V3_Small_Weights.IMAGENET1K_V1",
+  "training_run": "ml/runs/classification/v0-experimental-6006-attempt-4",
+  "source_checkpoint": "ml/runs/classification/v0-experimental-6006-attempt-4/best_model.pt",
+  "source_checkpoint_sha256": "10ace06ef6fb97ea8559e29340f4f326ab2fc0c33f40691fbb4157124b4f9c3b",
+  "tflite_artifact": "ml/runs/classification/v0-experimental-6006-attempt-4/mobilenet_v3_small_v0_float32.tflite",
+  "tflite_sha256": "e98d17518b0296a484a0a94c21359a6703b11b56e5db53a1cc659b8b3a440c96",
+  "tflite_size_bytes": 6106396,
+  "conversion": {
+    "route": "PyTorch -> ONNX -> onnx2tf -> float32 TFLite",
+    "packages": {
+      "torch": "2.14.0+cpu",
+      "torchvision": "0.29.0+cpu",
+      "onnx": "1.20.1",
+      "onnxruntime": "1.26.0",
+      "onnx2tf": "2.6.9",
+      "tensorflow": "2.20.0"
+    },
+    "quantization": "none; float32"
+  },
+  "input": {
+    "source": "RGB image",
+    "shape": [1, 224, 224, 3],
+    "dtype": "float32",
+    "layout": "NHWC",
+    "preprocessing": {
+      "resize": "aspect-preserving contain",
+      "canvas": [224, 224],
+      "padding": "centered",
+      "padding_value_rgb": [0, 0, 0],
+      "channel_order": "RGB",
+      "float_conversion": "uint8 / 255.0",
+      "normalization_mean": [0.485, 0.456, 0.406],
+      "normalization_std": [0.229, 0.224, 0.225]
+    }
+  },
+  "output": {
+    "shape": [1, 1],
+    "dtype": "float32",
+    "value": "raw classifier logit",
+    "sigmoid": "outside TFLite graph",
+    "model_score": "sigmoid(raw_logit)",
+    "class_mapping": {
+      "score_greater_than_or_equal_to_threshold": "accident",
+      "score_below_threshold": "non_accident"
+    },
+    "threshold": 0.8611480594,
+    "score_is_calibrated_probability": false
+  },
+  "dataset": {
+    "freeze_manifest": "datasets/manifests/classification/v0_candidate_freeze.v1.csv",
+    "freeze_manifest_sha256": "dbab98defad49c7dd05ba0688e0430110287975860773fa06bb10bcc5fb1f561",
+    "authorization": "datasets/manifests/classification/v0_experimental_authorization.v1.json",
+    "split_manifest": "datasets/manifests/classification/v0_experimental_split.v1.csv",
+    "split_manifest_sha256": "3bb5737d14b101ef911ce9f5da0319051b396fa975c754ed14386f6877995607",
+    "provenance_limitation": "AccidentDetection-9k remains REVIEW_REQUIRED because underlying individual-image provenance was not independently established; this model is not production or release-rights cleared."
+  },
+  "parity": {
+    "artifact": "ml/runs/classification/v0-experimental-6006-attempt-4/tflite_parity.json",
+    "samples": 30,
+    "class_counts": {
+      "accident": 15,
+      "non_accident": 15
+    },
+    "float32_tolerance": 0.0001,
+    "maximum_absolute_score_difference": 0.000009282296856122363,
+    "mean_absolute_score_difference": 0.0000005867791102152451,
+    "threshold_classification_disagreements": 0,
+    "status": "PASS"
+  }
+}
