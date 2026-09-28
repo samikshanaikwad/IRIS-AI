@@ -1,0 +1,61 @@
+{
+  "contract_version": "v1",
+  "status": "QUALIFIED_WITH_RESTRICTIONS",
+  "detector": {
+    "name": "EfficientDet-Lite0",
+    "publisher": "Google TensorFlow Lite Model Garden / Google AI Edge",
+    "source_url": "https://tfhub.dev/tensorflow/lite-model/efficientdet/lite0/detection/metadata/1?lite-format=tflite",
+    "artifact_filename": "efficientdet_lite0_detection_metadata_1.tflite",
+    "artifact_relative_path": "ml/runs/detection/v0-efficientdet-lite0-qualification/efficientdet_lite0_detection_metadata_1.tflite",
+    "retrieved_date": "2026-09-28",
+    "artifact_size_bytes": 4563519,
+    "artifact_sha256": "2e04c53bfeac0ac2a30c057c7e2a777594ce39baaac35a92f74fb1e8c4fc4e0b",
+    "training_dataset": "COCO 2017",
+    "format": "TensorFlow Lite",
+    "rights": {
+      "code_and_documentation": "Official Google/TensorFlow/Google AI Edge sources provide documentation and code under their stated licenses.",
+      "model_weights": "The official TFHub distribution endpoint is recorded, but a separate artifact-specific redistribution license was not located.",
+      "dataset": "COCO image and annotation licensing/provenance is separate from the model artifact and must be retained in downstream compliance review.",
+      "restriction": "Use is qualified for local academic/noncommercial IRIS development and evaluation. Bundling or redistributing this exact artifact requires confirmation of the artifact and COCO terms before release."
+    }
+  },
+  "input": {
+    "count": 1,
+    "shape": [1, 320, 320, 3],
+    "dtype": "uint8",
+    "layout": "NHWC",
+    "color_order": "RGB",
+    "pixel_range": "uint8 0..255",
+    "resize": "aspect-preserving resize to fit 320x320 with centered padding; integration must document the padding value",
+    "normalization": "none in caller; the model input quantization is scale 0.0078125 and zero_point 127",
+    "quantization": {"scale": 0.0078125, "zero_point": 127}
+  },
+  "output": {
+    "count": 4,
+    "boxes": {"shape": [1, 25, 4], "dtype": "float32", "order": "ymin,xmin,ymax,xmax", "coordinates": "normalized 0..1"},
+    "classes": {"shape": [1, 25], "dtype": "float32", "meaning": "zero-based COCO category IDs"},
+    "scores": {"shape": [1, 25], "dtype": "float32", "meaning": "detection score, not a calibrated probability"},
+    "detection_count": {"shape": [1], "dtype": "float32", "meaning": "number of valid postprocessed detections"},
+    "nms": "Included in the model graph/postprocessing; IRIS must not apply a second NMS stage."
+  },
+  "label_map": {
+    "source_url": "https://storage.googleapis.com/mediapipe-tasks/object_detector/labelmap.txt",
+    "embedded_filename": "labelmap.txt",
+    "sha256": "f8803ef7900160c629d570848dfda4175e21667bf7b71f73f8ece4938c9f2bf2",
+    "indexing": "zero-based line index",
+    "required_road_classes": {"person": 0, "bicycle": 1, "car": 2, "motorcycle": 3, "bus": 5, "truck": 7}
+  },
+  "policy": {
+    "score_term": "Detection score",
+    "score_threshold": "No IRIS threshold is frozen by qualification; preserve model outputs and select an engineering threshold only during a later validated integration step.",
+    "allowlist": ["person", "bicycle", "car", "motorcycle", "bus", "truck"],
+    "limitations": [
+      "General COCO detector, not accident-specific.",
+      "Does not determine damage, collision, impact direction, speed, debris, or forensic conclusions.",
+      "Publisher benchmark timings are not IRIS or Realme measurements.",
+      "Artifact/model redistribution and underlying COCO image provenance require compliance review before release."
+    ]
+  },
+  "android_plan": "Reuse the existing local native TensorFlow Lite runtime used by TASK 006; no MediaPipe dependency is required for this contract. Integration is deferred to TASK 007.",
+  "qualification": {"production_integration": false, "task": "TASK 007A", "no_fake_detections": true}
+}
