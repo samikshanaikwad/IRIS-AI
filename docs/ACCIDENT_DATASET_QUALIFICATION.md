@@ -1,6 +1,6 @@
 # TASK 006 Accident-Positive Dataset Qualification
 
-**Research checkpoint:** 2026-09-27
+**Research checkpoint:** 2026-09-28
 **Scope:** source qualification only. No candidate from this document has been
 added to the IRIS production classification manifest, and no model has been
 trained or integrated.
@@ -28,13 +28,14 @@ The categories below are project controls, not legal advice:
   provenance, even if a host page displays a license label.
 
 All source records, terms, and access state below were inspected on
-2026-09-27. No rights are inferred where the authoritative source is silent.
+2026-09-28. No rights are inferred where the authoritative source is silent.
 
 ## Qualification table
 
 | Candidate | Authoritative source and publisher | Media / scale / grouping | Content rights and downstream status | Still-image suitability | IRIS status |
 | --- | --- | --- | --- | --- | --- |
 | **TUM Traffic Accid3nD (TUMTraf-Accid3nD)** | [Official TUM project](https://accident-dataset.github.io/), Zimmer et al.; [paper](https://arxiv.org/abs/2503.12095) | First-party roadside camera/LiDAR collection at the A9 Digital Test Field, Munich. Project reports 111,945 labeled frames, four cameras plus LiDAR at 25 Hz, 2,634,233 labels, and OpenLABEL. Official WebDAV metadata lists five ZIP archives totaling 46,587,516,755 bytes. Sequences/events and multi-camera views must be indivisible groups after acquisition. | The source-specific project page says **CC BY-NC-SA 4.0**, but the official generic TUMTraf development-kit README says **CC BY-NC-ND 4.0**. That conflict is material: IRIS does not infer derived-still, training, redistribution, or model-release permission until TUM confirms the terms governing Accid3nD. The development kit's MIT license applies to code only. | Strong positive provenance: project-recorded real collisions, rollovers, and fires. Frames need human selection because pre-event/transition frames do not establish a visible accident; possible negatives require separate review. | **REVIEW_REQUIRED** |
+| **ACCIDENT benchmark** | [Official project page](https://accidentbench.github.io/), [official code/data instructions](https://github.com/accidentbench/ACCIDENT), Picek et al., CVPR Workshops 2026 | Traffic-surveillance video benchmark: 2,027 real clips and 2,211 CARLA-generated synthetic clips. The real clips are heterogeneous online CCTV sources; the official repository downloads a Kaggle archive (`picekl/accident`) containing `real_videos/`, metadata, and optionally synthetic data. The official source does not publish an accessible archive byte size; Kaggle CLI authentication is required. | The official supplemental policy says only clips whose upstream licenses explicitly permit redistribution and derivative works were included, with canonical source URLs in metadata. Annotations/metadata are CC BY 4.0; code and CARLA assets are Apache-2.0. Use is restricted to research and re-identification is prohibited. This supports local research use of licensed clips, but does not itself settle every upstream clip’s exact terms or permission to distribute an IRIS-trained/TFLite model. | Real clips have accident time, spatial location, and collision type. Accident-visible frame extraction is technically feasible, but IRIS must select only frames where the still visibly supports `accident`; pre-impact/ambiguous frames are excluded. Video IDs/metadata provide a practical event-group key, subject to verification after authorized acquisition. Synthetic clips are not substitutes for real accident evidence. | **REVIEW_REQUIRED** |
 | **Nexar Collision Prediction Dataset** | [Official Nexar Hugging Face record](https://huggingface.co/datasets/nexar-ai/nexar_collision_prediction), Nexar Inc.; [dataset paper](https://arxiv.org/abs/2503.03848); [dataset license](https://huggingface.co/datasets/nexar-ai/nexar_collision_prediction/blob/main/LICENSE) | Nexar dashcam video: 1,500 1280x720, 30 fps videos, typically about 40 seconds; official repository reports 31.4 GB. Half are event-positive and half regular driving. One video ID must be one split group; frames may not be randomly split. | Copyright 2025 Nexar Inc. The Nexar Open Data License explicitly permits use, copying, modification, and distribution with required attribution/notices; it prohibits resale/profit redistribution and imposes ethical/privacy restrictions. Access is gated: an account must agree to share contact information and accept the terms. The license does not expressly address trained-model distribution, so that remains a release review item. | Useful positives only after visual selection: the source treats actual collisions **and near-misses/imminent collisions** as positive. IRIS excludes the latter from `accident`. Regular-driving videos are negative candidates only after individual-frame review. | **QUALIFIED_WITH_RESTRICTIONS** |
 | **DADA-2000 / DADA** | [Official author repository](https://github.com/JWFangit/LOTVS-DADA); Fang et al., [paper](https://arxiv.org/abs/1912.03077) | Crowdsourced accident-scenario video. The paper reports 2,000 clips, about 658,476 frames, 54 accident types, temporal accident windows, and spatial crash-object annotations. The author repository advertises roughly 53 GB compressed training/test data and roughly 116 GB compressed full data through Drive/Baidu links. Clip ID is an appropriate future group. | The author repository invites use/share and asks for paper citation, but it has no published dataset-content license and gives no explicit permission for training, derived frames, source-media redistribution, or trained-model distribution. No download was attempted. | Temporal accident context is not a still label. Accident-visible windows could be reproducibly proposed from annotations, then reviewed. Pre-impact and precursor frames cannot automatically become either class. | **REVIEW_REQUIRED** |
 | **DoTA** | [Official repository](https://github.com/MoonBlvd/Detection-of-Traffic-Anomaly), inspected at commit `f8f603b8c06a946bc314752947ed480a4f33f82a`; [paper](https://arxiv.org/abs/2004.03044) | YouTube-derived traffic anomaly clips; official metadata has 4,677 clips and describes approximately 55 GB of extracted frames. Original source-video grouping is recoverable and must replace the publisher clip split. | The repository's MIT text is a **code** license. The README says the authors obtained authority from original channel authors to share clips, but current official README/repository/issue inspection supplied no separate content license or explicit local derived-frame/training/model-distribution terms. No new clarification was found; an unanswered or closed issue is not permission. | The anomaly start can precede visible impact, so frames require a reviewed collision-visible window. Some anomaly types are not collisions. | **REVIEW_REQUIRED** |
@@ -78,6 +79,42 @@ remains blocked by its Google-image-search chain of rights. The Roboflow record
 is rejected by IRIS because its uploader-level CC BY label is not an
 authoritative provenance chain for the underlying media.
 
+### ACCIDENT benchmark
+
+The ACCIDENT project is a stronger rights/provenance lead than web-scraped
+accident collections, but it is not yet an unconditional IRIS approval. The
+official paper and project page describe 2,027 real surveillance clips and
+2,211 synthetic CARLA clips. The project repository requires an authenticated
+Kaggle download of `picekl/accident`; no download was performed during this
+qualification. The real clips are collected from heterogeneous online CCTV
+sources, not recorded by the project itself.
+
+The official supplemental policy states that only clips with upstream terms
+explicitly permitting redistribution and derivative works were included, and
+that each released clip retains a canonical source URL. It assigns CC BY 4.0
+to annotations/metadata and Apache-2.0 to code/CARLA assets. The same policy
+restricts use to research, prohibits re-identification, and provides a
+take-down channel. These statements support a documented local academic
+training workflow for the licensed clips, including conservative local frame
+derivation, but they do not expressly grant distribution of a classifier or
+TFLite model trained on the clips. IRIS therefore keeps the route
+`REVIEW_REQUIRED` until the clip-level terms and model-bundling position are
+confirmed. The paper's open-access status is not treated as a dataset license.
+
+The benchmark is primarily temporal/spatial/collision-type video evaluation,
+not a ready-made still-image binary classifier. It can support IRIS only after
+human review of impact-time frames, exclusion of pre-impact and ambiguous
+frames, and event/video-group-aware splitting. The real subset is the only
+part relevant to real positive-image qualification; synthetic data remains
+separate and must not be silently mixed into the real-data manifest.
+
+## Current route decision
+
+| Route | Status | Why |
+| --- | --- | --- |
+| TUMTraf-Accid3nD | **REVIEW_REQUIRED** | First-party real accident capture, but the source-specific CC BY-NC-SA 4.0 statement conflicts with the generic development-kit CC BY-NC-ND 4.0 statement. Written TUM clarification is required before downloading or deriving frames. |
+| ACCIDENT benchmark real subset | **REVIEW_REQUIRED** | Stronger documented clip-selection policy and canonical provenance, but Kaggle-gated acquisition, clip-level upstream terms, research/privacy restrictions, and trained-model/TFLite distribution are not fully settled for IRIS's intended release. |
+
 ## Required future acquisition and qualification procedure
 
 The technically appropriate next step is to obtain a written confirmation from
@@ -85,6 +122,14 @@ TUM identifying the licence that governs the five Accid3nD archives and whether
 local frame extraction/training and model distribution are allowed. Do not
 download it before that confirmation. The official acquisition-plan document
 records the exact archive inventory and the proposed leakage-safe workflow.
+
+For ACCIDENT, the next step is a rights review of the authenticated Kaggle
+archive metadata and each real clip's canonical upstream URL/license. No
+download is approved by this document. If those records confirm derivative
+frame extraction for the intended academic use, IRIS may acquire only the
+real subset, preserve metadata and source URLs, and perform human-reviewed
+event-group extraction. Written clarification is still required before
+redistributing an IRIS-trained model or bundling a TFLite artifact for users.
 
 After acquisition, the dataset inspector must record actual archive size,
 checksums, file structure, sequence/event/camera grouping fields, readable
