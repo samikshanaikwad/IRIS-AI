@@ -40,7 +40,7 @@ void main() {
   });
 
   test(
-    'v3 to v7 preserves cases, evidence, quality, and empty analysis tables',
+  'v3 migration preserves cases, evidence, quality, and analysis tables',
     () async {
       final String databasePath = path.join(directory.path, 'migration.db');
       final Database old = await databaseFactoryFfi.openDatabase(

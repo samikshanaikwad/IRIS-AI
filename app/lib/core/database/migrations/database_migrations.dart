@@ -25,6 +25,8 @@ Future<void> migrateDatabase(
         await _createVersionSeven(database);
       case 8:
         await _createVersionEight(database);
+      case 9:
+        await _createVersionNine(database);
       default:
         throw StateError(
           'No database migration registered for version $version.',
@@ -61,6 +63,23 @@ Future<void> _createVersionEight(Database database) async {
       FOREIGN KEY(evidence_b_id) REFERENCES ${IrisDatabaseConstants.evidenceTable}(id) ON DELETE CASCADE,
       CHECK(evidence_a_id <> evidence_b_id),
       UNIQUE(evidence_a_id, evidence_b_id)
+    )
+  ''');
+}
+
+Future<void> _createVersionNine(Database database) async {
+  await database.execute('''
+    CREATE TABLE ${IrisDatabaseConstants.caseLocationsTable} (
+      case_id TEXT PRIMARY KEY NOT NULL,
+      latitude REAL NOT NULL CHECK(latitude >= -90.0 AND latitude <= 90.0),
+      longitude REAL NOT NULL CHECK(longitude >= -180.0 AND longitude <= 180.0),
+      source TEXT NOT NULL CHECK(source IN ('EVIDENCE_EXIF', 'MAP_SELECTION', 'SEARCH_RESULT', 'DEVICE_CURRENT_LOCATION')),
+      source_evidence_id TEXT,
+      place_label TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      FOREIGN KEY(case_id) REFERENCES ${IrisDatabaseConstants.casesTable}(id) ON DELETE CASCADE,
+      FOREIGN KEY(source_evidence_id) REFERENCES ${IrisDatabaseConstants.evidenceTable}(id) ON DELETE SET NULL
     )
   ''');
 }

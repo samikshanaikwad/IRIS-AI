@@ -24,6 +24,8 @@ import 'case_date_formatter.dart';
 import 'case_title_sheet.dart';
 import '../../multiview/application/multiview_service.dart';
 import '../../multiview/presentation/multiview_section.dart';
+import '../../location/application/case_location_service.dart';
+import '../../location/presentation/location_section.dart';
 
 class CaseOverviewScreen extends StatefulWidget {
   const CaseOverviewScreen({
@@ -36,6 +38,7 @@ class CaseOverviewScreen extends StatefulWidget {
     required this.evidenceDepth,
     required this.relativeGeometry,
     required this.multiView,
+    required this.location,
     super.key,
   });
 
@@ -48,6 +51,7 @@ class CaseOverviewScreen extends StatefulWidget {
   final EvidenceDepthOperations evidenceDepth;
   final RelativeGeometryOperations relativeGeometry;
   final MultiViewService multiView;
+  final CaseLocationService location;
 
   @override
   State<CaseOverviewScreen> createState() => _CaseOverviewScreenState();
@@ -288,7 +292,7 @@ class _CaseOverviewScreenState extends State<CaseOverviewScreen> {
         const SizedBox(height: IrisSpacing.lg),
         MultiViewSection(controller: widget.evidenceController, service: widget.multiView),
         const SizedBox(height: IrisSpacing.lg),
-        MultiViewSection(controller: widget.evidenceController, service: widget.multiView),
+        LocationSection(caseId: widget.caseId, controller: widget.evidenceController, service: widget.location),
         const SizedBox(height: IrisSpacing.md),
         const _WorkflowState(
           icon: Icons.location_off_outlined,

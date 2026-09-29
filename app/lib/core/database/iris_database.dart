@@ -134,7 +134,7 @@ class IrisDatabase {
     }
 
     final List<Map<String, Object?>> tables = await database.rawQuery(
-      "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       <Object?>[
         IrisDatabaseConstants.casesTable,
         IrisDatabaseConstants.evidenceTable,
@@ -145,9 +145,10 @@ class IrisDatabase {
         IrisDatabaseConstants.evidenceDepthAnalysesTable,
         IrisDatabaseConstants.evidenceGeometryAnalysesTable,
         IrisDatabaseConstants.multiViewPairAnalysesTable,
+        IrisDatabaseConstants.caseLocationsTable,
       ],
     );
-    if (tables.length != 9) {
+    if (tables.length != 10) {
       throw StateError('IRIS database schema is missing required tables.');
     }
   }

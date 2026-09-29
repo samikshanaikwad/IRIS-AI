@@ -119,11 +119,11 @@ void main() {
     expect(manifest, contains('android:required="false"'));
     expect(
       manifest,
-      isNot(contains('android.permission.ACCESS_FINE_LOCATION')),
+      contains('android.permission.ACCESS_FINE_LOCATION'),
     );
     expect(
       manifest,
-      isNot(contains('android.permission.ACCESS_COARSE_LOCATION')),
+      contains('android.permission.ACCESS_COARSE_LOCATION'),
     );
   });
 }
