@@ -27,6 +27,8 @@ import '../../multiview/presentation/multiview_section.dart';
 import '../../location/application/case_location_service.dart';
 import '../../location/presentation/location_section.dart';
 import '../../location/presentation/road_scene_viewer.dart';
+import '../../geometry/application/evidence_world_alignment_service.dart';
+import '../../geometry/presentation/evidence_alignment_section.dart';
 
 class CaseOverviewScreen extends StatefulWidget {
   const CaseOverviewScreen({
@@ -40,6 +42,7 @@ class CaseOverviewScreen extends StatefulWidget {
     required this.relativeGeometry,
     required this.multiView,
     required this.location,
+    required this.worldAlignment,
     super.key,
   });
 
@@ -53,6 +56,7 @@ class CaseOverviewScreen extends StatefulWidget {
   final RelativeGeometryOperations relativeGeometry;
   final MultiViewService multiView;
   final CaseLocationService location;
+  final EvidenceWorldAlignmentService worldAlignment;
 
   @override
   State<CaseOverviewScreen> createState() => _CaseOverviewScreenState();
@@ -291,11 +295,32 @@ class _CaseOverviewScreenState extends State<CaseOverviewScreen> {
           geometryOperations: widget.relativeGeometry,
         ),
         const SizedBox(height: IrisSpacing.lg),
-        MultiViewSection(controller: widget.evidenceController, service: widget.multiView),
+        MultiViewSection(
+          controller: widget.evidenceController,
+          service: widget.multiView,
+        ),
         const SizedBox(height: IrisSpacing.lg),
-        LocationSection(caseId: widget.caseId, controller: widget.evidenceController, service: widget.location),
+        LocationSection(
+          caseId: widget.caseId,
+          controller: widget.evidenceController,
+          service: widget.location,
+        ),
         const SizedBox(height: IrisSpacing.lg),
-        RoadSceneSection(caseId: widget.caseId, service: widget.location),
+        RoadSceneSection(
+          caseId: widget.caseId,
+          service: widget.location,
+          evidenceController: widget.evidenceController,
+          geometry: widget.relativeGeometry,
+          alignmentService: widget.worldAlignment,
+        ),
+        const SizedBox(height: IrisSpacing.lg),
+        EvidenceAlignmentSection(
+          caseId: widget.caseId,
+          evidenceController: widget.evidenceController,
+          geometry: widget.relativeGeometry,
+          location: widget.location,
+          alignment: widget.worldAlignment,
+        ),
         const SizedBox(height: IrisSpacing.md),
         const _WorkflowState(
           icon: Icons.location_off_outlined,

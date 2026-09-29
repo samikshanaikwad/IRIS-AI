@@ -29,6 +29,8 @@ import '../features/multiview/application/multiview_service.dart';
 import '../features/multiview/data/sqlite_multiview_repository.dart';
 import '../features/location/application/case_location_service.dart';
 import '../features/location/data/sqlite_case_location_repository.dart';
+import '../features/geometry/application/evidence_world_alignment_service.dart';
+import '../features/geometry/data/sqlite_world_alignment_repository.dart';
 
 class IrisApplicationServices {
   IrisApplicationServices({
@@ -44,6 +46,7 @@ class IrisApplicationServices {
     this.relativeGeometry,
     this.multiView,
     this.location,
+    this.worldAlignment,
     Future<void> Function()? close,
   }) : _close = close;
 
@@ -81,8 +84,18 @@ class IrisApplicationServices {
       storage: storage,
       depth: depthService,
     );
-    final MultiViewService multiViewService = MultiViewService(repository: SqliteMultiViewRepository(database), storage: storage);
-    final CaseLocationService locationService = CaseLocationService(repository: SqliteCaseLocationRepository(database), storage: storage);
+    final MultiViewService multiViewService = MultiViewService(
+      repository: SqliteMultiViewRepository(database),
+      storage: storage,
+    );
+    final CaseLocationService locationService = CaseLocationService(
+      repository: SqliteCaseLocationRepository(database),
+      storage: storage,
+    );
+    final EvidenceWorldAlignmentService worldAlignmentService =
+        EvidenceWorldAlignmentService(
+          repository: SqliteWorldAlignmentRepository(database),
+        );
     final EvidenceDetectionService detectionService = EvidenceDetectionService(
       repository: detectionRepository,
       storage: storage,
@@ -111,6 +124,7 @@ class IrisApplicationServices {
       relativeGeometry: geometryService,
       multiView: multiViewService,
       location: locationService,
+      worldAlignment: worldAlignmentService,
       close: database.close,
     );
   }
@@ -127,6 +141,7 @@ class IrisApplicationServices {
   final RelativeGeometryOperations? relativeGeometry;
   final MultiViewService? multiView;
   final CaseLocationService? location;
+  final EvidenceWorldAlignmentService? worldAlignment;
   final Future<void> Function()? _close;
 
   EvidenceController evidenceControllerFor(String caseId) {
@@ -185,7 +200,8 @@ class IrisApplicationServices {
 
   EvidenceDepthController evidenceDepthControllerFor(EvidenceImage evidence) {
     final operations = evidenceDepth;
-    if (operations == null) throw StateError('Depth services are not configured.');
+    if (operations == null)
+      throw StateError('Depth services are not configured.');
     return EvidenceDepthController(evidence: evidence, operations: operations);
   }
 

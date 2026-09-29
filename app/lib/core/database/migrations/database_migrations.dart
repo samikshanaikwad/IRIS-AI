@@ -29,6 +29,8 @@ Future<void> migrateDatabase(
         await _createVersionNine(database);
       case 10:
         await _createVersionTen(database);
+      case 11:
+        await _createVersionEleven(database);
       default:
         throw StateError(
           'No database migration registered for version $version.',
@@ -97,6 +99,27 @@ Future<void> _createVersionTen(Database database) async {
       status TEXT NOT NULL CHECK(status IN ('AVAILABLE', 'UNAVAILABLE', 'ERROR')),
       roads_json TEXT NOT NULL,
       FOREIGN KEY(case_id) REFERENCES ${IrisDatabaseConstants.casesTable}(id) ON DELETE CASCADE
+    )
+  ''');
+}
+
+Future<void> _createVersionEleven(Database database) async {
+  await database.execute('''
+    CREATE TABLE ${IrisDatabaseConstants.evidenceWorldAlignmentsTable} (
+      evidence_id TEXT PRIMARY KEY NOT NULL,
+      case_id TEXT NOT NULL,
+      translation_x REAL NOT NULL,
+      translation_y REAL NOT NULL,
+      translation_z REAL NOT NULL,
+      yaw REAL NOT NULL,
+      uniform_scale REAL NOT NULL CHECK(uniform_scale > 0.0),
+      source TEXT NOT NULL CHECK(source = 'USER_SUPPLIED'),
+      geometry_sha256 TEXT NOT NULL CHECK(length(geometry_sha256) = 64),
+      road_context_fingerprint TEXT NOT NULL CHECK(length(road_context_fingerprint) = 64),
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      FOREIGN KEY(case_id) REFERENCES ${IrisDatabaseConstants.casesTable}(id) ON DELETE CASCADE,
+      FOREIGN KEY(evidence_id) REFERENCES ${IrisDatabaseConstants.evidenceTable}(id) ON DELETE CASCADE
     )
   ''');
 }
