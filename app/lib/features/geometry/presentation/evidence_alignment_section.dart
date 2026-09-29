@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:crypto/crypto.dart';
@@ -36,6 +37,52 @@ class EvidenceAlignmentSection extends StatefulWidget {
 
 class _EvidenceAlignmentSectionState extends State<EvidenceAlignmentSection> {
   EvidenceImage? selected;
+  List<EvidenceImage> eligible = const [];
+  bool checking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.evidenceController.addListener(_onEvidenceChanged);
+    unawaited(_hydrateEligible());
+  }
+
+  @override
+  void dispose() {
+    widget.evidenceController.removeListener(_onEvidenceChanged);
+    super.dispose();
+  }
+
+  void _onEvidenceChanged() {
+    if (widget.evidenceController.items.isNotEmpty)
+      unawaited(_hydrateEligible());
+  }
+
+  Future<void> _hydrateEligible() async {
+    final items = widget.evidenceController.items;
+    if (items.isEmpty) return;
+    setState(() => checking = true);
+    final valid = <EvidenceImage>[];
+    for (final item in items) {
+      try {
+        final record = await widget.geometry.load(item);
+        if (record == null) continue;
+        await widget.geometry.read(record);
+        valid.add(item);
+      } on Object {
+        // Invalid or stale geometry is deliberately unavailable, never a fallback.
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      eligible = List.unmodifiable(valid);
+      if (selected == null || !eligible.contains(selected)) {
+        selected = eligible.isEmpty ? null : eligible.first;
+      }
+      checking = false;
+    });
+  }
+
   Future<void> _open() async {
     final evidence = selected;
     if (evidence == null) return;
@@ -81,8 +128,7 @@ class _EvidenceAlignmentSectionState extends State<EvidenceAlignmentSection> {
 
   @override
   Widget build(BuildContext context) {
-    final items = widget.evidenceController.items;
-    selected ??= items.isEmpty ? null : items.first;
+    final items = eligible;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -97,10 +143,17 @@ class _EvidenceAlignmentSectionState extends State<EvidenceAlignmentSection> {
             const Text(
               'User-supplied placement only. Relative evidence geometry is not automatically metric.',
             ),
-            if (items.isEmpty)
+            if (checking)
               const Padding(
                 padding: EdgeInsets.only(top: 12),
-                child: Text('No evidence available for alignment.'),
+                child: Text('Checking persisted relative geometry…'),
+              )
+            else if (items.isEmpty)
+              const Padding(
+                padding: EdgeInsets.only(top: 12),
+                child: Text(
+                  'No current TASK009C relative geometry is available for alignment.',
+                ),
               )
             else ...[
               const SizedBox(height: 12),
