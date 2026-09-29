@@ -1,8 +1,11 @@
 import 'package:flutter/services.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../../evidence/data/evidence_storage.dart';
 import '../../evidence/domain/evidence_image.dart';
 import '../data/sqlite_case_location_repository.dart';
 import '../domain/case_location.dart';
+import '../domain/road_context.dart';
 
 class CaseLocationService {
   CaseLocationService({required this.repository, required this.storage}) : _channel = const MethodChannel('com.iris.location/v1');
@@ -20,5 +23,20 @@ class CaseLocationService {
     return _candidate(caseId, (raw['latitude'] as num).toDouble(), (raw['longitude'] as num).toDouble(), CaseLocationSource.evidenceExif, sourceEvidenceId: evidence.id);
   }
   Future<void> confirm(CaseLocation value) => repository.save(value);
+  Future<CaseLocation?> load(String caseId) => repository.get(caseId);
+  Future<RoadContext?> loadRoadContext(String caseId) => repository.getRoadContext(caseId);
+  Future<RoadContext> fetchRoadContext(CaseLocation location) async {
+    final query = '[out:json][timeout:10];way(around:250,${location.latitude},${location.longitude})[highway];out tags geom;';
+    try {
+      final response = await http.get(Uri.https('overpass-api.de', '/api/interpreter', {'data': query}), headers: {'User-Agent': 'IRIS-V0-local-development'}).timeout(const Duration(seconds: 15));
+      if (response.statusCode != 200) return RoadContext(caseId: location.caseId, latitude: location.latitude, longitude: location.longitude, status: 'UNAVAILABLE', retrievedAt: DateTime.now(), roads: const []);
+      final elements = (jsonDecode(response.body)['elements'] as List?) ?? const [];
+      final roads = <RoadSegment>[];
+      for (final element in elements) { final item = element as Map<String, dynamic>; final geometry = (item['geometry'] as List?) ?? const []; final points = geometry.map((p) => <double>[(p['lat'] as num).toDouble(), (p['lon'] as num).toDouble()]).toList(); if (points.isEmpty) continue; final tags = (item['tags'] as Map?)?.cast<String, dynamic>() ?? {}; roads.add(RoadSegment(id: '${item['id']}', name: tags['name'] as String?, roadClass: tags['highway'] as String?, lanes: int.tryParse('${tags['lanes'] ?? ''}'), width: double.tryParse('${tags['width'] ?? ''}'), coordinates: points, localCoordinates: points.map((p) => _local(p[0], p[1], location.latitude, location.longitude)).toList())); }
+      return RoadContext(caseId: location.caseId, latitude: location.latitude, longitude: location.longitude, status: roads.isEmpty ? 'UNAVAILABLE' : 'AVAILABLE', retrievedAt: DateTime.now(), roads: roads);
+    } catch (_) { return RoadContext(caseId: location.caseId, latitude: location.latitude, longitude: location.longitude, status: 'UNAVAILABLE', retrievedAt: DateTime.now(), roads: const []); }
+  }
+  Future<void> saveRoadContext(RoadContext context) => repository.saveRoadContext(context);
+  List<double> _local(double lat, double lon, double originLat, double originLon) { const metersPerDegree = 111320.0; final x = (lon - originLon) * metersPerDegree * 0.999; final z = (lat - originLat) * metersPerDegree; return [x, z]; }
   CaseLocation _candidate(String caseId, double latitude, double longitude, CaseLocationSource source, {String? sourceEvidenceId}) => CaseLocation(caseId: caseId, latitude: latitude, longitude: longitude, source: source, sourceEvidenceId: sourceEvidenceId, updatedAt: DateTime.now());
 }
