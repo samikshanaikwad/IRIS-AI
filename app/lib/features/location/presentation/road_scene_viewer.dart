@@ -4,8 +4,11 @@ import '../application/case_location_service.dart';
 import '../domain/road_context.dart';
 import '../../geometry/domain/evidence_world_alignment.dart';
 import '../../geometry/domain/relative_geometry.dart';
+import '../../geometry/domain/evidence_vehicle_marker.dart';
 import '../../geometry/application/relative_geometry_service.dart';
 import '../../geometry/application/evidence_world_alignment_service.dart';
+import '../../detection/application/evidence_detection_service.dart';
+import '../../detection/domain/evidence_detection.dart';
 import '../../evidence/application/evidence_controller.dart';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
@@ -17,6 +20,7 @@ class RoadSceneSection extends StatelessWidget {
     this.evidenceController,
     this.geometry,
     this.alignmentService,
+    this.detection,
     super.key,
   });
   final String caseId;
@@ -24,6 +28,7 @@ class RoadSceneSection extends StatelessWidget {
   final EvidenceController? evidenceController;
   final RelativeGeometryOperations? geometry;
   final EvidenceWorldAlignmentService? alignmentService;
+  final EvidenceDetectionOperations? detection;
   Future<void> _open(BuildContext context) async {
     final contextData = await service.loadRoadContext(caseId);
     if (!context.mounted) return;
@@ -39,6 +44,7 @@ class RoadSceneSection extends StatelessWidget {
     }
     RelativeGeometry? evidenceGeometry;
     EvidenceWorldAlignment? alignment;
+    List<EvidenceVehicleMarker> markers = const [];
     final evidence = evidenceController?.items ?? const [];
     final geometryOps = geometry;
     final alignmentOps = alignmentService;
@@ -66,7 +72,21 @@ class RoadSceneSection extends StatelessWidget {
           evidenceGeometry = null;
           alignment = null;
         }
-        if (evidenceGeometry != null) break;
+        if (evidenceGeometry != null) {
+          final detectionOps = detection;
+          if (detectionOps != null) {
+            final snapshot = await detectionOps.load(item);
+            if (snapshot.state == DetectionState.complete &&
+                snapshot.analysis != null) {
+              markers = deriveVehicleMarkers(
+                analysis: snapshot.analysis!,
+                geometry: evidenceGeometry,
+                alignment: saved,
+              );
+            }
+          }
+          break;
+        }
       }
     }
     if (!context.mounted) return;
@@ -76,6 +96,7 @@ class RoadSceneSection extends StatelessWidget {
           contextData: contextData,
           evidenceGeometry: evidenceGeometry,
           alignment: alignment,
+          vehicleMarkers: markers,
         ),
       ),
     );
@@ -113,11 +134,13 @@ class RoadSceneViewer extends StatefulWidget {
     required this.contextData,
     this.evidenceGeometry,
     this.alignment,
+    this.vehicleMarkers = const [],
     super.key,
   });
   final RoadContext contextData;
   final RelativeGeometry? evidenceGeometry;
   final EvidenceWorldAlignment? alignment;
+  final List<EvidenceVehicleMarker> vehicleMarkers;
   @override
   State<RoadSceneViewer> createState() => _RoadSceneViewerState();
 }
@@ -159,12 +182,13 @@ class _RoadSceneViewerState extends State<RoadSceneViewer> {
                 zoom,
                 widget.evidenceGeometry,
                 widget.alignment,
+                widget.vehicleMarkers,
               ),
               child: const SizedBox.expand(),
             ),
           ),
         ),
-        const Padding(
+        Padding(
           padding: EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -177,6 +201,16 @@ class _RoadSceneViewerState extends State<RoadSceneViewer> {
               Text('Evidence geometry: Image-derived relative geometry'),
               Text('Alignment: User supplied / uncalibrated'),
               Text('Scale relationship: User-supplied relative-to-world scale'),
+              Text(
+                'Detected vehicle marker: Evidence anchored / representational',
+              ),
+              Text(
+                'Vehicle dimensions: Not measured • Orientation: Not established',
+              ),
+              if (widget.vehicleMarkers.isEmpty)
+                Text(
+                  'No eligible vehicle detections available for 3D representation.',
+                ),
             ],
           ),
         ),
@@ -193,11 +227,13 @@ class _RoadPainter extends CustomPainter {
     this.zoom,
     this.geometry,
     this.alignment,
+    this.vehicleMarkers,
   );
   final RoadContext data;
   final double yaw, pitch, zoom;
   final RelativeGeometry? geometry;
   final EvidenceWorldAlignment? alignment;
+  final List<EvidenceVehicleMarker> vehicleMarkers;
   @override
   void paint(Canvas canvas, Size size) {
     final points = data.roads.expand((r) => r.localCoordinates).toList();
@@ -268,6 +304,17 @@ class _RoadPainter extends CustomPainter {
       for (final point in evidencePoints) {
         canvas.drawCircle(project(point.x, point.z), 2.2, evidencePaint);
       }
+    }
+    for (final marker in vehicleMarkers) {
+      final point = project(marker.worldAnchor.x, marker.worldAnchor.z);
+      final paint = Paint()
+        ..color = Colors.lightBlueAccent
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2;
+      canvas.drawRect(
+        Rect.fromCenter(center: point, width: 18, height: 10),
+        paint,
+      );
     }
     final origin = project(0, 0);
     canvas.drawCircle(origin, 7, Paint()..color = Colors.redAccent);

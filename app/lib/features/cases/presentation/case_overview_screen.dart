@@ -312,6 +312,7 @@ class _CaseOverviewScreenState extends State<CaseOverviewScreen> {
           evidenceController: widget.evidenceController,
           geometry: widget.relativeGeometry,
           alignmentService: widget.worldAlignment,
+          detection: widget.evidenceDetection,
         ),
         const SizedBox(height: IrisSpacing.lg),
         EvidenceAlignmentSection(
