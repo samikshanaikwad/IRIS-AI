@@ -240,6 +240,11 @@ class _RoadSceneViewerState extends State<RoadSceneViewer> {
               const Text(
                 'Reference plane: Visualization only • terrain elevation unavailable',
               ),
+              Text(
+                widget.contextData.roads.any((road) => road.width == null)
+                    ? 'Road surface width: Representational / not established where OSM width is absent'
+                    : 'Road surface width: Map-derived from explicit OSM width',
+              ),
               if (widget.vehicleMarkers.isEmpty)
                 Text(
                   'No eligible vehicle detections available for 3D representation.',
@@ -250,6 +255,27 @@ class _RoadSceneViewerState extends State<RoadSceneViewer> {
       ],
     ),
   );
+}
+
+/// Render-only 3D primitives. Their dimensions are never analytical evidence.
+/// Future physics must use its own calibrated/evidence-backed data model.
+class _ScenePoint {
+  const _ScenePoint(this.x, this.y, this.z);
+  final double x, y, z;
+  _ScenePoint operator +(_ScenePoint other) =>
+      _ScenePoint(x + other.x, y + other.y, z + other.z);
+}
+
+class _ProjectedPoint {
+  const _ProjectedPoint(this.offset, this.depth);
+  final Offset offset;
+  final double depth;
+}
+
+class _SceneFace {
+  const _SceneFace(this.points, this.color);
+  final List<_ScenePoint> points;
+  final Color color;
 }
 
 class _RoadPainter extends CustomPainter {
@@ -329,95 +355,65 @@ class _RoadPainter extends CustomPainter {
             .clamp(1.0, double.infinity);
     final centerX = hasIncidentFocus ? focusX : (minX + maxX) / 2;
     final centerZ = hasIncidentFocus ? focusZ : (minZ + maxZ) / 2;
-    final scale = size.shortestSide * .72 * zoom / span;
-    final cy = math.cos(yaw),
-        sy = math.sin(yaw),
-        cp = math.cos(pitch),
-        sp = math.sin(pitch);
-    Offset project(double x, double z) {
-      final rx = (x - centerX) * cy - (z - centerZ) * sy;
-      final rz = (x - centerX) * sy + (z - centerZ) * cy;
-      final y = -rz * sp;
-      final depth = rz * cp;
-      return Offset(
-        size.width / 2 + rx * scale / (1 + depth.abs() * .01),
-        size.height / 2 + y * scale / (1 + depth.abs() * .01),
-      );
-    }
+    final camera = _SceneCamera(
+      target: _ScenePoint(centerX, 0, centerZ),
+      yaw: yaw,
+      pitch: pitch.clamp(-1.25, .15),
+      distance: span * 1.25 / zoom,
+      viewport: size,
+    );
 
     canvas.drawRect(
       Offset.zero & size,
       Paint()..color = const Color(0xff10161d),
     );
-    final grid = Paint()
-      ..color = Colors.white12
-      ..strokeWidth = 1;
-    if (showGrid)
-      for (var i = -10; i <= 10; i++) {
-        final a = project(i * span / 10, -span),
-            b = project(i * span / 10, span),
-            c = project(-span, i * span / 10),
-            d = project(span, i * span / 10);
-        canvas.drawLine(a, b, grid);
-        canvas.drawLine(c, d, grid);
-      }
-    final road = Paint()
-      ..color = Colors.amberAccent
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke;
-    if (showRoad)
-      for (final segment in data.roads) {
-        final path = Path();
-        for (var i = 0; i < segment.localCoordinates.length; i++) {
-          final p = project(
-            segment.localCoordinates[i][0],
-            segment.localCoordinates[i][1],
-          );
-          if (i == 0) {
-            path.moveTo(p.dx, p.dy);
-          } else {
-            path.lineTo(p.dx, p.dy);
-          }
-        }
-        canvas.drawPath(path, road);
-        final ribbon = Paint()
-          ..color = Colors.blueGrey.withValues(alpha: .28)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = segment.width != null
-              ? math.max(6, segment.width! * scale)
-              : 24;
-        final ribbonPath = Path();
-        for (var i = 0; i < segment.localCoordinates.length; i++) {
-          final p = project(
-            segment.localCoordinates[i][0],
-            segment.localCoordinates[i][1],
-          );
-          if (i == 0)
-            ribbonPath.moveTo(p.dx, p.dy);
-          else
-            ribbonPath.lineTo(p.dx, p.dy);
-        }
-        canvas.drawPath(ribbonPath, ribbon);
-      }
-    if (showEvidence && evidencePoints.isNotEmpty) {
-      final evidencePaint = Paint()..color = Colors.cyanAccent;
-      for (final point in evidencePoints) {
-        canvas.drawCircle(project(point.x, point.z), 2.2, evidencePaint);
+    final faces = <_SceneFace>[
+      ..._cuboid(
+        _ScenePoint(centerX, -.45, centerZ),
+        span * 1.25,
+        .45,
+        span * 1.25,
+        const Color(0xff26313a),
+        const Color(0xff172028),
+      ),
+    ];
+    for (final segment in data.roads) {
+      final width =
+          segment.width ?? 6.0; // Display-only when OSM width is absent.
+      for (var i = 1; i < segment.localCoordinates.length; i++) {
+        final a = segment.localCoordinates[i - 1];
+        final b = segment.localCoordinates[i];
+        faces.addAll(_roadSlab(a[0], a[1], b[0], b[1], width));
       }
     }
     for (final marker in vehicleMarkers) {
-      final point = project(marker.worldAnchor.x, marker.worldAnchor.z);
-      _drawVehicleProxy(canvas, point, marker.className, scale);
+      faces.addAll(_vehicleMesh(marker));
     }
-    final origin = project(0, 0);
-    canvas.drawCircle(origin, 7, Paint()..color = Colors.redAccent);
-    canvas.drawCircle(
-      origin,
-      11,
-      Paint()
-        ..color = Colors.redAccent.withValues(alpha: .25)
-        ..style = PaintingStyle.stroke,
+    // The incident marker is a 3D reference, not a collision/impact point.
+    faces.addAll(
+      _cuboid(
+        const _ScenePoint(0, .3, 0),
+        .45,
+        .6,
+        .45,
+        Colors.redAccent,
+        const Color(0xff7d2030),
+      ),
     );
+    _drawFaces(canvas, camera, faces);
+    if (showGrid) _drawGrid(canvas, camera, span);
+    if (showRoad) _drawCenterlines(canvas, camera);
+    if (showEvidence && evidencePoints.isNotEmpty) {
+      final evidencePaint = Paint()..color = Colors.cyanAccent;
+      for (final point in evidencePoints) {
+        final projected = camera.project(
+          _ScenePoint(point.x, point.y, point.z),
+        );
+        if (projected != null) {
+          canvas.drawCircle(projected.offset, 2.2, evidencePaint);
+        }
+      }
+    }
   }
 
   @override
@@ -430,57 +426,223 @@ class _RoadPainter extends CustomPainter {
       old.showRoad != showRoad ||
       old.showGrid != showGrid;
 
-  void _drawVehicleProxy(
-    Canvas canvas,
-    Offset center,
-    String className,
-    double scale,
-  ) {
-    final proportions = switch (className) {
-      'motorcycle' => (42.0, 18.0),
-      'bicycle' => (46.0, 16.0),
-      'bus' => (64.0, 30.0),
-      'truck' => (60.0, 28.0),
-      _ => (52.0, 26.0),
-    };
-    final body = Path()
-      ..moveTo(center.dx - proportions.$1 / 2, center.dy + proportions.$2 / 2)
-      ..lineTo(center.dx + proportions.$1 / 2, center.dy + proportions.$2 / 2)
-      ..lineTo(center.dx + proportions.$1 / 2, center.dy - proportions.$2 / 2)
-      ..lineTo(center.dx - proportions.$1 / 2, center.dy - proportions.$2 / 2)
-      ..close();
-    canvas.drawPath(
-      body,
-      Paint()..color = Colors.lightBlueAccent.withValues(alpha: .72),
-    );
-    if (className == 'motorcycle' || className == 'bicycle') {
-      final wheel = Paint()
-        ..color = Colors.white70
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3;
-      canvas.drawCircle(
-        Offset(
-          center.dx - proportions.$1 * .32,
-          center.dy + proportions.$2 * .28,
-        ),
-        6,
-        wheel,
-      );
-      canvas.drawCircle(
-        Offset(
-          center.dx + proportions.$1 * .32,
-          center.dy + proportions.$2 * .28,
-        ),
-        6,
-        wheel,
+  void _drawFaces(Canvas canvas, _SceneCamera camera, List<_SceneFace> faces) {
+    final projected =
+        <({List<_ProjectedPoint> points, Color color, double depth})>[];
+    for (final face in faces) {
+      final points = face.points
+          .map(camera.project)
+          .whereType<_ProjectedPoint>()
+          .toList();
+      if (points.length == face.points.length) {
+        projected.add((
+          points: points,
+          color: face.color,
+          depth:
+              points.map((p) => p.depth).reduce((a, b) => a + b) /
+              points.length,
+        ));
+      }
+    }
+    projected.sort((a, b) => b.depth.compareTo(a.depth));
+    for (final face in projected) {
+      final path = Path()
+        ..moveTo(face.points.first.offset.dx, face.points.first.offset.dy);
+      for (final point in face.points.skip(1)) {
+        path.lineTo(point.offset.dx, point.offset.dy);
+      }
+      path.close();
+      canvas.drawPath(path, Paint()..color = face.color);
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = Colors.black26
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = .7,
       );
     }
-    canvas.drawPath(
-      body,
-      Paint()
-        ..color = Colors.lightBlueAccent
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
+  }
+
+  void _drawGrid(Canvas canvas, _SceneCamera camera, double span) {
+    final paint = Paint()
+      ..color = Colors.white12
+      ..strokeWidth = 1;
+    for (var i = -10; i <= 10; i++) {
+      _line(
+        canvas,
+        camera,
+        _ScenePoint(i * span / 10, .01, -span),
+        _ScenePoint(i * span / 10, .01, span),
+        paint,
+      );
+      _line(
+        canvas,
+        camera,
+        _ScenePoint(-span, .01, i * span / 10),
+        _ScenePoint(span, .01, i * span / 10),
+        paint,
+      );
+    }
+  }
+
+  void _drawCenterlines(Canvas canvas, _SceneCamera camera) {
+    final paint = Paint()
+      ..color = Colors.amberAccent
+      ..strokeWidth = 2;
+    for (final road in data.roads) {
+      for (var i = 1; i < road.localCoordinates.length; i++) {
+        final a = road.localCoordinates[i - 1], b = road.localCoordinates[i];
+        _line(
+          canvas,
+          camera,
+          _ScenePoint(a[0], .04, a[1]),
+          _ScenePoint(b[0], .04, b[1]),
+          paint,
+        );
+      }
+    }
+  }
+
+  void _line(
+    Canvas canvas,
+    _SceneCamera camera,
+    _ScenePoint a,
+    _ScenePoint b,
+    Paint paint,
+  ) {
+    final pa = camera.project(a), pb = camera.project(b);
+    if (pa != null && pb != null) canvas.drawLine(pa.offset, pb.offset, paint);
+  }
+
+  List<_SceneFace> _roadSlab(
+    double ax,
+    double az,
+    double bx,
+    double bz,
+    double width,
+  ) {
+    final dx = bx - ax, dz = bz - az, length = math.sqrt(dx * dx + dz * dz);
+    if (length == 0) return const [];
+    final nx = -dz / length * width / 2, nz = dx / length * width / 2;
+    final top = <_ScenePoint>[
+      _ScenePoint(ax + nx, .05, az + nz),
+      _ScenePoint(bx + nx, .05, bz + nz),
+      _ScenePoint(bx - nx, .05, bz - nz),
+      _ScenePoint(ax - nx, .05, az - nz),
+    ];
+    final bottom = top.map((p) => _ScenePoint(p.x, -.12, p.z)).toList();
+    return _prism(
+      top,
+      bottom,
+      const Color(0xff4d5963),
+      const Color(0xff27323a),
+    );
+  }
+
+  List<_SceneFace> _vehicleMesh(EvidenceVehicleMarker marker) {
+    final p = marker.worldAnchor;
+    const top = Color(0xff72c6e8), side = Color(0xff2e7396);
+    List<_SceneFace> box(
+      double dx,
+      double dy,
+      double dz,
+      double x,
+      double y,
+      double z,
+    ) => _cuboid(_ScenePoint(p.x + x, p.y + y, p.z + z), dx, dy, dz, top, side);
+    // These class proportions are display-only, neutral-orientation proxies.
+    return switch (marker.className) {
+      'motorcycle' => [
+        ...box(2.2, .45, .45, 0, .35, 0),
+        ...box(.9, .45, .55, 0, .75, 0),
+        ...box(.28, .5, .85, -1.0, .25, 0),
+        ...box(.28, .5, .85, 1.0, .25, 0),
+      ],
+      'bicycle' => [
+        ...box(2.0, .22, .25, 0, .55, 0),
+        ...box(.22, .65, .55, -.8, .35, 0),
+        ...box(.22, .65, .55, .8, .35, 0),
+      ],
+      'bus' => box(4.3, 1.45, 1.25, 0, .75, 0),
+      'truck' => [
+        ...box(2.8, 1.25, 1.25, .65, .65, 0),
+        ...box(1.25, 1.05, 1.2, -1.35, .55, 0),
+      ],
+      _ => [
+        ...box(3.0, .85, 1.35, 0, .48, 0),
+        ...box(1.65, .65, 1.12, .15, 1.15, 0),
+      ],
+    };
+  }
+
+  List<_SceneFace> _cuboid(
+    _ScenePoint center,
+    double width,
+    double height,
+    double depth,
+    Color top,
+    Color side,
+  ) {
+    final x = width / 2, y = height / 2, z = depth / 2;
+    final lower = <_ScenePoint>[
+      _ScenePoint(center.x - x, center.y - y, center.z - z),
+      _ScenePoint(center.x + x, center.y - y, center.z - z),
+      _ScenePoint(center.x + x, center.y - y, center.z + z),
+      _ScenePoint(center.x - x, center.y - y, center.z + z),
+    ];
+    final upper = lower
+        .map((p) => _ScenePoint(p.x, p.y + height, p.z))
+        .toList();
+    return _prism(upper, lower, top, side);
+  }
+
+  List<_SceneFace> _prism(
+    List<_ScenePoint> top,
+    List<_ScenePoint> bottom,
+    Color topColor,
+    Color sideColor,
+  ) => [
+    _SceneFace(top, topColor),
+    for (var i = 0; i < top.length; i++)
+      _SceneFace([
+        top[i],
+        top[(i + 1) % top.length],
+        bottom[(i + 1) % top.length],
+        bottom[i],
+      ], sideColor.withValues(alpha: .9)),
+  ];
+}
+
+class _SceneCamera {
+  const _SceneCamera({
+    required this.target,
+    required this.yaw,
+    required this.pitch,
+    required this.distance,
+    required this.viewport,
+  });
+  final _ScenePoint target;
+  final double yaw, pitch, distance;
+  final Size viewport;
+  _ProjectedPoint? project(_ScenePoint point) {
+    final x = point.x - target.x,
+        y = point.y - target.y,
+        z = point.z - target.z;
+    final cy = math.cos(yaw),
+        sy = math.sin(yaw),
+        cp = math.cos(pitch),
+        sp = math.sin(pitch);
+    final rx = x * cy - z * sy, rz = x * sy + z * cy;
+    final ry = y * cp - rz * sp;
+    final depth = y * sp + rz * cp + distance;
+    if (depth <= .05) return null;
+    final focal = viewport.shortestSide * .92;
+    return _ProjectedPoint(
+      Offset(
+        viewport.width / 2 + rx * focal / depth,
+        viewport.height / 2 - ry * focal / depth,
+      ),
+      depth,
     );
   }
 }
