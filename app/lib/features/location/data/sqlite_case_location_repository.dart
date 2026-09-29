@@ -101,6 +101,8 @@ class SqliteCaseLocationRepository {
     final raw = jsonDecode(row['features_json']! as String) as List;
     return EnvironmentContext(
       caseId: caseId,
+      latitude: (row['latitude']! as num).toDouble(),
+      longitude: (row['longitude']! as num).toDouble(),
       status: row['status']! as String,
       retrievedAt: DateTime.fromMillisecondsSinceEpoch(
         row['retrieved_at']! as int,
@@ -116,6 +118,8 @@ class SqliteCaseLocationRepository {
       IrisDatabaseConstants.environmentContextsTable,
       {
         'case_id': context.caseId,
+        'latitude': context.latitude,
+        'longitude': context.longitude,
         'provider': context.provider,
         'retrieved_at': context.retrievedAt.millisecondsSinceEpoch,
         'status': context.status,

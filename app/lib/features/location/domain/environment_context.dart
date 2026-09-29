@@ -39,11 +39,14 @@ class EnvironmentFeature {
 class EnvironmentContext {
   const EnvironmentContext({
     required this.caseId,
+    required this.latitude,
+    required this.longitude,
     required this.status,
     required this.retrievedAt,
     required this.features,
   });
   final String caseId, status;
+  final double latitude, longitude;
   final DateTime retrievedAt;
   final List<EnvironmentFeature> features;
   String get provider => 'OpenStreetMap Overpass API';

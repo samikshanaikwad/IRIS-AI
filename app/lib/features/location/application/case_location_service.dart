@@ -126,13 +126,23 @@ class CaseLocationService {
 
   Future<void> saveRoadContext(RoadContext context) =>
       repository.saveRoadContext(context);
-  Future<EnvironmentContext?> loadEnvironment(String caseId) =>
-      repository.getEnvironmentContext(caseId);
+  Future<EnvironmentContext?> loadEnvironment(String caseId) async {
+    final location = await load(caseId);
+    if (location == null) return null;
+    final context = await repository.getEnvironmentContext(caseId);
+    if (context == null) return null;
+    const tolerance = 0.000001;
+    return (context.latitude - location.latitude).abs() <= tolerance &&
+            (context.longitude - location.longitude).abs() <= tolerance
+        ? context
+        : null;
+  }
+
   Future<EnvironmentContext?> fetchEnvironmentForCase(String caseId) async {
     final location = await load(caseId);
     if (location == null) return null;
     final query =
-        '[out:json][timeout:15];(way(around:150,${location.latitude},${location.longitude})[building];node(around:150,${location.latitude},${location.longitude})[natural=tree];way(around:150,${location.latitude},${location.longitude})[barrier~"^(wall|fence|guard_rail)\$"];);out tags geom;';
+        '[out:json][timeout:15];(way(around:150,${location.latitude},${location.longitude})["building"];relation(around:150,${location.latitude},${location.longitude})["building"];node(around:150,${location.latitude},${location.longitude})["natural"="tree"];way(around:150,${location.latitude},${location.longitude})["barrier"~"^(wall|fence|guard_rail)\$"];);out tags geom;';
     try {
       final response = await http
           .get(
@@ -143,6 +153,8 @@ class CaseLocationService {
       if (response.statusCode != 200)
         return EnvironmentContext(
           caseId: caseId,
+          latitude: location.latitude,
+          longitude: location.longitude,
           status: 'UNAVAILABLE',
           retrievedAt: DateTime.now(),
           features: const [],
@@ -196,6 +208,8 @@ class CaseLocationService {
       }
       return EnvironmentContext(
         caseId: caseId,
+        latitude: location.latitude,
+        longitude: location.longitude,
         status: features.isEmpty ? 'EMPTY' : 'AVAILABLE',
         retrievedAt: DateTime.now(),
         features: features,
@@ -203,6 +217,8 @@ class CaseLocationService {
     } catch (_) {
       return EnvironmentContext(
         caseId: caseId,
+        latitude: location.latitude,
+        longitude: location.longitude,
         status: 'UNAVAILABLE',
         retrievedAt: DateTime.now(),
         features: const [],

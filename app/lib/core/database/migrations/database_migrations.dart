@@ -33,6 +33,8 @@ Future<void> migrateDatabase(
         await _createVersionEleven(database);
       case 12:
         await _createVersionTwelve(database);
+      case 13:
+        await _createVersionThirteen(database);
       default:
         throw StateError(
           'No database migration registered for version $version.',
@@ -52,6 +54,15 @@ Future<void> _createVersionTwelve(Database database) async {
       FOREIGN KEY(case_id) REFERENCES ${IrisDatabaseConstants.casesTable}(id) ON DELETE CASCADE
     )
   ''');
+}
+
+Future<void> _createVersionThirteen(Database database) async {
+  await database.execute(
+    'ALTER TABLE ${IrisDatabaseConstants.environmentContextsTable} ADD COLUMN latitude REAL NOT NULL DEFAULT 0.0',
+  );
+  await database.execute(
+    'ALTER TABLE ${IrisDatabaseConstants.environmentContextsTable} ADD COLUMN longitude REAL NOT NULL DEFAULT 0.0',
+  );
 }
 
 Future<void> _createVersionEight(Database database) async {
