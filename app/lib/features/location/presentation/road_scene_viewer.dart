@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../application/case_location_service.dart';
 import '../domain/road_context.dart';
+import '../domain/environment_context.dart';
 import '../../geometry/domain/evidence_world_alignment.dart';
 import '../../geometry/domain/relative_geometry.dart';
 import '../../geometry/domain/evidence_vehicle_marker.dart';
@@ -42,6 +43,8 @@ class RoadSceneSection extends StatelessWidget {
       );
       return;
     }
+    var environment = await service.loadEnvironment(caseId);
+    environment ??= await service.refreshEnvironment(caseId);
     RelativeGeometry? evidenceGeometry;
     EvidenceWorldAlignment? alignment;
     List<EvidenceVehicleMarker> markers = const [];
@@ -97,6 +100,7 @@ class RoadSceneSection extends StatelessWidget {
           evidenceGeometry: evidenceGeometry,
           alignment: alignment,
           vehicleMarkers: markers,
+          environment: environment,
         ),
       ),
     );
@@ -135,12 +139,14 @@ class RoadSceneViewer extends StatefulWidget {
     this.evidenceGeometry,
     this.alignment,
     this.vehicleMarkers = const [],
+    this.environment,
     super.key,
   });
   final RoadContext contextData;
   final RelativeGeometry? evidenceGeometry;
   final EvidenceWorldAlignment? alignment;
   final List<EvidenceVehicleMarker> vehicleMarkers;
+  final EnvironmentContext? environment;
   @override
   State<RoadSceneViewer> createState() => _RoadSceneViewerState();
 }
@@ -184,6 +190,7 @@ class _RoadSceneViewerState extends State<RoadSceneViewer> {
                 widget.evidenceGeometry,
                 widget.alignment,
                 widget.vehicleMarkers,
+                widget.environment,
                 showEvidence,
                 showRoad,
                 showGrid,
@@ -245,6 +252,12 @@ class _RoadSceneViewerState extends State<RoadSceneViewer> {
                     ? 'Road surface width: Representational / not established where OSM width is absent'
                     : 'Road surface width: Map-derived from explicit OSM width',
               ),
+              Text(
+                'Mapped environment: Buildings ${widget.environment?.count('building') ?? 0} • Trees ${widget.environment?.count('tree') ?? 0} • Barriers ${widget.environment?.count('barrier') ?? 0}',
+              ),
+              const Text(
+                'Environment source: OpenStreetMap • Map coverage may be incomplete.',
+              ),
               if (widget.vehicleMarkers.isEmpty)
                 Text(
                   'No eligible vehicle detections available for 3D representation.',
@@ -287,6 +300,7 @@ class _RoadPainter extends CustomPainter {
     this.geometry,
     this.alignment,
     this.vehicleMarkers,
+    this.environment,
     this.showEvidence,
     this.showRoad,
     this.showGrid,
@@ -296,6 +310,7 @@ class _RoadPainter extends CustomPainter {
   final RelativeGeometry? geometry;
   final EvidenceWorldAlignment? alignment;
   final List<EvidenceVehicleMarker> vehicleMarkers;
+  final EnvironmentContext? environment;
   final bool showEvidence, showRoad, showGrid;
   @override
   void paint(Canvas canvas, Size size) {
@@ -388,6 +403,57 @@ class _RoadPainter extends CustomPainter {
     }
     for (final marker in vehicleMarkers) {
       faces.addAll(_vehicleMesh(marker));
+    }
+    for (final feature
+        in environment?.features ?? const <EnvironmentFeature>[]) {
+      if (feature.featureType == 'building' &&
+          feature.localCoordinates.length >= 3) {
+        final vertices = feature.localCoordinates;
+        final height = double.tryParse(feature.tags['height'] ?? '') ?? 5.0;
+        final top = vertices
+            .map((p) => _ScenePoint(p[0], height, p[1]))
+            .toList();
+        final bottom = vertices.map((p) => _ScenePoint(p[0], 0, p[1])).toList();
+        faces.addAll(
+          _prism(top, bottom, const Color(0xff87939d), const Color(0xff4a5660)),
+        );
+      } else if (feature.featureType == 'tree' &&
+          feature.localCoordinates.isNotEmpty) {
+        final p = feature.localCoordinates.first;
+        faces.addAll(
+          _cuboid(
+            _ScenePoint(p[0], 2.0, p[1]),
+            .35,
+            4.0,
+            .35,
+            const Color(0xff6c5538),
+            const Color(0xff493821),
+          ),
+        );
+        faces.addAll(
+          _cuboid(
+            _ScenePoint(p[0], 5.0, p[1]),
+            2.2,
+            2.0,
+            2.2,
+            const Color(0xff48735d),
+            const Color(0xff294637),
+          ),
+        );
+      } else if (feature.featureType == 'barrier') {
+        for (var i = 1; i < feature.localCoordinates.length; i++) {
+          final a = feature.localCoordinates[i - 1],
+              b = feature.localCoordinates[i];
+          faces.addAll(
+            _roadSlab(a[0], a[1], b[0], b[1], .18).map(
+              (f) => _SceneFace(
+                f.points.map((p) => _ScenePoint(p.x, p.y + .8, p.z)).toList(),
+                const Color(0xff8c8374),
+              ),
+            ),
+          );
+        }
+      }
     }
     // The incident marker is a 3D reference, not a collision/impact point.
     faces.addAll(

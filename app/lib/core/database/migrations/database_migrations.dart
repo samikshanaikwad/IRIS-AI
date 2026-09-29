@@ -31,12 +31,27 @@ Future<void> migrateDatabase(
         await _createVersionTen(database);
       case 11:
         await _createVersionEleven(database);
+      case 12:
+        await _createVersionTwelve(database);
       default:
         throw StateError(
           'No database migration registered for version $version.',
         );
     }
   }
+}
+
+Future<void> _createVersionTwelve(Database database) async {
+  await database.execute('''
+    CREATE TABLE ${IrisDatabaseConstants.environmentContextsTable} (
+      case_id TEXT PRIMARY KEY NOT NULL,
+      provider TEXT NOT NULL,
+      retrieved_at INTEGER NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('AVAILABLE', 'EMPTY', 'UNAVAILABLE')),
+      features_json TEXT NOT NULL,
+      FOREIGN KEY(case_id) REFERENCES ${IrisDatabaseConstants.casesTable}(id) ON DELETE CASCADE
+    )
+  ''');
 }
 
 Future<void> _createVersionEight(Database database) async {
