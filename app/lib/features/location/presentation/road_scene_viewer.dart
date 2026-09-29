@@ -147,6 +147,7 @@ class RoadSceneViewer extends StatefulWidget {
 
 class _RoadSceneViewerState extends State<RoadSceneViewer> {
   double yaw = .35, pitch = -.35, zoom = 1;
+  bool showEvidence = false, showRoad = true, showGrid = true;
   void reset() => setState(() {
     yaw = .35;
     pitch = -.35;
@@ -183,6 +184,9 @@ class _RoadSceneViewerState extends State<RoadSceneViewer> {
                 widget.evidenceGeometry,
                 widget.alignment,
                 widget.vehicleMarkers,
+                showEvidence,
+                showRoad,
+                showGrid,
               ),
               child: const SizedBox.expand(),
             ),
@@ -193,6 +197,32 @@ class _RoadSceneViewerState extends State<RoadSceneViewer> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Wrap(
+                spacing: 8,
+                children: [
+                  FilterChip(
+                    label: const Text('Scene'),
+                    selected: true,
+                    onSelected: (_) {},
+                  ),
+                  FilterChip(
+                    label: const Text('Evidence geometry'),
+                    selected: showEvidence,
+                    onSelected: (v) => setState(() => showEvidence = v),
+                  ),
+                  FilterChip(
+                    label: const Text('Road centerlines'),
+                    selected: showRoad,
+                    onSelected: (v) => setState(() => showRoad = v),
+                  ),
+                  FilterChip(
+                    label: const Text('World grid'),
+                    selected: showGrid,
+                    onSelected: (v) => setState(() => showGrid = v),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
               Text('Environment source: OpenStreetMap-derived road geometry'),
               Text(
                 'Coordinate frame: Local metric (metres from geographic coordinates)',
@@ -206,6 +236,9 @@ class _RoadSceneViewerState extends State<RoadSceneViewer> {
               ),
               Text(
                 'Vehicle dimensions: Not measured • Orientation: Not established',
+              ),
+              const Text(
+                'Reference plane: Visualization only • terrain elevation unavailable',
               ),
               if (widget.vehicleMarkers.isEmpty)
                 Text(
@@ -228,12 +261,16 @@ class _RoadPainter extends CustomPainter {
     this.geometry,
     this.alignment,
     this.vehicleMarkers,
+    this.showEvidence,
+    this.showRoad,
+    this.showGrid,
   );
   final RoadContext data;
   final double yaw, pitch, zoom;
   final RelativeGeometry? geometry;
   final EvidenceWorldAlignment? alignment;
   final List<EvidenceVehicleMarker> vehicleMarkers;
+  final bool showEvidence, showRoad, showGrid;
   @override
   void paint(Canvas canvas, Size size) {
     final points = data.roads.expand((r) => r.localCoordinates).toList();
@@ -250,6 +287,12 @@ class _RoadPainter extends CustomPainter {
       maxX = math.max(maxX, p.x);
       minZ = math.min(minZ, p.z);
       maxZ = math.max(maxZ, p.z);
+    }
+    for (final marker in vehicleMarkers) {
+      minX = math.min(minX, marker.worldAnchor.x);
+      maxX = math.max(maxX, marker.worldAnchor.x);
+      minZ = math.min(minZ, marker.worldAnchor.z);
+      maxZ = math.max(maxZ, marker.worldAnchor.z);
     }
     final span = math.max(maxX - minX, maxZ - minZ).clamp(1.0, double.infinity);
     final centerX = (minX + maxX) / 2, centerZ = (minZ + maxZ) / 2;
@@ -272,34 +315,54 @@ class _RoadPainter extends CustomPainter {
     final grid = Paint()
       ..color = Colors.white12
       ..strokeWidth = 1;
-    for (var i = -10; i <= 10; i++) {
-      final a = project(i * span / 10, -span),
-          b = project(i * span / 10, span),
-          c = project(-span, i * span / 10),
-          d = project(span, i * span / 10);
-      canvas.drawLine(a, b, grid);
-      canvas.drawLine(c, d, grid);
-    }
+    if (showGrid)
+      for (var i = -10; i <= 10; i++) {
+        final a = project(i * span / 10, -span),
+            b = project(i * span / 10, span),
+            c = project(-span, i * span / 10),
+            d = project(span, i * span / 10);
+        canvas.drawLine(a, b, grid);
+        canvas.drawLine(c, d, grid);
+      }
     final road = Paint()
       ..color = Colors.amberAccent
       ..strokeWidth = 3
       ..style = PaintingStyle.stroke;
-    for (final segment in data.roads) {
-      final path = Path();
-      for (var i = 0; i < segment.localCoordinates.length; i++) {
-        final p = project(
-          segment.localCoordinates[i][0],
-          segment.localCoordinates[i][1],
-        );
-        if (i == 0) {
-          path.moveTo(p.dx, p.dy);
-        } else {
-          path.lineTo(p.dx, p.dy);
+    if (showRoad)
+      for (final segment in data.roads) {
+        final path = Path();
+        for (var i = 0; i < segment.localCoordinates.length; i++) {
+          final p = project(
+            segment.localCoordinates[i][0],
+            segment.localCoordinates[i][1],
+          );
+          if (i == 0) {
+            path.moveTo(p.dx, p.dy);
+          } else {
+            path.lineTo(p.dx, p.dy);
+          }
         }
+        canvas.drawPath(path, road);
+        final ribbon = Paint()
+          ..color = Colors.blueGrey.withValues(alpha: .28)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = segment.width != null
+              ? math.max(6, segment.width! * scale)
+              : 8;
+        final ribbonPath = Path();
+        for (var i = 0; i < segment.localCoordinates.length; i++) {
+          final p = project(
+            segment.localCoordinates[i][0],
+            segment.localCoordinates[i][1],
+          );
+          if (i == 0)
+            ribbonPath.moveTo(p.dx, p.dy);
+          else
+            ribbonPath.lineTo(p.dx, p.dy);
+        }
+        canvas.drawPath(ribbonPath, ribbon);
       }
-      canvas.drawPath(path, road);
-    }
-    if (evidencePoints.isNotEmpty) {
+    if (showEvidence && evidencePoints.isNotEmpty) {
       final evidencePaint = Paint()..color = Colors.cyanAccent;
       for (final point in evidencePoints) {
         canvas.drawCircle(project(point.x, point.z), 2.2, evidencePaint);
@@ -307,14 +370,7 @@ class _RoadPainter extends CustomPainter {
     }
     for (final marker in vehicleMarkers) {
       final point = project(marker.worldAnchor.x, marker.worldAnchor.z);
-      final paint = Paint()
-        ..color = Colors.lightBlueAccent
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2;
-      canvas.drawRect(
-        Rect.fromCenter(center: point, width: 18, height: 10),
-        paint,
-      );
+      _drawVehicleProxy(canvas, point, marker.className, scale);
     }
     final origin = project(0, 0);
     canvas.drawCircle(origin, 7, Paint()..color = Colors.redAccent);
@@ -332,5 +388,40 @@ class _RoadPainter extends CustomPainter {
       old.data != data ||
       old.yaw != yaw ||
       old.pitch != pitch ||
-      old.zoom != zoom;
+      old.zoom != zoom ||
+      old.showEvidence != showEvidence ||
+      old.showRoad != showRoad ||
+      old.showGrid != showGrid;
+
+  void _drawVehicleProxy(
+    Canvas canvas,
+    Offset center,
+    String className,
+    double scale,
+  ) {
+    final proportions = switch (className) {
+      'motorcycle' => (12.0, 5.0),
+      'bicycle' => (14.0, 4.0),
+      'bus' => (24.0, 9.0),
+      'truck' => (22.0, 9.0),
+      _ => (18.0, 8.0),
+    };
+    final body = Path()
+      ..moveTo(center.dx - proportions.$1 / 2, center.dy + proportions.$2 / 2)
+      ..lineTo(center.dx + proportions.$1 / 2, center.dy + proportions.$2 / 2)
+      ..lineTo(center.dx + proportions.$1 / 2, center.dy - proportions.$2 / 2)
+      ..lineTo(center.dx - proportions.$1 / 2, center.dy - proportions.$2 / 2)
+      ..close();
+    canvas.drawPath(
+      body,
+      Paint()..color = Colors.lightBlueAccent.withValues(alpha: .72),
+    );
+    canvas.drawPath(
+      body,
+      Paint()
+        ..color = Colors.lightBlueAccent
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+  }
 }
