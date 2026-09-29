@@ -147,7 +147,7 @@ class RoadSceneViewer extends StatefulWidget {
 
 class _RoadSceneViewerState extends State<RoadSceneViewer> {
   double yaw = .35, pitch = -.35, zoom = 1;
-  bool showEvidence = false, showRoad = true, showGrid = true;
+  bool showEvidence = false, showRoad = true, showGrid = false;
   void reset() => setState(() {
     yaw = .35;
     pitch = -.35;
@@ -294,8 +294,41 @@ class _RoadPainter extends CustomPainter {
       minZ = math.min(minZ, marker.worldAnchor.z);
       maxZ = math.max(maxZ, marker.worldAnchor.z);
     }
-    final span = math.max(maxX - minX, maxZ - minZ).clamp(1.0, double.infinity);
-    final centerX = (minX + maxX) / 2, centerZ = (minZ + maxZ) / 2;
+    final hasIncidentFocus =
+        evidencePoints.isNotEmpty || vehicleMarkers.isNotEmpty;
+    final focusX = evidencePoints.isNotEmpty
+        ? evidencePoints.map((p) => p.x).reduce((a, b) => a + b) /
+              evidencePoints.length
+        : vehicleMarkers.isNotEmpty
+        ? vehicleMarkers.map((m) => m.worldAnchor.x).reduce((a, b) => a + b) /
+              vehicleMarkers.length
+        : 0.0;
+    final focusZ = evidencePoints.isNotEmpty
+        ? evidencePoints.map((p) => p.z).reduce((a, b) => a + b) /
+              evidencePoints.length
+        : vehicleMarkers.isNotEmpty
+        ? vehicleMarkers.map((m) => m.worldAnchor.z).reduce((a, b) => a + b) /
+              vehicleMarkers.length
+        : 0.0;
+    final evidenceSpan = hasIncidentFocus
+        ? math.max(
+            evidencePoints.isEmpty
+                ? 0
+                : (evidencePoints.map((p) => p.x).reduce(math.max) -
+                      evidencePoints.map((p) => p.x).reduce(math.min)),
+            evidencePoints.isEmpty
+                ? 0
+                : (evidencePoints.map((p) => p.z).reduce(math.max) -
+                      evidencePoints.map((p) => p.z).reduce(math.min)),
+          )
+        : 0;
+    final span =
+        (hasIncidentFocus
+                ? math.max(evidenceSpan * 3.0, 12.0)
+                : math.max(maxX - minX, maxZ - minZ))
+            .clamp(1.0, double.infinity);
+    final centerX = hasIncidentFocus ? focusX : (minX + maxX) / 2;
+    final centerZ = hasIncidentFocus ? focusZ : (minZ + maxZ) / 2;
     final scale = size.shortestSide * .72 * zoom / span;
     final cy = math.cos(yaw),
         sy = math.sin(yaw),
@@ -312,6 +345,10 @@ class _RoadPainter extends CustomPainter {
       );
     }
 
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()..color = const Color(0xff10161d),
+    );
     final grid = Paint()
       ..color = Colors.white12
       ..strokeWidth = 1;
@@ -348,7 +385,7 @@ class _RoadPainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeWidth = segment.width != null
               ? math.max(6, segment.width! * scale)
-              : 8;
+              : 24;
         final ribbonPath = Path();
         for (var i = 0; i < segment.localCoordinates.length; i++) {
           final p = project(
@@ -400,11 +437,11 @@ class _RoadPainter extends CustomPainter {
     double scale,
   ) {
     final proportions = switch (className) {
-      'motorcycle' => (12.0, 5.0),
-      'bicycle' => (14.0, 4.0),
-      'bus' => (24.0, 9.0),
-      'truck' => (22.0, 9.0),
-      _ => (18.0, 8.0),
+      'motorcycle' => (42.0, 18.0),
+      'bicycle' => (46.0, 16.0),
+      'bus' => (64.0, 30.0),
+      'truck' => (60.0, 28.0),
+      _ => (52.0, 26.0),
     };
     final body = Path()
       ..moveTo(center.dx - proportions.$1 / 2, center.dy + proportions.$2 / 2)
@@ -416,6 +453,28 @@ class _RoadPainter extends CustomPainter {
       body,
       Paint()..color = Colors.lightBlueAccent.withValues(alpha: .72),
     );
+    if (className == 'motorcycle' || className == 'bicycle') {
+      final wheel = Paint()
+        ..color = Colors.white70
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3;
+      canvas.drawCircle(
+        Offset(
+          center.dx - proportions.$1 * .32,
+          center.dy + proportions.$2 * .28,
+        ),
+        6,
+        wheel,
+      );
+      canvas.drawCircle(
+        Offset(
+          center.dx + proportions.$1 * .32,
+          center.dy + proportions.$2 * .28,
+        ),
+        6,
+        wheel,
+      );
+    }
     canvas.drawPath(
       body,
       Paint()
