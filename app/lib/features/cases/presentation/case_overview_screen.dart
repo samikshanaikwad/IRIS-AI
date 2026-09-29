@@ -26,6 +26,7 @@ import '../../multiview/application/multiview_service.dart';
 import '../../multiview/presentation/multiview_section.dart';
 import '../../location/application/case_location_service.dart';
 import '../../location/presentation/location_section.dart';
+import '../../location/presentation/road_scene_viewer.dart';
 
 class CaseOverviewScreen extends StatefulWidget {
   const CaseOverviewScreen({
@@ -293,6 +294,8 @@ class _CaseOverviewScreenState extends State<CaseOverviewScreen> {
         MultiViewSection(controller: widget.evidenceController, service: widget.multiView),
         const SizedBox(height: IrisSpacing.lg),
         LocationSection(caseId: widget.caseId, controller: widget.evidenceController, service: widget.location),
+        const SizedBox(height: IrisSpacing.lg),
+        RoadSceneSection(caseId: widget.caseId, service: widget.location),
         const SizedBox(height: IrisSpacing.md),
         const _WorkflowState(
           icon: Icons.location_off_outlined,
