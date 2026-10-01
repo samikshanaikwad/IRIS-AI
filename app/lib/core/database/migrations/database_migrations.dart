@@ -35,6 +35,8 @@ Future<void> migrateDatabase(
         await _createVersionTwelve(database);
       case 13:
         await _createVersionThirteen(database);
+      case 14:
+        await _createVersionFourteen(database);
       default:
         throw StateError(
           'No database migration registered for version $version.',
@@ -62,6 +64,12 @@ Future<void> _createVersionThirteen(Database database) async {
   );
   await database.execute(
     'ALTER TABLE ${IrisDatabaseConstants.environmentContextsTable} ADD COLUMN longitude REAL NOT NULL DEFAULT 0.0',
+  );
+}
+
+Future<void> _createVersionFourteen(Database database) async {
+  await database.execute(
+    'ALTER TABLE ${IrisDatabaseConstants.environmentContextsTable} ADD COLUMN provider_state TEXT NOT NULL DEFAULT \'UNKNOWN\'',
   );
 }
 

@@ -104,6 +104,9 @@ class SqliteCaseLocationRepository {
       latitude: (row['latitude']! as num).toDouble(),
       longitude: (row['longitude']! as num).toDouble(),
       status: row['status']! as String,
+      providerState: EnvironmentProviderState.fromStorage(
+        row['provider_state'] as String?,
+      ),
       retrievedAt: DateTime.fromMillisecondsSinceEpoch(
         row['retrieved_at']! as int,
       ),
@@ -123,6 +126,7 @@ class SqliteCaseLocationRepository {
         'provider': context.provider,
         'retrieved_at': context.retrievedAt.millisecondsSinceEpoch,
         'status': context.status,
+        'provider_state': context.providerState.storageValue,
         'features_json': context.json,
       },
       conflictAlgorithm: ConflictAlgorithm.replace,

@@ -1,5 +1,40 @@
 import 'dart:convert';
 
+/// The provider outcome is deliberately separate from supported-feature counts.
+/// In particular, a provider or parse failure is not evidence of an empty map.
+enum EnvironmentProviderState {
+  successWithFeatures,
+  successEmpty,
+  httpError,
+  overpassError,
+  parseError,
+  noConfirmedLocation,
+  offlineUsingPersisted,
+  unknown;
+
+  String get storageValue => switch (this) {
+    successWithFeatures => 'SUCCESS_WITH_FEATURES',
+    successEmpty => 'SUCCESS_EMPTY',
+    httpError => 'HTTP_ERROR',
+    overpassError => 'OVERPASS_ERROR',
+    parseError => 'PARSE_ERROR',
+    noConfirmedLocation => 'NO_CONFIRMED_LOCATION',
+    offlineUsingPersisted => 'OFFLINE_USING_PERSISTED',
+    unknown => 'UNKNOWN',
+  };
+
+  bool get isSuccess =>
+      this == successWithFeatures ||
+      this == successEmpty ||
+      this == offlineUsingPersisted;
+
+  static EnvironmentProviderState fromStorage(String? value) =>
+      EnvironmentProviderState.values.firstWhere(
+        (state) => state.storageValue == value,
+        orElse: () => unknown,
+      );
+}
+
 /// Structured OSM facts. Display meshes are derived later and are not persisted here.
 class EnvironmentFeature {
   const EnvironmentFeature({
@@ -42,14 +77,17 @@ class EnvironmentContext {
     required this.latitude,
     required this.longitude,
     required this.status,
+    required this.providerState,
     required this.retrievedAt,
     required this.features,
   });
   final String caseId, status;
+  final EnvironmentProviderState providerState;
   final double latitude, longitude;
   final DateTime retrievedAt;
   final List<EnvironmentFeature> features;
   String get provider => 'OpenStreetMap Overpass API';
   String get json => jsonEncode(features.map((f) => f.toJson()).toList());
   int count(String type) => features.where((f) => f.featureType == type).length;
+  bool get hasVerifiedResult => providerState.isSuccess;
 }

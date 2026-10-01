@@ -51,6 +51,9 @@ class RoadSceneSection extends StatelessWidget {
     final evidence = evidenceController?.items ?? const [];
     final geometryOps = geometry;
     final alignmentOps = alignmentService;
+    var hasCurrentAlignedGeometry = false;
+    var hasCurrentDetection = false;
+    var hasEligibleDetection = false;
     if (geometryOps != null && alignmentOps != null && evidence.isNotEmpty) {
       for (final item in evidence) {
         final saved = await alignmentOps.load(item.id);
@@ -68,27 +71,34 @@ class RoadSceneSection extends StatelessWidget {
           roadContextFingerprint: fingerprint,
         ))
           continue;
+        hasCurrentAlignedGeometry = true;
         try {
-          evidenceGeometry = await geometryOps.read(record);
-          alignment = saved;
-        } on Object {
-          evidenceGeometry = null;
-          alignment = null;
-        }
-        if (evidenceGeometry != null) {
+          final currentGeometry = await geometryOps.read(record);
+          evidenceGeometry ??= currentGeometry;
+          alignment ??= saved;
           final detectionOps = detection;
-          if (detectionOps != null) {
-            final snapshot = await detectionOps.load(item);
-            if (snapshot.state == DetectionState.complete &&
-                snapshot.analysis != null) {
-              markers = deriveVehicleMarkers(
-                analysis: snapshot.analysis!,
-                geometry: evidenceGeometry,
-                alignment: saved,
-              );
-            }
+          if (detectionOps == null) continue;
+          final snapshot = await detectionOps.load(item);
+          if (snapshot.state != DetectionState.complete ||
+              snapshot.analysis == null) {
+            continue;
           }
-          break;
+          hasCurrentDetection = true;
+          if (snapshot.analysis!.detections.any(
+            (value) => eligibleVehicleClasses.contains(value.className),
+          )) {
+            hasEligibleDetection = true;
+          }
+          markers = [
+            ...markers,
+            ...deriveVehicleMarkers(
+              analysis: snapshot.analysis!,
+              geometry: currentGeometry,
+              alignment: saved,
+            ),
+          ];
+        } on Object {
+          // A corrupt geometry artifact cannot produce an evidence marker.
         }
       }
     }
@@ -101,6 +111,14 @@ class RoadSceneSection extends StatelessWidget {
           alignment: alignment,
           vehicleMarkers: markers,
           environment: environment,
+          service: service,
+          caseId: caseId,
+          vehicleStatus: _vehicleStatus(
+            hasCurrentAlignedGeometry: hasCurrentAlignedGeometry,
+            hasCurrentDetection: hasCurrentDetection,
+            hasEligibleDetection: hasEligibleDetection,
+            markerCount: markers.length,
+          ),
         ),
       ),
     );
@@ -131,6 +149,24 @@ class RoadSceneSection extends StatelessWidget {
       ),
     ),
   );
+
+  String _vehicleStatus({
+    required bool hasCurrentAlignedGeometry,
+    required bool hasCurrentDetection,
+    required bool hasEligibleDetection,
+    required int markerCount,
+  }) {
+    if (markerCount > 0) return 'Evidence-anchored vehicle markers available.';
+    if (!hasCurrentAlignedGeometry) {
+      return 'No current user-supplied evidence alignment is available.';
+    }
+    if (!hasCurrentDetection)
+      return 'No current TASK007 detection analysis is available.';
+    if (!hasEligibleDetection) {
+      return 'No eligible vehicle detections available for 3D representation.';
+    }
+    return 'Eligible vehicle detections could not be anchored in current relative geometry.';
+  }
 }
 
 class RoadSceneViewer extends StatefulWidget {
@@ -140,6 +176,9 @@ class RoadSceneViewer extends StatefulWidget {
     this.alignment,
     this.vehicleMarkers = const [],
     this.environment,
+    required this.service,
+    required this.caseId,
+    required this.vehicleStatus,
     super.key,
   });
   final RoadContext contextData;
@@ -147,6 +186,8 @@ class RoadSceneViewer extends StatefulWidget {
   final EvidenceWorldAlignment? alignment;
   final List<EvidenceVehicleMarker> vehicleMarkers;
   final EnvironmentContext? environment;
+  final CaseLocationService service;
+  final String caseId, vehicleStatus;
   @override
   State<RoadSceneViewer> createState() => _RoadSceneViewerState();
 }
@@ -154,6 +195,26 @@ class RoadSceneViewer extends StatefulWidget {
 class _RoadSceneViewerState extends State<RoadSceneViewer> {
   double yaw = .35, pitch = -.35, zoom = 1;
   bool showEvidence = false, showRoad = true, showGrid = false;
+  EnvironmentContext? environment;
+  bool refreshingEnvironment = false;
+
+  @override
+  void initState() {
+    super.initState();
+    environment = widget.environment;
+  }
+
+  Future<void> _refreshEnvironment() async {
+    if (refreshingEnvironment) return;
+    setState(() => refreshingEnvironment = true);
+    final refreshed = await widget.service.refreshEnvironment(widget.caseId);
+    if (!mounted) return;
+    setState(() {
+      refreshingEnvironment = false;
+      if (refreshed != null) environment = refreshed;
+    });
+  }
+
   void reset() => setState(() {
     yaw = .35;
     pitch = -.35;
@@ -164,6 +225,16 @@ class _RoadSceneViewerState extends State<RoadSceneViewer> {
     appBar: AppBar(
       title: const Text('3D Reconstruction'),
       actions: [
+        IconButton(
+          onPressed: refreshingEnvironment ? null : _refreshEnvironment,
+          tooltip: 'Refresh mapped environment',
+          icon: refreshingEnvironment
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.cloud_sync_outlined),
+        ),
         IconButton(
           onPressed: reset,
           tooltip: 'Reset camera',
@@ -190,7 +261,7 @@ class _RoadSceneViewerState extends State<RoadSceneViewer> {
                 widget.evidenceGeometry,
                 widget.alignment,
                 widget.vehicleMarkers,
-                widget.environment,
+                environment,
                 showEvidence,
                 showRoad,
                 showGrid,
@@ -252,22 +323,39 @@ class _RoadSceneViewerState extends State<RoadSceneViewer> {
                     ? 'Road surface width: Representational / not established where OSM width is absent'
                     : 'Road surface width: Map-derived from explicit OSM width',
               ),
-              Text(
-                'Mapped environment: Buildings ${widget.environment?.count('building') ?? 0} • Trees ${widget.environment?.count('tree') ?? 0} • Barriers ${widget.environment?.count('barrier') ?? 0}',
-              ),
-              const Text(
-                'Environment source: OpenStreetMap • Map coverage may be incomplete.',
-              ),
-              if (widget.vehicleMarkers.isEmpty)
-                Text(
-                  'No eligible vehicle detections available for 3D representation.',
-                ),
+              _environmentStatus(environment),
+              Text(widget.vehicleStatus),
             ],
           ),
         ),
       ],
     ),
   );
+
+  Widget _environmentStatus(EnvironmentContext? value) {
+    if (value == null ||
+        value.providerState == EnvironmentProviderState.noConfirmedLocation) {
+      return const Text(
+        'Mapped environment unavailable — confirm an incident location first.',
+      );
+    }
+    if (!value.hasVerifiedResult) {
+      return Text(
+        'Mapped environment unavailable: ${value.providerState.storageValue}.',
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Mapped environment: Buildings ${value.count('building')} • Trees ${value.count('tree')} • Barriers ${value.count('barrier')}',
+        ),
+        const Text(
+          'Environment source: OpenStreetMap • Map coverage may be incomplete.',
+        ),
+      ],
+    );
+  }
 }
 
 /// Render-only 3D primitives. Their dimensions are never analytical evidence.

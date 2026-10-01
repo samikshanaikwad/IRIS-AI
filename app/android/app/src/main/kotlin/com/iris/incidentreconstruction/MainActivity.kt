@@ -111,6 +111,22 @@ class MainActivity : FlutterActivity() {
                 result.notImplemented()
             }
         }
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            environmentDiagnosticsChannel,
+        ).setMethodCallHandler { call, result ->
+            if (call.method == environmentDiagnosticsMethod) {
+                // Count-only development diagnostics. Flutter controls the
+                // message and deliberately omits coordinates and payloads.
+                val message = call.argument<String>("message")
+                if (message != null && message.length <= 1000) {
+                    Log.d(environmentDiagnosticsTag, message)
+                }
+                result.success(null)
+            } else {
+                result.notImplemented()
+            }
+        }
     }
 
     private fun resolvePluginClass(className: String): Class<out FlutterPlugin>? =
@@ -125,6 +141,9 @@ class MainActivity : FlutterActivity() {
         const val diagnosticsTag = "IRISPluginRegistration"
         const val diagnosticsChannel = "com.iris.debug/plugin_registration"
         const val diagnosticsMethod = "getRegistrationState"
+        const val environmentDiagnosticsTag = "IRISEnvironment"
+        const val environmentDiagnosticsChannel = "com.iris.debug/environment"
+        const val environmentDiagnosticsMethod = "logCounts"
         const val classifierChannel = "com.iris.classifier/v1"
         const val detectorChannel = "com.iris.detector/v1"
         const val depthChannel = "com.iris.depth/v1"

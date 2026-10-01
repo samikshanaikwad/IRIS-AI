@@ -117,6 +117,59 @@ void main() {
   );
 
   test(
+    'v13 to v14 preserves persisted environment context and adds provider state',
+    () async {
+      await services.close();
+      final databasePath = path.join(directory.path, 'environment-v13.db');
+      final v13 = await databaseFactoryFfi.openDatabase(
+        databasePath,
+        options: OpenDatabaseOptions(
+          version: 13,
+          onCreate: (db, version) => migrateDatabase(db, 0, version),
+        ),
+      );
+      final timestamp = DateTime.utc(2026).millisecondsSinceEpoch;
+      await v13.insert(IrisDatabaseConstants.casesTable, {
+        'id': 'environment-case',
+        'title': 'Existing environment case',
+        'status': 'draft',
+        'created_at': timestamp,
+        'updated_at': timestamp,
+      });
+      await v13.insert(IrisDatabaseConstants.environmentContextsTable, {
+        'case_id': 'environment-case',
+        'latitude': 12.0,
+        'longitude': 77.0,
+        'provider': 'OpenStreetMap Overpass API',
+        'retrieved_at': timestamp,
+        'status': 'EMPTY',
+        'features_json': '[]',
+      });
+      await v13.close();
+
+      database = IrisDatabase(
+        factory: databaseFactoryFfi,
+        databasePath: databasePath,
+      );
+      services = IrisApplicationServices.fromDatabase(
+        database,
+        evidenceStorage: storage,
+      );
+      final migrated = await database.open();
+      final row = (await migrated.query(
+        IrisDatabaseConstants.environmentContextsTable,
+        where: 'case_id = ?',
+        whereArgs: ['environment-case'],
+      )).single;
+      expect(await migrated.getVersion(), 14);
+      expect(row['latitude'], 12.0);
+      expect(row['longitude'], 77.0);
+      expect(row['features_json'], '[]');
+      expect(row['provider_state'], 'UNKNOWN');
+    },
+  );
+
+  test(
     'single and multiple imports preserve bytes, hash, and persistence',
     () async {
       final firstCase = await services.caseRepository.createCase(

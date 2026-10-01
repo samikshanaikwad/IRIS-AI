@@ -20,6 +20,18 @@ void main() {
     expect(source, isNot(contains('import com.tekartik.sqflite')));
   });
 
+  test('environment diagnostics remain count-only and debug-only', () {
+    final String source = File(
+      'android/app/src/main/kotlin/com/iris/incidentreconstruction/'
+      'MainActivity.kt',
+    ).readAsStringSync();
+
+    expect(source, contains('ApplicationInfo.FLAG_DEBUGGABLE'));
+    expect(source, contains('com.iris.debug/environment'));
+    expect(source, contains('IRISEnvironment'));
+    expect(source, contains('message.length <= 1000'));
+  });
+
   test('Flutter dependency metadata includes required Android plugins', () {
     final File metadataFile = File('.flutter-plugins-dependencies');
     expect(
