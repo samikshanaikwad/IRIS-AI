@@ -313,6 +313,10 @@ class _CaseOverviewScreenState extends State<CaseOverviewScreen> {
           geometry: widget.relativeGeometry,
           alignmentService: widget.worldAlignment,
           detection: widget.evidenceDetection,
+          quality: widget.evidenceQuality,
+          classification: widget.evidenceClassification,
+          depth: widget.evidenceDepth,
+          multiView: widget.multiView,
         ),
         const SizedBox(height: IrisSpacing.lg),
         EvidenceAlignmentSection(
@@ -323,18 +327,6 @@ class _CaseOverviewScreenState extends State<CaseOverviewScreen> {
           alignment: widget.worldAlignment,
         ),
         const SizedBox(height: IrisSpacing.md),
-        const _WorkflowState(
-          icon: Icons.location_off_outlined,
-          title: 'Location',
-          state: 'Not set',
-        ),
-        const SizedBox(height: IrisSpacing.sm),
-        const _WorkflowState(
-          icon: Icons.view_in_ar_outlined,
-          title: 'Reconstruction',
-          state: 'Not available until evidence is analyzed',
-        ),
-        const SizedBox(height: IrisSpacing.sm),
         const _WorkflowState(
           icon: Icons.alt_route_outlined,
           title: 'Scenarios',

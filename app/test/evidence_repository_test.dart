@@ -117,7 +117,7 @@ void main() {
   );
 
   test(
-    'v13 to v14 preserves persisted environment context and adds provider state',
+    'v13 to current preserves persisted environment context and adds source state',
     () async {
       await services.close();
       final databasePath = path.join(directory.path, 'environment-v13.db');
@@ -161,11 +161,12 @@ void main() {
         where: 'case_id = ?',
         whereArgs: ['environment-case'],
       )).single;
-      expect(await migrated.getVersion(), 14);
+      expect(await migrated.getVersion(), IrisDatabaseConstants.schemaVersion);
       expect(row['latitude'], 12.0);
       expect(row['longitude'], 77.0);
       expect(row['features_json'], '[]');
       expect(row['provider_state'], 'UNKNOWN');
+      expect(row['sources_json'], '[]');
     },
   );
 

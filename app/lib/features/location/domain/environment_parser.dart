@@ -94,7 +94,7 @@ ParsedEnvironment parseEnvironmentElements({
         continue;
     }
     final tags = _tags(item['tags']);
-    final isBuilding = tags.containsKey('building');
+    final isBuilding = tags.containsKey('building') && tags['building'] != 'no';
     final isTree = type == 'node' && tags['natural'] == 'tree';
     final isBarrier =
         type == 'way' &&
@@ -197,12 +197,13 @@ List<List<double>> _geometry(Object? raw) {
   if (raw is! List) return const [];
   final points = <List<double>>[];
   for (final value in raw) {
-    if (value is! Map) continue;
+    if (value is! Map) return const [];
     final lat = value['lat'];
     final lon = value['lon'];
-    if (lat is! num || lon is! num) continue;
+    if (lat is! num || lon is! num) return const [];
     final point = [lat.toDouble(), lon.toDouble()];
-    if (_valid(point)) points.add(point);
+    if (!_valid(point)) return const [];
+    points.add(point);
   }
   return points;
 }
@@ -221,6 +222,8 @@ List<List<double>>? _path(List<List<double>> points) {
 }
 
 List<List<double>>? _closedFootprint(List<List<double>> points) {
+  // Missing closing geometry is not permission to invent a footprint edge.
+  if (points.length < 4 || !_same(points.first, points.last)) return null;
   final normalized = List<List<double>>.from(points);
   if (normalized.length > 1 && _same(normalized.first, normalized.last)) {
     normalized.removeLast();
@@ -230,6 +233,13 @@ List<List<double>>? _closedFootprint(List<List<double>> points) {
 
 List<List<double>>? _relationOuterFootprint(Object? rawMembers) {
   if (rawMembers is! List) return null;
+  // V0 supports exactly one already-closed outer ring. Do not fill courtyards
+  // or discard additional outers; unsupported multipolygons stay diagnostic.
+  final rings = rawMembers
+      .whereType<Map>()
+      .where((m) => m['type'] == 'way')
+      .toList();
+  if (rings.length != 1 || rings.single['role'] != 'outer') return null;
   for (final member in rawMembers) {
     if (member is! Map || member['role'] != 'outer') continue;
     final footprint = _closedFootprint(_geometry(member['geometry']));

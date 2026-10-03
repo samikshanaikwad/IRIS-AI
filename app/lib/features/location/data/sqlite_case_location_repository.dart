@@ -113,6 +113,13 @@ class SqliteCaseLocationRepository {
       features: raw
           .map((v) => EnvironmentFeature.fromJson(v as Map<String, dynamic>))
           .toList(),
+      sources: (jsonDecode(row['sources_json'] as String? ?? '[]') as List)
+          .map(
+            (v) => EnvironmentSourceSnapshot.fromJson(
+              Map<String, dynamic>.from(v as Map),
+            ),
+          )
+          .toList(),
     );
   }
 
@@ -128,8 +135,45 @@ class SqliteCaseLocationRepository {
         'status': context.status,
         'provider_state': context.providerState.storageValue,
         'features_json': context.json,
+        'sources_json': jsonEncode(
+          context.sources.map((s) => s.toJson()).toList(),
+        ),
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+  }
+
+  Future<bool> saveApplicableEnvironment(EnvironmentContext context) async {
+    return (await database.open()).transaction((txn) async {
+      final locations = await txn.query(
+        IrisDatabaseConstants.caseLocationsTable,
+        columns: ['latitude', 'longitude'],
+        where: 'case_id = ?',
+        whereArgs: [context.caseId],
+      );
+      if (locations.isEmpty ||
+          locations.single['latitude'] != context.latitude ||
+          locations.single['longitude'] != context.longitude) {
+        return false;
+      }
+      await txn.insert(
+        IrisDatabaseConstants.environmentContextsTable,
+        {
+          'case_id': context.caseId,
+          'latitude': context.latitude,
+          'longitude': context.longitude,
+          'provider': context.provider,
+          'retrieved_at': context.retrievedAt.millisecondsSinceEpoch,
+          'status': context.status,
+          'provider_state': context.providerState.storageValue,
+          'features_json': context.json,
+          'sources_json': jsonEncode(
+            context.sources.map((s) => s.toJson()).toList(),
+          ),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      return true;
+    });
   }
 }

@@ -1,4 +1,3 @@
-import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
@@ -10,12 +9,24 @@ import '../domain/case_location.dart';
 import '../domain/road_context.dart';
 import '../domain/environment_context.dart';
 import '../domain/environment_parser.dart';
+import '../domain/environment_composition.dart';
+import '../data/environment_provider.dart';
+import '../data/overture_environment_provider.dart';
+import '../data/overpass_environment_provider.dart';
 
 class CaseLocationService {
-  CaseLocationService({required this.repository, required this.storage})
-    : _channel = const MethodChannel('com.iris.location/v1');
+  CaseLocationService({
+    required this.repository,
+    required this.storage,
+    List<EnvironmentProvider>? environmentProviders,
+  }) : environmentProviders =
+           environmentProviders ??
+           [OvertureEnvironmentProvider(), OverpassEnvironmentProvider()],
+       _channel = const MethodChannel('com.iris.location/v1');
   final SqliteCaseLocationRepository repository;
   final EvidenceStorage storage;
+  final List<EnvironmentProvider> environmentProviders;
+  final Map<String, Future<EnvironmentContext?>> _refreshes = {};
   final MethodChannel _channel;
   static const MethodChannel _environmentDiagnosticChannel = MethodChannel(
     'com.iris.debug/environment',
@@ -56,8 +67,16 @@ class CaseLocationService {
 
   Future<void> confirm(CaseLocation value) => repository.save(value);
   Future<CaseLocation?> load(String caseId) => repository.get(caseId);
-  Future<RoadContext?> loadRoadContext(String caseId) =>
-      repository.getRoadContext(caseId);
+  Future<RoadContext?> loadRoadContext(String caseId) async {
+    final location = await load(caseId);
+    final roads = await repository.getRoadContext(caseId);
+    return location != null &&
+            roads != null &&
+            sameEnvironmentLocation(roads.latitude, roads.longitude, location)
+        ? roads
+        : null;
+  }
+
   Future<RoadContext> fetchRoadContext(CaseLocation location) async {
     final query =
         '[out:json][timeout:10];way(around:250,${location.latitude},${location.longitude})[highway];out tags geom;';
@@ -68,7 +87,7 @@ class CaseLocationService {
             headers: {'User-Agent': 'IRIS-V0-local-development'},
           )
           .timeout(const Duration(seconds: 15));
-      if (response.statusCode != 200)
+      if (response.statusCode != 200) {
         return RoadContext(
           caseId: location.caseId,
           latitude: location.latitude,
@@ -77,6 +96,7 @@ class CaseLocationService {
           retrievedAt: DateTime.now(),
           roads: const [],
         );
+      }
       final elements =
           (jsonDecode(response.body)['elements'] as List?) ?? const [];
       final roads = <RoadSegment>[];
@@ -130,184 +150,90 @@ class CaseLocationService {
     }
   }
 
-  Future<void> saveRoadContext(RoadContext context) =>
-      repository.saveRoadContext(context);
+  Future<void> saveRoadContext(RoadContext context) async {
+    final current = await load(context.caseId);
+    if (current == null ||
+        !sameEnvironmentLocation(
+          context.latitude,
+          context.longitude,
+          current,
+        )) {
+      return;
+    }
+    final cached = await loadRoadContext(context.caseId);
+    if (context.status != 'AVAILABLE' && cached?.status == 'AVAILABLE') return;
+    await repository.saveRoadContext(context);
+  }
+
   Future<EnvironmentContext?> loadEnvironment(String caseId) async {
     final location = await load(caseId);
     if (location == null) return null;
     final context = await repository.getEnvironmentContext(caseId);
     if (context == null) return null;
-    const tolerance = 0.000001;
-    return (context.latitude - location.latitude).abs() <= tolerance &&
-            (context.longitude - location.longitude).abs() <= tolerance
+    return sameEnvironmentLocation(
+          context.latitude,
+          context.longitude,
+          location,
+        )
         ? context
         : null;
   }
 
+  static String environmentQuery(CaseLocation location) =>
+      OverpassEnvironmentProvider.query(location);
+
   Future<EnvironmentContext?> fetchEnvironmentForCase(String caseId) async {
     final location = await load(caseId);
     if (location == null) return null;
-    final query = environmentQuery(location);
-    try {
-      final response = await http
-          .get(
-            Uri.https('overpass-api.de', '/api/interpreter', {'data': query}),
-            headers: {'User-Agent': 'IRIS-V0-local-development'},
-          )
-          .timeout(const Duration(seconds: 20));
-      developer.log(
-        'httpStatus=${response.statusCode} responseBytes=${response.bodyBytes.length}',
-        name: 'IRIS.environment',
-      );
-      await _diagnostic(
-        'httpStatus=${response.statusCode} responseBytes=${response.bodyBytes.length}',
-      );
-      if (response.statusCode != 200) {
-        await _diagnostic('providerState=HTTP_ERROR');
-        return _environmentFailure(
-          caseId,
-          location,
-          EnvironmentProviderState.httpError,
-        );
-      }
-      final Object? decoded;
-      try {
-        decoded = jsonDecode(response.body);
-      } on FormatException {
+    final cached = await loadEnvironment(caseId);
+    final attempts = await Future.wait(
+      environmentProviders.map((provider) async {
+        EnvironmentSourceSnapshot result;
+        try {
+          result = await provider.fetch(location);
+        } on Object {
+          // Isolate malformed/failed sources; a decoder failure must not erase
+          // another provider's valid data or masquerade as empty coverage.
+          result = EnvironmentSourceSnapshot(
+            provider: provider.name,
+            state: EnvironmentProviderState.parseError,
+            attemptedAt: DateTime.now().toUtc(),
+            detail: 'Provider could not produce a valid source snapshot',
+          );
+        }
         await _diagnostic(
-          'providerState=${_overpassOrParseState(response.body).storageValue}',
+          'source=${result.provider} state=${result.state.storageValue} '
+          'buildings=${result.features.where((f) => f.featureType == 'building').map((f) => f.sourceId ?? f.id).toSet().length} '
+          'sourceHeightBuildings=${result.features.where((f) => f.featureType == 'building' && f.sourceHeight != null).map((f) => f.sourceId ?? f.id).toSet().length} '
+          'trees=${result.features.where((f) => f.featureType == 'tree').length} '
+          'barriers=${result.features.where((f) => f.featureType == 'barrier').length}',
         );
-        return _environmentFailure(
-          caseId,
-          location,
-          _overpassOrParseState(response.body),
-        );
-      }
-      if (decoded is! Map) {
-        await _diagnostic('providerState=PARSE_ERROR');
-        return _environmentFailure(
-          caseId,
-          location,
-          EnvironmentProviderState.parseError,
-        );
-      }
-      final payload = Map<String, dynamic>.from(decoded);
-      if (payload['remark'] != null || payload['error'] != null) {
-        await _diagnostic('providerState=OVERPASS_ERROR');
-        return _environmentFailure(
-          caseId,
-          location,
-          EnvironmentProviderState.overpassError,
-        );
-      }
-      final elements = payload['elements'];
-      if (elements is! List) {
-        await _diagnostic('providerState=PARSE_ERROR');
-        return _environmentFailure(
-          caseId,
-          location,
-          EnvironmentProviderState.parseError,
-        );
-      }
-      final parsed = parseEnvironmentElements(
-        elements: elements,
-        originLatitude: location.latitude,
-        originLongitude: location.longitude,
-      );
-      developer.log(parsed.diagnostics.logLine, name: 'IRIS.environment');
-      await _diagnostic(parsed.diagnostics.logLine);
-      final providerState = parsed.features.isEmpty
-          ? EnvironmentProviderState.successEmpty
-          : EnvironmentProviderState.successWithFeatures;
-      return EnvironmentContext(
-        caseId: caseId,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        status: parsed.features.isEmpty ? 'EMPTY' : 'AVAILABLE',
-        providerState: providerState,
-        retrievedAt: DateTime.now(),
-        features: parsed.features,
-      );
-    } catch (_) {
-      developer.log(
-        'providerState=HTTP_OR_NETWORK_ERROR',
-        name: 'IRIS.environment',
-      );
-      await _diagnostic('providerState=HTTP_OR_NETWORK_ERROR');
-      return _environmentFailure(
+        return result;
+      }),
+    );
+    return composeEnvironment(location, attempts, cached);
+  }
+
+  Future<EnvironmentContext?> refreshEnvironment(String caseId) =>
+      _refreshes.putIfAbsent(
         caseId,
-        location,
-        EnvironmentProviderState.httpError,
+        () => _refresh(caseId).whenComplete(() {
+          _refreshes.remove(caseId);
+        }),
       );
-    }
-  }
 
-  /// Bounded, geometry-bearing query contract for the current confirmed case
-  /// location. The query is never built from device-current location.
-  static String environmentQuery(CaseLocation location) =>
-      '[out:json][timeout:15];('
-      'way(around:150,${location.latitude},${location.longitude})["building"];'
-      'relation(around:150,${location.latitude},${location.longitude})["building"];'
-      'node(around:150,${location.latitude},${location.longitude})["natural"="tree"];'
-      'way(around:150,${location.latitude},${location.longitude})["barrier"~"^(wall|fence|guard_rail)\$"];'
-      ');out tags geom;';
-
-  Future<EnvironmentContext?> refreshEnvironment(String caseId) async {
+  Future<EnvironmentContext?> _refresh(String caseId) async {
     final result = await fetchEnvironmentForCase(caseId);
-    if (result != null) {
-      // A failed refresh must not erase a valid environment already stored for
-      // this same confirmed location.
-      if (result.providerState.isSuccess) {
-        await repository.saveEnvironmentContext(result);
-      }
-      final reloaded = await loadEnvironment(caseId);
-      developer.log(
-        'providerState=${result.providerState.storageValue} '
-        'persistedBuildings=${reloaded?.count('building') ?? 0} '
-        'persistedTrees=${reloaded?.count('tree') ?? 0} '
-        'persistedBarriers=${reloaded?.count('barrier') ?? 0} '
-        'reloadedBuildings=${reloaded?.count('building') ?? 0} '
-        'reloadedTrees=${reloaded?.count('tree') ?? 0} '
-        'reloadedBarriers=${reloaded?.count('barrier') ?? 0}',
-        name: 'IRIS.environment',
-      );
-      await _diagnostic(
-        'providerState=${result.providerState.storageValue} '
-        'persistedBuildings=${reloaded?.count('building') ?? 0} '
-        'persistedTrees=${reloaded?.count('tree') ?? 0} '
-        'persistedBarriers=${reloaded?.count('barrier') ?? 0} '
-        'reloadedBuildings=${reloaded?.count('building') ?? 0} '
-        'reloadedTrees=${reloaded?.count('tree') ?? 0} '
-        'reloadedBarriers=${reloaded?.count('barrier') ?? 0}',
-      );
-    }
-    return result;
-  }
-
-  EnvironmentContext _environmentFailure(
-    String caseId,
-    CaseLocation location,
-    EnvironmentProviderState providerState,
-  ) => EnvironmentContext(
-    caseId: caseId,
-    latitude: location.latitude,
-    longitude: location.longitude,
-    status: 'UNAVAILABLE',
-    providerState: providerState,
-    retrievedAt: DateTime.now(),
-    features: const [],
-  );
-
-  EnvironmentProviderState _overpassOrParseState(String body) {
-    final normalized = body.toLowerCase();
-    final isOverpassError =
-        normalized.contains('osm3s') ||
-        normalized.contains('overpass') ||
-        normalized.contains('runtime error') ||
-        normalized.contains('dispatcher');
-    return isOverpassError
-        ? EnvironmentProviderState.overpassError
-        : EnvironmentProviderState.parseError;
+    if (result == null) return null;
+    // The transactional save checks location again: navigation/location edits
+    // while HTTP is in flight cannot attach old geometry to a different world.
+    if (!await repository.saveApplicableEnvironment(result)) return null;
+    final reloaded = await loadEnvironment(caseId);
+    await _diagnostic(
+      'stage=reloaded buildings=${reloaded?.count('building')} '
+      'trees=${reloaded?.count('tree')} barriers=${reloaded?.count('barrier')}',
+    );
+    return reloaded;
   }
 
   Future<void> _diagnostic(String message) async {
@@ -329,10 +255,7 @@ class CaseLocationService {
     double originLat,
     double originLon,
   ) {
-    const metersPerDegree = 111320.0;
-    final x = (lon - originLon) * metersPerDegree * 0.999;
-    final z = (lat - originLat) * metersPerDegree;
-    return [x, z];
+    return localMetricPoint(lat, lon, originLat, originLon);
   }
 
   CaseLocation _candidate(

@@ -37,6 +37,10 @@ Future<void> migrateDatabase(
         await _createVersionThirteen(database);
       case 14:
         await _createVersionFourteen(database);
+      case 15:
+        await database.execute(
+          "ALTER TABLE ${IrisDatabaseConstants.environmentContextsTable} ADD COLUMN sources_json TEXT NOT NULL DEFAULT '[]'",
+        );
       default:
         throw StateError(
           'No database migration registered for version $version.',
