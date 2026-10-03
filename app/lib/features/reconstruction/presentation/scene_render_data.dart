@@ -27,18 +27,17 @@ class SceneFrame {
   final RenderPoint target;
   final double span;
   factory SceneFrame.forScene(ReconstructionScene scene) {
-    final points = scene.alignedPoints.toList();
-    final anchors = points.isNotEmpty
-        ? points.map((p) => RenderPoint(p.x, p.y, p.z)).toList()
-        : scene.vehicles
-              .map(
-                (v) => RenderPoint(
-                  v.anchor.worldAnchor.x,
-                  v.anchor.worldAnchor.y,
-                  v.anchor.worldAnchor.z,
-                ),
-              )
-              .toList();
+    // Camera framing is display-only: prioritize real vehicle anchors, not the
+    // distant relative-depth tail or the whole provider query radius.
+    final anchors = scene.vehicles
+        .map(
+          (v) => RenderPoint(
+            v.anchor.worldAnchor.x,
+            v.anchor.worldAnchor.y,
+            v.anchor.worldAnchor.z,
+          ),
+        )
+        .toList();
     if (anchors.isEmpty) return const SceneFrame(RenderPoint(0, 0, 0), 65);
     final xs = anchors.map((p) => p.x),
         zs = anchors.map((p) => p.z),
@@ -278,7 +277,7 @@ class SceneRenderData {
           vehicle.id,
           vehicle.anchor.className,
           'Evidence: ${vehicle.evidenceId}\nDetection score: ${vehicle.anchor.score.toStringAsFixed(3)}\n'
-          'Anchor: relative image geometry + user alignment\nDimensions: not measured • Orientation: not established\n'
+          'Anchor: relative image geometry + user alignment\nRepresentational display proportions\nDimensions: not measured • Orientation: not established\n'
           'Bounding-box/background uncertainty; segmentation unavailable',
           vehicleFaces(vehicle),
         ),
@@ -399,6 +398,30 @@ List<RenderFace> vehicleFaces(SceneVehicle vehicle) {
     return [...renderPrism(front, back, dark), RenderFace(back, dark)];
   }
 
+  // Display-only diagonal frame/fork members. Their endpoints are procedural
+  // silhouette proportions, never evidence measurements or solved vehicle pose.
+  List<RenderFace> beam(
+    double ax,
+    double ay,
+    double bx,
+    double by,
+    double thickness,
+  ) {
+    final dx = bx - ax, dy = by - ay, l = math.sqrt(dx * dx + dy * dy);
+    if (l == 0) return [];
+    final nx = -dy / l * thickness / 2, ny = dx / l * thickness / 2;
+    final front = [
+      RenderPoint(p.x + ax + nx, p.y + ay + ny, p.z + thickness / 2),
+      RenderPoint(p.x + bx + nx, p.y + by + ny, p.z + thickness / 2),
+      RenderPoint(p.x + bx - nx, p.y + by - ny, p.z + thickness / 2),
+      RenderPoint(p.x + ax - nx, p.y + ay - ny, p.z + thickness / 2),
+    ];
+    final back = front
+        .map((v) => RenderPoint(v.x, v.y, p.z - thickness / 2))
+        .toList();
+    return [...renderPrism(front, back, glass), RenderFace(back, glass)];
+  }
+
   // Neutral display orientation. These are small class silhouettes, not vehicle
   // dimensions, not fitted to roads, and never persisted to the source scene.
   return switch (vehicle.anchor.className) {
@@ -408,20 +431,26 @@ List<RenderFace> vehicleFaces(SceneVehicle vehicle) {
       ...box(0, .55, 0, 1.25, .27, .32),
       ...box(-.2, .92, 0, .65, .18, .42, dark),
       ...box(.32, .85, 0, .48, .35, .38),
-      ...box(.66, 1.1, 0, .12, .48, .12, glass),
+      ...beam(.8, .42, .5, 1.3, .12),
+      ...beam(-.8, .42, -.15, .78, .10),
+      ...box(-.1, .64, 0, .45, .35, .42, dark),
       ...box(.65, 1.35, 0, .12, .1, .65, dark),
     ],
     'bicycle' => [
       ...wheel(-.8, 0, .45, .12),
       ...wheel(.8, 0, .45, .12),
-      ...box(0, .7, 0, 1.4, .12, .13),
-      ...box(0, .94, 0, .13, .48, .13),
+      ...beam(-.8, .45, -.12, 1.06, .08),
+      ...beam(-.8, .45, 0, .5, .08),
+      ...beam(0, .5, -.12, 1.06, .08),
+      ...beam(-.12, 1.06, .52, 1.06, .08),
+      ...beam(0, .5, .52, 1.06, .08),
+      ...beam(.52, 1.06, .8, .45, .08),
       ...box(-.1, 1.2, 0, .4, .1, .25, dark),
       ...box(.7, 1.1, 0, .1, .5, .1),
       ...box(.7, 1.35, 0, .1, .1, .5, dark),
     ],
     'bus' => [
-      ...box(0, 1.2, 0, 4.5, 1.75, 1.5),
+      ...box(0, 1.2, 0, 4.5, 1.75, 1.5, const Color(0xff789b91)),
       ...box(0, 1.55, 0, 4.25, .55, 1.53, glass),
       ...wheel(-1.5, .65, .4, .25),
       ...wheel(1.5, .65, .4, .25),
@@ -429,7 +458,7 @@ List<RenderFace> vehicleFaces(SceneVehicle vehicle) {
       ...wheel(1.5, -.65, .4, .25),
     ],
     'truck' => [
-      ...box(.7, 1.15, 0, 2.5, 1.5, 1.5),
+      ...box(.7, 1.15, 0, 2.5, 1.5, 1.5, const Color(0xff939b9e)),
       ...box(-1.2, .95, 0, 1.25, 1.2, 1.4),
       ...box(-1.25, 1.35, 0, 1, .45, 1.43, glass),
       ...wheel(-1.25, .62, .38, .25),

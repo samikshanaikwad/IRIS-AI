@@ -4,6 +4,7 @@ import '../../location/domain/environment_context.dart';
 import '../../geometry/domain/relative_geometry.dart';
 import '../../geometry/domain/evidence_world_alignment.dart';
 import '../../geometry/domain/evidence_vehicle_marker.dart';
+import 'evidence_reconstruction_eligibility.dart';
 
 enum SceneProvenance {
   mapDerived,
@@ -64,12 +65,14 @@ class SceneEvidence {
     this.geometry,
     this.alignment,
     this.markers = const [],
+    this.eligibility,
   });
   final String evidenceId, label, placementStatus;
   final Map<String, String> capabilities;
   final RelativeGeometry? geometry;
   final EvidenceWorldAlignment? alignment;
   final List<EvidenceVehicleMarker> markers;
+  final EvidenceReconstructionEligibility? eligibility;
   Set<SceneProvenance> get provenance => {
     SceneProvenance.evidenceDerived,
     if (alignment != null) SceneProvenance.userAligned,

@@ -14,7 +14,23 @@ abstract interface class RelativeGeometryOperations {
   Future<RelativeGeometry> read(GeometryRecord record);
 }
 
-class RelativeGeometryService implements RelativeGeometryOperations {
+enum GeometryInspectionState { ready, missing, stale, invalid, unavailable }
+
+class GeometryInspection {
+  const GeometryInspection(this.state, {this.record, this.geometry});
+  final GeometryInspectionState state;
+  final GeometryRecord? record;
+  final RelativeGeometry? geometry;
+}
+
+abstract interface class RelativeGeometryInspectionOperations {
+  Future<GeometryInspection> inspect(EvidenceImage evidence);
+}
+
+class RelativeGeometryService
+    implements
+        RelativeGeometryOperations,
+        RelativeGeometryInspectionOperations {
   RelativeGeometryService({
     required this.repository,
     required this.storage,
@@ -23,6 +39,65 @@ class RelativeGeometryService implements RelativeGeometryOperations {
   final SqliteGeometryRepository repository;
   final EvidenceStorage storage;
   final EvidenceDepthOperations depth;
+  @override
+  Future<GeometryInspection> inspect(EvidenceImage evidence) async {
+    // Read-only diagnostic path; never generates geometry or changes its meaning.
+    final record = await repository.get(evidence.id);
+    if (record == null) {
+      return const GeometryInspection(GeometryInspectionState.missing);
+    }
+    final snapshot = await depth.load(evidence);
+    if (snapshot.state != DepthState.analyzed ||
+        snapshot.analysis == null ||
+        record.depthSha256 != evidence.sha256 ||
+        record.depthSha256 != snapshot.analysis!.evidenceSha256 ||
+        record.depthAnalyzedAt != snapshot.analysis!.analyzedAt) {
+      return GeometryInspection(GeometryInspectionState.stale, record: record);
+    }
+    if (record.evidenceId != evidence.id ||
+        record.algorithmVersion != 'relative-geometry-v1' ||
+        record.coordinateVersion != 'iris-relative-camera-v1' ||
+        record.pointCount <= 0 ||
+        record.pointCount > 2048) {
+      return GeometryInspection(
+        GeometryInspectionState.invalid,
+        record: record,
+      );
+    }
+    if (!await File(await storage.absolutePath(record.path)).exists()) {
+      return GeometryInspection(
+        GeometryInspectionState.invalid,
+        record: record,
+      );
+    }
+    try {
+      final points = await read(record);
+      if (points.points.any(
+        (p) => ![p.u, p.v].every((v) => v.isFinite && v >= 0 && v <= 1),
+      )) {
+        return GeometryInspection(
+          GeometryInspectionState.invalid,
+          record: record,
+        );
+      }
+      return GeometryInspection(
+        GeometryInspectionState.ready,
+        record: record,
+        geometry: points,
+      );
+    } on FormatException {
+      return GeometryInspection(
+        GeometryInspectionState.invalid,
+        record: record,
+      );
+    } on FileSystemException {
+      return GeometryInspection(
+        GeometryInspectionState.unavailable,
+        record: record,
+      );
+    }
+  }
+
   @override
   Future<GeometryRecord?> load(EvidenceImage evidence) async {
     final record = await repository.get(evidence.id);

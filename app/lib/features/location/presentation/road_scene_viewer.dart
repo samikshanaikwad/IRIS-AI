@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../application/case_location_service.dart';
 import '../../geometry/application/relative_geometry_service.dart';
 import '../../geometry/application/evidence_world_alignment_service.dart';
+import '../../geometry/presentation/evidence_alignment_section.dart';
+import '../../reconstruction/domain/evidence_reconstruction_eligibility.dart';
 import '../../detection/application/evidence_detection_service.dart';
 import '../../evidence/application/evidence_controller.dart';
 import '../../evidence_quality/application/evidence_quality_service.dart';
@@ -160,6 +162,7 @@ class _RoadSceneViewerState extends State<RoadSceneViewer> {
       grid = false,
       environment = true;
   bool refreshing = false;
+  bool editing = false;
   @override
   void initState() {
     super.initState();
@@ -174,6 +177,69 @@ class _RoadSceneViewerState extends State<RoadSceneViewer> {
     gestureZoom = 1;
     pan = Offset.zero;
   });
+  Future<void> alignEvidence(SceneEvidence source) async {
+    if (editing || refreshing) return;
+    setState(() => editing = true);
+    try {
+      final geometry = widget.loader.geometry;
+      final alignments = widget.loader.alignment;
+      final images = await widget.loader.loadEvidence();
+      final matches = images
+          .where((e) => e.id == source.evidenceId && e.caseId == scene.caseId)
+          .toList();
+      final road = await widget.service.loadRoadContext(scene.caseId);
+      if (matches.length != 1 ||
+          geometry == null ||
+          alignments == null ||
+          road?.status != 'AVAILABLE' ||
+          road!.roads.isEmpty) {
+        throw StateError('Current evidence and road context are required');
+      }
+      final item = matches.single;
+      final record = await geometry.load(item);
+      if (record == null) {
+        throw StateError('Current relative geometry is required');
+      }
+      final points = await geometry.read(record);
+      final previous = await alignments.load(item.id);
+      if (!mounted) return;
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => EvidenceAlignmentEditor(
+            caseId: scene.caseId,
+            evidence: item,
+            road: road,
+            geometry: points,
+            record: record,
+            previous: previous,
+            service: alignments,
+          ),
+        ),
+      );
+      // Explicit save/cancel belongs to the existing editor. Recompose from
+      // repositories on return, never regenerate inference or refresh providers.
+      final next = await widget.loader.load(scene.caseId);
+      if (!mounted) return;
+      setState(() {
+        scene = next;
+        render = SceneRenderData(next);
+      });
+      reset();
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Alignment unavailable. Check current relative geometry and road context; no placement was created automatically.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => editing = false);
+    }
+  }
+
   Future<void> refresh() async {
     setState(() => refreshing = true);
     try {
@@ -232,7 +298,7 @@ class _RoadSceneViewerState extends State<RoadSceneViewer> {
         title: const Text('3D Reconstruction'),
         actions: [
           IconButton(
-            onPressed: refreshing ? null : refresh,
+            onPressed: refreshing || editing ? null : refresh,
             tooltip: 'Refresh mapped environment',
             icon: const Icon(Icons.refresh),
           ),
@@ -386,17 +452,70 @@ class _RoadSceneViewerState extends State<RoadSceneViewer> {
                           'Last usable retrieval: ${source.retrievedAt?.toLocal() ?? 'unavailable'}\n'
                           '${source.detail ?? ''}',
                         ),
-                      for (final item in scene.evidence)
+                      for (final indexed in scene.evidence.indexed)
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            '${item.label}: ${item.placementStatus}\n'
-                            '${item.capabilities.entries.map((e) => '${e.key}: ${e.value}').join(' • ')}',
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Evidence ${indexed.$1 + 1}: ${indexed.$2.placementStatus}',
+                              ),
+                              if (indexed.$2.eligibility
+                                  case final EvidenceReconstructionEligibility
+                                      eligibility) ...[
+                                Text(
+                                  'Vehicle detection: ${eligibility.detectionState.name} — ${eligibility.eligibleCount} eligible '
+                                  '${eligibility.classes.join(', ')}\nRelative geometry: ${eligibility.geometryState.name} '
+                                  '(${eligibility.pointCount} points)\nWorld alignment: ${eligibility.alignmentState.name}\n'
+                                  'Road provenance: ${eligibility.worldState.name}',
+                                ),
+                                if (eligibility.ready)
+                                  const Text(
+                                    'Class: Evidence-derived • Position: Evidence-derived + user alignment\n'
+                                    'Dimensions: Representational • Heading: Not established',
+                                  ),
+                              ],
+                              Text(
+                                indexed.$2.capabilities.entries
+                                    .map((e) => '${e.key}: ${e.value}')
+                                    .join(' • '),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed:
+                                    editing ||
+                                        refreshing ||
+                                        !scene.hasRoadContext ||
+                                        indexed.$2.geometry == null
+                                    ? null
+                                    : () => alignEvidence(indexed.$2),
+                                icon: const Icon(Icons.open_with),
+                                label: Text('Align Evidence ${indexed.$1 + 1}'),
+                              ),
+                            ],
                           ),
                         ),
                       Text(
                         '${scene.relatedViews.length} verified multi-view relationships. '
                         'No metric pose, automatic fusion or cross-image vehicle identity inferred.',
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Safe prerequisite diagnostics (no private paths or coordinates)',
+                      ),
+                      Text(
+                        'sceneVehicles=${scene.vehicles.length} renderVehicleMeshes=${render.meshes.where((m) => m.id.contains('/detection/')).length}',
+                      ),
+                      SelectableText(
+                        scene.evidence.indexed
+                            .map(
+                              (entry) =>
+                                  entry.$2.eligibility?.diagnostic(
+                                    entry.$1 + 1,
+                                  ) ??
+                                  'E${entry.$1 + 1} diagnostic unavailable',
+                            )
+                            .join('\n'),
                       ),
                     ],
                   ),

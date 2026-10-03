@@ -1,8 +1,16 @@
+import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:crypto/crypto.dart';
+import 'package:iris/features/depth/application/evidence_depth_service.dart';
+import 'package:iris/features/depth/domain/evidence_depth.dart';
+import 'package:iris/features/depth/domain/depth_visualization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iris/features/reconstruction/application/reconstruction_scene_service.dart';
 import 'package:iris/features/reconstruction/domain/reconstruction_scene.dart';
+import 'package:iris/features/reconstruction/domain/evidence_reconstruction_eligibility.dart';
 import 'package:iris/features/reconstruction/presentation/scene_render_data.dart';
 import 'package:iris/features/reconstruction/presentation/reconstruction_painter.dart';
 import 'package:iris/features/location/application/case_location_service.dart';
@@ -77,7 +85,14 @@ EvidenceDetectionAnalysis detection(
   inferenceMs: 1,
   detections: [
     EvidenceDetection(
-      classId: 3,
+      classId: const {
+        'person': 0,
+        'bicycle': 1,
+        'car': 2,
+        'motorcycle': 3,
+        'bus': 5,
+        'truck': 7,
+      }[type]!,
       className: type,
       score: .8,
       ymin: .5,
@@ -170,8 +185,235 @@ class DetectionFixture implements EvidenceDetectionOperations {
       throw StateError('Must not rerun');
 }
 
+class AlignmentNavigationObserver extends NavigatorObserver {
+  Completer<void>? opened;
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (previousRoute != null) opened?.complete();
+  }
+}
+
+class DepthFixture implements EvidenceDepthOperations {
+  DepthState state = DepthState.analyzed;
+  @override
+  Future<EvidenceDepthSnapshot> load(EvidenceImage e) async =>
+      EvidenceDepthSnapshot(
+        state,
+        analysis: EvidenceDepthAnalysis(
+          evidenceId: e.id,
+          evidenceSha256: e.sha256,
+          artifactSha256: EvidenceDepthService.artifactSha256,
+          analyzedAt: date,
+          width: 100,
+          height: 100,
+          depthWidth: 518,
+          depthHeight: 518,
+          depthPath: 'test-only',
+          min: 1,
+          max: 3,
+          mean: 2,
+        ),
+      );
+  @override
+  Future<EvidenceDepthAnalysis> analyze(EvidenceImage e) =>
+      throw StateError('Must not rerun');
+  @override
+  Future<EvidenceDepthVisualization> loadVisualization(
+    EvidenceDepthAnalysis a,
+  ) => throw StateError('Must not regenerate');
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test(
+    'geometry inspection distinguishes missing, current, stale and corrupt without regeneration',
+    () async {
+      final h = await CaseTestHarness.create();
+      addTearDown(h.dispose);
+      final c = await h.repository.createCase(title: 'Fixture');
+      final e = item(c.id, 'geometry-fixture');
+      await h.services.evidenceRepository!.add(e);
+      final repo = SqliteGeometryRepository(h.database);
+      final depth = DepthFixture();
+      final storage = EvidenceStorage(rootProvider: () async => h.directory);
+      final service = RelativeGeometryService(
+        repository: repo,
+        storage: storage,
+        depth: depth,
+      );
+      expect((await service.inspect(e)).state, GeometryInspectionState.missing);
+      final bytes = Float32List.fromList([
+        1,
+        0,
+        2,
+        .3,
+        .75,
+      ]).buffer.asUint8List();
+      const path = 'test-geometry.f32';
+      final file = File(await storage.absolutePath(path));
+      await file.writeAsBytes(bytes);
+      await repo.save(
+        GeometryRecord(
+          evidenceId: e.id,
+          depthSha256: e.sha256,
+          depthAnalyzedAt: date,
+          algorithmVersion: 'relative-geometry-v1',
+          coordinateVersion: 'iris-relative-camera-v1',
+          pointCount: 1,
+          path: path,
+          sha256: sha256.convert(bytes).toString(),
+          analyzedAt: date,
+        ),
+      );
+      expect((await service.inspect(e)).state, GeometryInspectionState.ready);
+      depth.state = DepthState.stale;
+      expect((await service.inspect(e)).state, GeometryInspectionState.stale);
+      depth.state = DepthState.analyzed;
+      await file.writeAsBytes([0]);
+      expect((await service.inspect(e)).state, GeometryInspectionState.invalid);
+      expect(await repo.get(e.id), isNotNull);
+    },
+  );
+  EvidenceReconstructionEligibility evaluate({
+    String type = 'motorcycle',
+    ReconstructionPrerequisite detectionStatus =
+        ReconstructionPrerequisite.ready,
+    ReconstructionPrerequisite depthStatus = ReconstructionPrerequisite.ready,
+    ReconstructionPrerequisite geometryStatus =
+        ReconstructionPrerequisite.ready,
+    ReconstructionPrerequisite alignmentStatus =
+        ReconstructionPrerequisite.ready,
+    ReconstructionPrerequisite worldStatus = ReconstructionPrerequisite.ready,
+    RelativeGeometry? points,
+  }) => evaluateEvidenceReconstruction(
+    evidenceId: 'e',
+    evidenceSha256: item('c', 'e').sha256,
+    detectionState: detectionStatus,
+    depthState: depthStatus,
+    geometryState: geometryStatus,
+    alignmentState: alignmentStatus,
+    worldState: worldStatus,
+    detection: detection(item('c', 'e'), type),
+    geometry: points ?? geometry('e'),
+    alignment: alignment('c', 'e', roads('c')),
+  );
+  for (final type in ['car', 'motorcycle', 'bus', 'truck', 'bicycle']) {
+    test(
+      '$type current prerequisites produce only evidence-derived anchor',
+      () {
+        final result = evaluate(type: type);
+        expect(result.state, EvidenceReconstructionState.ready);
+        expect(result.markers, hasLength(1));
+        expect(result.markers.single.worldAnchor.x, 14);
+        expect(result.markers.single.worldAnchor.z, 28);
+        expect(result.classes, [type]);
+      },
+    );
+  }
+  test('non-vehicle detection cannot produce a marker', () {
+    expect(
+      evaluate(type: 'person').state,
+      EvidenceReconstructionState.noEligibleVehicle,
+    );
+    expect(evaluate(type: 'person').markers, isEmpty);
+  });
+  for (final status in [
+    ReconstructionPrerequisite.missing,
+    ReconstructionPrerequisite.stale,
+  ]) {
+    test(
+      '$status detection, depth, geometry and alignment block independently',
+      () {
+        final results = [
+          evaluate(detectionStatus: status),
+          evaluate(depthStatus: status),
+          evaluate(geometryStatus: status),
+          evaluate(alignmentStatus: status),
+        ];
+        for (final result in results) {
+          expect(result.markers, isEmpty);
+          expect(result.anchorAttempted, isFalse);
+          expect(result.state.name.toLowerCase(), startsWith(status.name));
+        }
+      },
+    );
+  }
+  test(
+    'missing current roads does not weaken the saved fingerprint contract',
+    () {
+      expect(
+        evaluate(worldStatus: ReconstructionPrerequisite.missing).state,
+        EvidenceReconstructionState.missingRequiredWorldContext,
+      );
+    },
+  );
+  test('invalid alignment has no origin or road-snap fallback', () {
+    final result = evaluate(
+      alignmentStatus: ReconstructionPrerequisite.invalid,
+    );
+    expect(result.state, EvidenceReconstructionState.invalidAlignment);
+    expect(result.markers, isEmpty);
+  });
+  test(
+    'padded normalized anchor region rejects points outside real vehicle box',
+    () {
+      final outside = RelativeGeometry(
+        evidenceId: 'e',
+        depthSha256: 'depth',
+        depthAnalyzedAt: date,
+        width: 518,
+        height: 518,
+        points: const [RelativePoint(x: 8, y: 0, z: 4, u: .8, v: .8)],
+      );
+      final result = evaluate(points: outside);
+      expect(result.state, EvidenceReconstructionState.anchorRegionHasNoPoints);
+      expect(result.anchorAttempted, isTrue);
+      expect(result.markers, isEmpty);
+    },
+  );
+  test(
+    'missing alignment diagnostics explain action without source identifiers',
+    () {
+      final result = evaluate(
+        alignmentStatus: ReconstructionPrerequisite.missing,
+      );
+      expect(result.message, contains('Align Evidence'));
+      expect(result.diagnostic(1), contains('alignment=missing'));
+      expect(result.diagnostic(1), isNot(contains(item('c', 'e').sha256)));
+      expect(result.diagnostic(1), isNot(contains('test/')));
+    },
+  );
+  test(
+    'vehicle framing ignores broad cloud and absent vehicle falls back to origin',
+    () {
+      final ready = evidence('e');
+      final frame = SceneFrame.forScene(scene(evidence: [ready]));
+      expect(frame.target.x, ready.markers.single.worldAnchor.x);
+      expect(frame.target.z, ready.markers.single.worldAnchor.z);
+      final noVehicle = composeSceneEvidence(
+        item: item('c', 'e'),
+        capabilities: {},
+        geometry: geometry('e'),
+        alignment: alignment('c', 'e', roads('c')),
+      );
+      final fallback = SceneFrame.forScene(scene(evidence: [noVehicle]));
+      expect(fallback.target.x, 0);
+      expect(fallback.target.z, 0);
+      expect(fallback.span, 65);
+    },
+  );
+  test('five display classes remain volumetric and non-analytical', () {
+    for (final type in ['car', 'motorcycle', 'bus', 'truck', 'bicycle']) {
+      final s = scene(evidence: [evidence('e', type)]);
+      final mesh = SceneRenderData(
+        s,
+      ).meshes.singleWhere((m) => m.id.contains('detection'));
+      expect(mesh.faces.length, greaterThan(12));
+      expect(mesh.provenance.toLowerCase(), contains('representational'));
+      expect(s.vehicles.single.dimensions, 'Not measured');
+      expect(s.vehicles.single.orientation, 'Not established');
+    }
+  });
   test(
     'confirmed origin permits building retrieval without roads; no origin is unavailable',
     () {
@@ -218,12 +460,18 @@ void main() {
         ),
       );
       await repo.saveRoadContext(roads(c.id));
-      final images = [item(c.id, 'a'), item(c.id, 'b'), item(c.id, 'stale')];
+      final images = [
+        item(c.id, 'missing'),
+        item(c.id, 'a'),
+        item(c.id, 'b'),
+        item(c.id, 'stale'),
+      ];
       final align = EvidenceWorldAlignmentService(
         repository: SqliteWorldAlignmentRepository(h.database),
       );
       for (final e in images) {
         await h.services.evidenceRepository!.add(e);
+        if (e.id == 'missing') continue;
         await align.save(
           alignment(c.id, e.id, roads(c.id), stale: e.id == 'stale'),
         );
@@ -241,8 +489,12 @@ void main() {
         detection: DetectionFixture(),
       );
       final result = await loader.load(c.id);
-      expect(geo.seen, ['a', 'b', 'stale']);
-      expect(result.evidence, hasLength(3));
+      expect(geo.seen, ['missing', 'a', 'b', 'stale']);
+      expect(result.evidence, hasLength(4));
+      expect(
+        result.evidence.first.eligibility!.state,
+        EvidenceReconstructionState.missingAlignment,
+      );
       expect(result.vehicles, hasLength(2));
       expect(result.alignedPoints, hasLength(6));
       expect(result.evidence.last.alignment, isNull);
@@ -435,6 +687,114 @@ void main() {
       expect(sceneGestureZoom(1, 1.2), 1.2);
       expect(sceneGestureZoom(1, 1.5), 1.5);
       expect(sceneGestureZoom(2, 1.5), 3);
+    },
+  );
+  testWidgets(
+    'Sources alignment editor cancel preserves absence and explicit save recomposes without inference',
+    (tester) async {
+      final h = (await tester.runAsync(CaseTestHarness.create))!;
+      addTearDown(() => tester.runAsync(h.dispose));
+      late ReconstructionSceneService loader;
+      late EvidenceWorldAlignmentService align;
+      late ReconstructionScene initial;
+      late String evidenceId;
+      await tester.runAsync(() async {
+        final c = await h.repository.createCase(title: 'Fixture');
+        final e = item(c.id, 'alignment-fixture');
+        evidenceId = e.id;
+        await h.services.evidenceRepository!.add(e);
+        final repo = SqliteCaseLocationRepository(h.database);
+        await repo.save(
+          CaseLocation(
+            caseId: c.id,
+            latitude: 0,
+            longitude: 0,
+            source: CaseLocationSource.mapSelection,
+            updatedAt: date,
+          ),
+        );
+        await repo.saveRoadContext(roads(c.id));
+        align = EvidenceWorldAlignmentService(
+          repository: SqliteWorldAlignmentRepository(h.database),
+        );
+        loader = ReconstructionSceneService(
+          location: CaseLocationService(
+            repository: repo,
+            storage: EvidenceStorage(rootProvider: () async => h.directory),
+            environmentProviders: [],
+          ),
+          loadEvidence: () async => [e],
+          geometry: GeometryFixture(),
+          alignment: align,
+          detection: DetectionFixture(),
+        );
+        initial = await loader.load(c.id);
+      });
+      final observer = AlignmentNavigationObserver();
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorObservers: [observer],
+          home: RoadSceneViewer(
+            scene: initial,
+            loader: loader,
+            service: loader.location,
+          ),
+        ),
+      );
+      await tester.tap(find.text('Sources & evidence'));
+      await tester.pumpAndSettle();
+      Future<void>? editorCompletion;
+      Future<void> openEditor() async {
+        await tester.ensureVisible(find.text('Align Evidence 1'));
+        observer.opened = Completer<void>();
+        await tester.runAsync(() async {
+          final button = tester.widget<OutlinedButton>(
+            find.ancestor(
+              of: find.text('Align Evidence 1'),
+              matching: find.byWidgetPredicate((w) => w is OutlinedButton),
+            ),
+          );
+          editorCompletion = (button.onPressed as dynamic)() as Future<void>;
+        });
+        // Navigation observer delivery is post-frame. Pump frames while SQLite
+        // completes on the real event loop, rather than blocking frame delivery.
+        final watch = Stopwatch()..start();
+        while (!observer.opened!.isCompleted &&
+            watch.elapsed < const Duration(seconds: 10)) {
+          await tester.runAsync(() => Future<void>(() {}));
+          await tester.pump();
+        }
+        expect(observer.opened!.isCompleted, isTrue);
+        await tester.pumpAndSettle();
+      }
+
+      await openEditor();
+      expect(find.text('Save Alignment'), findsOneWidget);
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Cancel'));
+        await editorCompletion!.timeout(const Duration(seconds: 10));
+      });
+      await tester.pumpAndSettle();
+      expect(await tester.runAsync(() => align.load(evidenceId)), isNull);
+      await openEditor();
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Save Alignment'));
+        await editorCompletion!.timeout(const Duration(seconds: 10));
+      });
+      await tester.pumpAndSettle();
+      final saved = await tester.runAsync(() => align.load(evidenceId));
+      expect(saved!.source, AlignmentSource.userSupplied);
+      final painter =
+          tester
+                  .widget<CustomPaint>(find.byKey(const Key('unified-scene')))
+                  .painter!
+              as ReconstructionPainter;
+      expect(painter.data.source.vehicles, hasLength(1));
+      expect(
+        painter.data.source.evidence.single.eligibility!.state,
+        EvidenceReconstructionState.ready,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
     },
   );
   testWidgets(
