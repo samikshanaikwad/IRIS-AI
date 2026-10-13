@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'building_appearance.dart';
 
 /// The provider outcome is deliberately separate from supported-feature counts.
 /// In particular, a provider or parse failure is not evidence of an empty map.
@@ -56,6 +57,10 @@ class EnvironmentFeature {
   final String provider;
   final String? sourceRelease, sourceId;
   final List<List<List<double>>> holes, localHoles;
+  SurfaceAppearance get wallAppearance =>
+      SurfaceAppearance.fromSource(tags['building:colour'], provider);
+  SurfaceAppearance get roofAppearance =>
+      SurfaceAppearance.fromSource(tags['roof:colour'], provider);
   double? get sourceHeight {
     final value = double.tryParse(
       (tags['height'] ?? '').replaceFirst(RegExp(r'\s*m$'), ''),
@@ -75,6 +80,13 @@ class EnvironmentFeature {
     'sourceId': sourceId,
     'holes': holes,
     'localHoles': localHoles,
+    // Validated derivatives of original tags; never shaded screen colors.
+    // Legacy records remain readable and derive the same appearance on load.
+    if (featureType == 'building')
+      'appearance': {
+        'wall': wallAppearance.toJson(),
+        'roof': roofAppearance.toJson(),
+      },
   };
   factory EnvironmentFeature.fromJson(Map<String, dynamic> json) =>
       EnvironmentFeature(
@@ -103,6 +115,32 @@ List<List<List<double>>> _rings(Object? value) => (value as List? ?? const [])
           .toList(),
     )
     .toList();
+
+/// Counts only; a building using neutral on either roof or walls counts once.
+Map<String, int> buildingAppearanceCounts(
+  Iterable<EnvironmentFeature> features,
+) {
+  final buildings = features.where((f) => f.featureType == 'building').toList();
+  return {
+    'buildings': buildings.length,
+    'wallColor': buildings.where((f) => f.wallAppearance.argb != null).length,
+    'roofColor': buildings.where((f) => f.roofAppearance.argb != null).length,
+    'material': buildings
+        .where(
+          (f) => [
+            'building:material',
+            'roof:material',
+          ].any((k) => f.tags[k]?.trim().isNotEmpty == true),
+        )
+        .length,
+    'height': buildings.where((f) => f.sourceHeight != null).length,
+    'unknownNeutral': buildings
+        .where(
+          (f) => f.wallAppearance.argb == null || f.roofAppearance.argb == null,
+        )
+        .length,
+  };
+}
 
 /// The latest request outcome and last usable snapshot are separate. Failed
 /// requests never become empty coverage or erase a same-location cache.

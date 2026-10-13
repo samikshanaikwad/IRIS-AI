@@ -41,11 +41,33 @@ Future<void> migrateDatabase(
         await database.execute(
           "ALTER TABLE ${IrisDatabaseConstants.environmentContextsTable} ADD COLUMN sources_json TEXT NOT NULL DEFAULT '[]'",
         );
+      case 16:
+        await _createVersionSixteen(database);
       default:
         throw StateError(
           'No database migration registered for version $version.',
         );
     }
+  }
+}
+
+Future<void> _createVersionSixteen(Database database) async {
+  final columns = await database.rawQuery(
+    'PRAGMA table_info(${IrisDatabaseConstants.evidenceWorldAlignmentsTable})',
+  );
+  final names = columns.map((row) => row['name']).toSet();
+  if (!names.contains('world_frame_fingerprint')) {
+    await database.execute(
+      'ALTER TABLE ${IrisDatabaseConstants.evidenceWorldAlignmentsTable} '
+      'ADD COLUMN world_frame_fingerprint TEXT '
+      'CHECK(world_frame_fingerprint IS NULL OR length(world_frame_fingerprint) = 64)',
+    );
+  }
+  if (!names.contains('provenance_version')) {
+    await database.execute(
+      'ALTER TABLE ${IrisDatabaseConstants.evidenceWorldAlignmentsTable} '
+      'ADD COLUMN provenance_version TEXT',
+    );
   }
 }
 

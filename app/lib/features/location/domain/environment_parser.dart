@@ -1,4 +1,5 @@
 import 'environment_context.dart';
+import '../../../core/domain/case_local_world.dart';
 
 /// Counts retained for development diagnostics. They contain no case location
 /// or evidence information and never become incident-environment facts.
@@ -183,11 +184,12 @@ List<double> localMetricPoint(
   double originLatitude,
   double originLongitude,
 ) {
-  const metresPerDegree = 111320.0;
-  return [
-    (longitude - originLongitude) * metresPerDegree * .999,
-    (latitude - originLatitude) * metresPerDegree,
-  ];
+  return CaseLocalWorldFrame.geographicToMapXZ(
+    latitude: latitude,
+    longitude: longitude,
+    originLatitude: originLatitude,
+    originLongitude: originLongitude,
+  );
 }
 
 Map<String, String> _tags(Object? raw) =>

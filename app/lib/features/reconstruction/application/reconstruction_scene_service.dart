@@ -2,9 +2,11 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:crypto/crypto.dart';
+import '../../../core/domain/case_local_world.dart';
 import '../../evidence/domain/evidence_image.dart';
 import '../../location/application/case_location_service.dart';
 import '../../location/domain/road_context.dart';
+import '../../location/domain/environment_context.dart';
 import '../../geometry/application/relative_geometry_service.dart';
 import '../../geometry/application/evidence_world_alignment_service.dart';
 import '../../geometry/domain/evidence_vehicle_marker.dart';
@@ -47,6 +49,13 @@ class ReconstructionSceneService {
     final origin = await location.load(caseId);
     final roads = await location.loadRoadContext(caseId);
     final environment = await location.loadEnvironment(caseId);
+    final worldFrameFingerprint = origin == null
+        ? null
+        : CaseLocalWorldFrame.fingerprint(
+            caseId: caseId,
+            originLatitude: origin.latitude,
+            originLongitude: origin.longitude,
+          );
     final images = await loadEvidence();
     final evidence = <SceneEvidence>[];
     for (final item in images.where((e) => e.caseId == caseId)) {
@@ -130,8 +139,9 @@ class ReconstructionSceneService {
       });
       EvidenceWorldAlignment? saved;
       var alignmentState = ReconstructionPrerequisite.unavailable;
-      final worldState =
-          roads != null && roads.status == 'AVAILABLE' && roads.roads.isNotEmpty
+      // The confirmed location defines the canonical TASK012 world frame.
+      // Mutable provider road coverage is scene context, not frame identity.
+      final worldState = worldFrameFingerprint != null
           ? ReconstructionPrerequisite.ready
           : ReconstructionPrerequisite.missing;
       await stage('World alignment', () async {
@@ -170,29 +180,46 @@ class ReconstructionSceneService {
           alignmentState = ReconstructionPrerequisite.invalid;
           return 'invalid transform or evidence ownership';
         }
-        if (worldState != ReconstructionPrerequisite.ready) {
-          return 'unverifiable — current road context required';
+        if (worldState != ReconstructionPrerequisite.ready ||
+            worldFrameFingerprint == null) {
+          return 'unverifiable — confirmed location required';
         }
-        if (saved!.caseId != caseId ||
-            roads == null ||
-            roads.status != 'AVAILABLE' ||
-            roads.roads.isEmpty ||
-            record == null ||
-            saved!.isStale(
-              geometrySha256: record!.sha256,
-              roadContextFingerprint: roadFingerprint(roads),
-            ) ||
-            ![
-              saved!.translationX,
-              saved!.translationY,
-              saved!.translationZ,
-              saved!.yaw,
-              saved!.uniformScale,
-            ].every((v) => v.isFinite) ||
-            saved!.uniformScale <= 0) {
+        if (record == null) {
           saved = null;
           alignmentState = ReconstructionPrerequisite.stale;
-          return 'stale — review required';
+          capabilities['Alignment geometry provenance'] = 'unverifiable';
+          capabilities['Alignment world-frame provenance'] = 'unverifiable';
+          capabilities['Alignment road snapshot'] = 'unverifiable';
+          return 'stale — source geometry unavailable';
+        }
+        final currentRoadFingerprint = roads == null
+            ? null
+            : roadFingerprint(roads);
+        capabilities['Alignment geometry provenance'] =
+            saved!.geometrySha256 == record!.sha256 ? 'current' : 'changed';
+        capabilities['Alignment road snapshot'] = currentRoadFingerprint == null
+            ? 'unavailable'
+            : saved!.roadContextFingerprint == currentRoadFingerprint
+            ? 'current'
+            : 'changed';
+        final provenance = saved!.provenanceStatus(
+          geometrySha256: record!.sha256,
+          roadContextFingerprint: currentRoadFingerprint ?? '',
+          worldFrameFingerprint: worldFrameFingerprint,
+        );
+        capabilities['Alignment world-frame provenance'] = provenance.name;
+        if (!provenance.usable) {
+          saved = null;
+          alignmentState = ReconstructionPrerequisite.stale;
+          return switch (provenance) {
+            AlignmentProvenanceStatus.geometryChanged =>
+              'stale — evidence geometry changed; review required',
+            AlignmentProvenanceStatus.worldFrameChanged =>
+              'stale — confirmed location frame changed; review required',
+            AlignmentProvenanceStatus.legacyLocationUnproven =>
+              'stale — legacy location provenance unproven; review required',
+            _ => 'stale — alignment provenance unsupported; review required',
+          };
         }
         alignmentState = ReconstructionPrerequisite.ready;
         return 'user supplied / uncalibrated';
@@ -234,6 +261,14 @@ class ReconstructionSceneService {
     }
     if (kDebugMode) {
       try {
+        if (environment?.hasVerifiedResult == true) {
+          await const MethodChannel(
+            'com.iris.debug/environment',
+          ).invokeMethod<void>('logCounts', {
+            'message':
+                'stage=appearance ${buildingAppearanceCounts(environment!.features).entries.map((e) => '${e.key}=${e.value}').join(' ')}',
+          });
+        }
         for (var i = 0; i < evidence.length; i++) {
           final e = evidence[i];
           await const MethodChannel(
@@ -243,6 +278,9 @@ class ReconstructionSceneService {
                 'stage=evidence ${e.eligibility?.diagnostic(i + 1)} '
                 'quality=${e.capabilities['Quality'] ?? 'notChecked'} classification=${e.capabilities['Classification'] ?? 'notChecked'} '
                 'alignmentRecord=${e.capabilities['Alignment record']} scale=${e.capabilities['Alignment scale']} translation=${e.capabilities['Alignment translation']} '
+                'geometryProvenance=${e.capabilities['Alignment geometry provenance'] ?? 'notChecked'} '
+                'worldFrameProvenance=${e.capabilities['Alignment world-frame provenance'] ?? 'notChecked'} '
+                'roadSnapshot=${e.capabilities['Alignment road snapshot'] ?? 'notChecked'} '
                 'correspondence=${relations.where((r) => r.evidenceAId == e.evidenceId || r.evidenceBId == e.evidenceId).length}',
           });
         }

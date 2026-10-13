@@ -94,7 +94,7 @@ class EvidenceReconstructionEligibility {
     EvidenceReconstructionState.alignmentUnavailable =>
       'Saved alignment could not be read',
     EvidenceReconstructionState.missingRequiredWorldContext =>
-      'Current road context required to verify saved alignment',
+      'Confirmed incident location required to verify saved alignment',
     EvidenceReconstructionState.anchorRegionHasNoPoints =>
       'No valid geometry points in vehicle anchor region',
     EvidenceReconstructionState.anchorGenerationFailed =>

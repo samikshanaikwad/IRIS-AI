@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 import 'package:iris/features/depth/application/evidence_depth_service.dart';
 import 'package:iris/features/depth/domain/evidence_depth.dart';
 import 'package:iris/features/depth/domain/depth_visualization.dart';
+import 'package:iris/core/domain/case_local_world.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -58,6 +59,8 @@ EvidenceWorldAlignment alignment(
   String id,
   RoadContext roads, {
   bool stale = false,
+  String? roadSnapshot,
+  String? worldFrameFingerprint,
 }) => EvidenceWorldAlignment(
   caseId: caseId,
   evidenceId: id,
@@ -68,7 +71,11 @@ EvidenceWorldAlignment alignment(
   uniformScale: 2,
   source: AlignmentSource.userSupplied,
   geometrySha256: stale ? 'a' * 64 : 'b' * 64,
-  roadContextFingerprint: roadFingerprint(roads),
+  roadContextFingerprint: roadSnapshot ?? roadFingerprint(roads),
+  worldFrameFingerprint: worldFrameFingerprint,
+  provenanceVersion: worldFrameFingerprint == null
+      ? null
+      : EvidenceWorldAlignment.currentProvenanceVersion,
   createdAt: date,
   updatedAt: date,
 );
@@ -388,8 +395,13 @@ void main() {
     () {
       final ready = evidence('e');
       final frame = SceneFrame.forScene(scene(evidence: [ready]));
-      expect(frame.target.x, ready.markers.single.worldAnchor.x);
-      expect(frame.target.z, ready.markers.single.worldAnchor.z);
+      expect(frame.target.x, closeTo(ready.markers.single.worldAnchor.x, 10));
+      expect(frame.target.z, closeTo(ready.markers.single.worldAnchor.z, 10));
+      expect(frame.target.z, lessThan(ready.markers.single.worldAnchor.z));
+      expect(
+        ready.markers.single.worldAnchor.z,
+        28,
+      ); // Camera does not road-snap evidence.
       final noVehicle = composeSceneEvidence(
         item: item('c', 'e'),
         capabilities: {},
@@ -502,6 +514,68 @@ void main() {
       expect(result.vehicles.first.anchor.worldAnchor.x, 14);
       expect(result.vehicles.first.dimensions, 'Not measured');
       expect(result.vehicles.first.orientation, 'Not established');
+    },
+  );
+  test(
+    'same-location road refresh keeps stable alignment and resumes vehicle anchor',
+    () async {
+      final h = await CaseTestHarness.create();
+      addTearDown(h.dispose);
+      final c = await h.repository.createCase(title: 'Stable frame fixture');
+      final repo = SqliteCaseLocationRepository(h.database);
+      final confirmed = CaseLocation(
+        caseId: c.id,
+        latitude: 0,
+        longitude: 0,
+        source: CaseLocationSource.mapSelection,
+        updatedAt: date,
+      );
+      await repo.save(confirmed);
+      final refreshedRoads = roads(c.id);
+      await repo.saveRoadContext(refreshedRoads);
+      final e = item(c.id, 'stable');
+      await h.services.evidenceRepository!.add(e);
+      final alignments = EvidenceWorldAlignmentService(
+        repository: SqliteWorldAlignmentRepository(h.database),
+      );
+      await alignments.save(
+        alignment(
+          c.id,
+          e.id,
+          refreshedRoads,
+          roadSnapshot: 'f' * 64,
+          worldFrameFingerprint: CaseLocalWorldFrame.fingerprint(
+            caseId: c.id,
+            originLatitude: confirmed.latitude,
+            originLongitude: confirmed.longitude,
+          ),
+        ),
+      );
+      final result = await ReconstructionSceneService(
+        location: CaseLocationService(
+          repository: repo,
+          storage: EvidenceStorage(rootProvider: () async => h.directory),
+          environmentProviders: [],
+        ),
+        loadEvidence: () async => [e],
+        geometry: GeometryFixture(),
+        alignment: alignments,
+        detection: DetectionFixture(),
+      ).load(c.id);
+      expect(result.evidence.single.alignment, isNotNull);
+      expect(
+        result.evidence.single.eligibility!.state,
+        EvidenceReconstructionState.ready,
+      );
+      expect(result.vehicles, hasLength(1));
+      expect(
+        result.evidence.single.capabilities['Alignment road snapshot'],
+        'changed',
+      );
+      expect(
+        result.evidence.single.capabilities['Alignment world-frame provenance'],
+        AlignmentProvenanceStatus.current.name,
+      );
     },
   );
   test('each missing vehicle prerequisite produces no fabricated proxy', () {
@@ -827,6 +901,10 @@ void main() {
       expect(current().evidence, isFalse);
       expect(current().grid, isFalse);
       expect(current().centerlines, isFalse);
+      final sources = tester.widget<ExpansionTile>(
+        find.byKey(const Key('sources-evidence')),
+      );
+      expect(sources.initiallyExpanded, isFalse);
       await tester.tap(find.text('Analysis View'));
       await tester.pump();
       expect(current().evidence, isTrue);
@@ -843,8 +921,19 @@ void main() {
       expect(current().yaw, isNot(.5));
       await tester.tap(find.byTooltip('Reset camera'));
       await tester.pump();
-      expect(current().yaw, .5);
-      expect(current().pitch, -.62);
+      expect(current().yaw, current().data.frame.yaw);
+      expect(current().pitch, current().data.frame.pitch);
+      final beforeFullscreen = current();
+      await tester.tap(find.byTooltip('Fullscreen'));
+      await tester.pumpAndSettle();
+      expect(find.text('Sources & evidence'), findsNothing);
+      expect(current().yaw, beforeFullscreen.yaw);
+      expect(current().pitch, beforeFullscreen.pitch);
+      expect(current().grid, beforeFullscreen.grid);
+      await tester.tap(find.byTooltip('Exit fullscreen'));
+      await tester.pumpAndSettle();
+      expect(find.text('Sources & evidence'), findsOneWidget);
+      expect(current().zoom, beforeFullscreen.zoom);
       await tester.tap(find.text('Scene View'));
       await tester.pump();
       expect(current().grid, isFalse);

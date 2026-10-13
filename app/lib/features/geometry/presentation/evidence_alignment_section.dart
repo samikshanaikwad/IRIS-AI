@@ -5,9 +5,11 @@ import 'dart:math' as math;
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/domain/case_local_world.dart';
 import '../../evidence/application/evidence_controller.dart';
 import '../../evidence/domain/evidence_image.dart';
 import '../../location/application/case_location_service.dart';
+import '../../location/domain/case_location.dart';
 import '../../location/domain/road_context.dart';
 import '../application/evidence_world_alignment_service.dart';
 import '../data/sqlite_geometry_repository.dart';
@@ -86,10 +88,14 @@ class _EvidenceAlignmentSectionState extends State<EvidenceAlignmentSection> {
   Future<void> _open() async {
     final evidence = selected;
     if (evidence == null) return;
+    final origin = await widget.location.load(widget.caseId);
     final road = await widget.location.loadRoadContext(widget.caseId);
     final record = await widget.geometry.load(evidence);
     if (!mounted) return;
-    if (road == null || road.status != 'AVAILABLE' || record == null) {
+    if (origin == null ||
+        road == null ||
+        road.status != 'AVAILABLE' ||
+        record == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -108,6 +114,7 @@ class _EvidenceAlignmentSectionState extends State<EvidenceAlignmentSection> {
           builder: (_) => EvidenceAlignmentEditor(
             caseId: widget.caseId,
             evidence: evidence,
+            origin: origin,
             road: road,
             geometry: points,
             record: record,
@@ -193,6 +200,7 @@ class EvidenceAlignmentEditor extends StatefulWidget {
   const EvidenceAlignmentEditor({
     required this.caseId,
     required this.evidence,
+    required this.origin,
     required this.road,
     required this.geometry,
     required this.record,
@@ -202,6 +210,7 @@ class EvidenceAlignmentEditor extends StatefulWidget {
   });
   final String caseId;
   final EvidenceImage evidence;
+  final CaseLocation origin;
   final RoadContext road;
   final RelativeGeometry geometry;
   final GeometryRecord record;
@@ -246,6 +255,12 @@ class _EvidenceAlignmentEditorState extends State<EvidenceAlignmentEditor> {
         source: AlignmentSource.userSupplied,
         geometrySha256: widget.record.sha256,
         roadContextFingerprint: _fingerprint(),
+        worldFrameFingerprint: CaseLocalWorldFrame.fingerprint(
+          caseId: widget.caseId,
+          originLatitude: widget.origin.latitude,
+          originLongitude: widget.origin.longitude,
+        ),
+        provenanceVersion: EvidenceWorldAlignment.currentProvenanceVersion,
         createdAt: widget.previous?.createdAt ?? now,
         updatedAt: now,
       ),
@@ -274,6 +289,13 @@ class _EvidenceAlignmentEditorState extends State<EvidenceAlignmentEditor> {
                 source: AlignmentSource.userSupplied,
                 geometrySha256: widget.record.sha256,
                 roadContextFingerprint: _fingerprint(),
+                worldFrameFingerprint: CaseLocalWorldFrame.fingerprint(
+                  caseId: widget.caseId,
+                  originLatitude: widget.origin.latitude,
+                  originLongitude: widget.origin.longitude,
+                ),
+                provenanceVersion:
+                    EvidenceWorldAlignment.currentProvenanceVersion,
                 createdAt: DateTime.now(),
                 updatedAt: DateTime.now(),
               ),
@@ -284,7 +306,7 @@ class _EvidenceAlignmentEditorState extends State<EvidenceAlignmentEditor> {
         const Padding(
           padding: EdgeInsets.all(8),
           child: Text(
-            'Initial editing position — not inferred. All controls are USER-SUPPLIED ALIGNMENT. Scale is relative-to-world and uncalibrated.',
+            'Initial editing position — not inferred. All controls are USER-SUPPLIED ALIGNMENT. Scale is relative-to-world and uncalibrated. The preview auto-fits all loaded geometry; apparent screen spacing is not a measured distance.',
           ),
         ),
         _slider('Move X', x, -50, 50, (v) => setState(() => x = v)),
@@ -346,6 +368,8 @@ class _AlignmentPainter extends CustomPainter {
         maxX = all.map((p) => p[0]).reduce(math.max),
         minZ = all.map((p) => p[1]).reduce(math.min),
         maxZ = all.map((p) => p[1]).reduce(math.max);
+    // Both preview and ReconstructionScene use the same canonical TASK012B
+    // transform. Only the viewport below is independently auto-fitted.
     final ep = geometry.points.map(alignment.transform).toList();
     for (final p in ep) {
       minX = math.min(minX, p.x);
@@ -370,8 +394,41 @@ class _AlignmentPainter extends CustomPainter {
         );
     final ePaint = Paint()..color = Colors.cyanAccent;
     for (final p in ep) canvas.drawCircle(project(p.x, p.z), 2, ePaint);
+    final origin = project(
+      const CaseLocalWorldPoint.origin().xEast,
+      const CaseLocalWorldPoint.origin().zNorth,
+    );
+    canvas.drawCircle(
+      origin,
+      5,
+      Paint()
+        ..color = Colors.cyanAccent
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
   }
 
   @override
   bool shouldRepaint(covariant _AlignmentPainter old) => true;
+}
+
+/// Safe relationship diagnostic shared with Scene View. It contains no
+/// coordinates and does not alter either road or evidence placement.
+String alignmentPreviewRoadBucket(
+  RoadContext road,
+  RelativeGeometry geometry,
+  EvidenceWorldAlignment alignment,
+) {
+  if (geometry.points.isEmpty) return 'noEvidenceGeometry';
+  var nearest = double.infinity;
+  for (final point in geometry.points.map(alignment.transform)) {
+    nearest = math.min(
+      nearest,
+      nearestMapPolylineDistance(
+        CaseLocalWorldPoint(xEast: point.x, yUp: point.y, zNorth: point.z),
+        road.roads.map((r) => r.localCoordinates),
+      ),
+    );
+  }
+  return mapDistanceBucket(nearest);
 }

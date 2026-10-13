@@ -32,6 +32,8 @@ class SqliteWorldAlignmentRepository {
         'source': 'USER_SUPPLIED',
         'geometry_sha256': value.geometrySha256,
         'road_context_fingerprint': value.roadContextFingerprint,
+        'world_frame_fingerprint': value.worldFrameFingerprint,
+        'provenance_version': value.provenanceVersion,
         'created_at': value.createdAt.millisecondsSinceEpoch,
         'updated_at': value.updatedAt.millisecondsSinceEpoch,
       },
@@ -51,6 +53,8 @@ class SqliteWorldAlignmentRepository {
         source: AlignmentSource.userSupplied,
         geometrySha256: row['geometry_sha256']! as String,
         roadContextFingerprint: row['road_context_fingerprint']! as String,
+        worldFrameFingerprint: row['world_frame_fingerprint'] as String?,
+        provenanceVersion: row['provenance_version'] as String?,
         createdAt: DateTime.fromMillisecondsSinceEpoch(
           row['created_at']! as int,
           isUtc: true,
