@@ -12,6 +12,12 @@ android {
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
+    // Ignored, local-only MobileSAM qualification exports. This source set is
+    // debug-only; release APKs never include the experimental model artifacts.
+    sourceSets.getByName("debug").assets.srcDir(
+        rootProject.file("../../.local-tools/segmentation-qualification/export"),
+    )
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
