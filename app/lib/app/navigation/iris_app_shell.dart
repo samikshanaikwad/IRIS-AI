@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 import '../iris_application_services.dart';
 import '../../features/capture/presentation/capture_screen.dart';
@@ -9,6 +10,7 @@ import '../../features/cases/presentation/case_overview_screen.dart';
 import '../../features/cases/presentation/case_title_sheet.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/more/presentation/more_screen.dart';
+import '../../features/segmentation_qualification/presentation/public_segmentation_qualification_screen.dart';
 import 'iris_navigation.dart';
 
 class IrisAppShell extends StatefulWidget {
@@ -98,6 +100,13 @@ class _IrisAppShellState extends State<IrisAppShell> {
         onAnalyzeIncident: _createCase,
         onOpenCase: _openCase,
         onViewCases: () => _selectDestination(IrisDestination.cases),
+        onOpenSegmentationQualification: kDebugMode
+            ? () => Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (_) => const PublicSegmentationQualificationScreen(),
+                ),
+              )
+            : null,
       ),
       CasesScreen(
         caseController: widget.caseController,

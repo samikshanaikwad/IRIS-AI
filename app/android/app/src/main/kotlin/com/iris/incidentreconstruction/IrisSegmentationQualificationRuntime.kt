@@ -41,21 +41,30 @@ class IrisSegmentationQualificationRuntime(private val context: Context) : AutoC
     private var decoder: OrtSession? = null
 
     fun handle(call: MethodCall, result: MethodChannel.Result): Boolean {
-        if (call.method != "runQualification") return false
         if (!context.applicationInfo.flags.let { it and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0 }) {
             result.error("unavailable", "Qualification is debug-build only.", null)
             return true
         }
+        if (call.method == "preparePublicEvaluationImage") {
+            preparePublicEvaluationImage(call, result)
+            return true
+        }
+        if (call.method != "runQualification") return false
         val path = call.argument<String>("absolutePath")
         val contract = call.argument<String>("coordinateContractVersion")
         val boxes = call.argument<List<Map<String, Any>>>("boxes")
+        val outputId = call.argument<String>("outputId") ?: "private-evidence"
         if (path.isNullOrBlank() || contract != IrisImageCoordinateContract.VERSION || boxes.isNullOrEmpty() || boxes.size > 12) {
             result.error("invalid_request", "Current image coordinates and eligible real detections are required.", null)
             return true
         }
+        if (!safeId.matches(outputId)) {
+            result.error("invalid_request", "Qualification output ID is invalid.", null)
+            return true
+        }
         executor.execute {
             try {
-                val output = runQualification(File(path), boxes)
+                val output = runQualification(File(path), boxes, outputId)
                 Handler(Looper.getMainLooper()).post { result.success(output) }
             } catch (_: Throwable) {
                 Handler(Looper.getMainLooper()).post {
@@ -66,7 +75,54 @@ class IrisSegmentationQualificationRuntime(private val context: Context) : AutoC
         return true
     }
 
-    private fun runQualification(file: File, rawBoxes: List<Map<String, Any>>): Map<String, Any> {
+    private fun preparePublicEvaluationImage(call: MethodCall, result: MethodChannel.Result) {
+        val assetName = call.argument<String>("assetName")
+        val expectedSha256 = call.argument<String>("sha256")
+        if (
+            assetName == null ||
+            !safeAssetName.matches(assetName) ||
+            expectedSha256 == null ||
+            !sha256Pattern.matches(expectedSha256)
+        ) {
+            result.error("invalid_request", "A governed public evaluation asset is required.", null)
+            return
+        }
+        executor.execute {
+            try {
+                val bytes = context.assets.open(assetName).use { it.readBytes() }
+                check(sha256(bytes) == expectedSha256)
+                val directory = qualificationDirectory()
+                val destination = File(directory, "source-$assetName")
+                FileOutputStream(destination).use { output ->
+                    output.write(bytes)
+                    output.fd.sync()
+                }
+                Handler(Looper.getMainLooper()).post {
+                    result.success(
+                        mapOf(
+                            "absolutePath" to destination.absolutePath,
+                            "sha256" to expectedSha256,
+                            "bytes" to bytes.size,
+                        ),
+                    )
+                }
+            } catch (_: Throwable) {
+                Handler(Looper.getMainLooper()).post {
+                    result.error(
+                        "evaluation_asset_unavailable",
+                        "The governed public evaluation image is unavailable or changed.",
+                        null,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun runQualification(
+        file: File,
+        rawBoxes: List<Map<String, Any>>,
+        outputId: String,
+    ): Map<String, Any> {
         val canonical = file.canonicalFile
         val appRoot = File(context.applicationInfo.dataDir).canonicalFile
         check(canonical.path.startsWith(appRoot.path + File.separator))
@@ -76,9 +132,8 @@ class IrisSegmentationQualificationRuntime(private val context: Context) : AutoC
         val orientedImage = IrisImageCoordinateContract.orient(bitmap, canonical)
         val oriented = orientedImage.bitmap
         if (oriented !== bitmap) bitmap.recycle()
-        val directory = File(context.cacheDir, "segmentation-qualification")
-        check(directory.isDirectory || directory.mkdirs())
-        val outputFile = File(directory, "mask-overlay.png")
+        val directory = qualificationDirectory()
+        val outputFile = File(directory, "$outputId-overlay.png")
         val baselinePss = currentPssKb()
         val peakPss = AtomicInteger(baselinePss)
         val sampling = AtomicBoolean(true)
@@ -126,6 +181,7 @@ class IrisSegmentationQualificationRuntime(private val context: Context) : AutoC
                 var right = -1
                 var bottom = -1
                 overlayPixels.fill(0)
+                val maskPixels = IntArray(oriented.width * oriented.height)
                 val maskDigest = MessageDigest.getInstance("SHA-256")
                 val color = colors[index % colors.size]
                 for (y in 0 until oriented.height) {
@@ -136,14 +192,31 @@ class IrisSegmentationQualificationRuntime(private val context: Context) : AutoC
                             foreground++
                             left = min(left, x); top = min(top, y); right = max(right, x); bottom = max(bottom, y)
                             overlayPixels[y * oriented.width + x] = color
+                            maskPixels[y * oriented.width + x] = 0xffffffff.toInt()
+                        } else {
+                            maskPixels[y * oriented.width + x] = 0xff000000.toInt()
                         }
                     }
                 }
+                val maskFile = File(directory, "$outputId-mask-$index.png")
                 if (foreground > 0) {
                     val maskBitmap = Bitmap.createBitmap(overlayPixels, oriented.width, oriented.height, Bitmap.Config.ARGB_8888)
                     canvas.drawBitmap(maskBitmap, 0f, 0f, paint)
                     maskBitmap.recycle()
+                    val binaryMask = Bitmap.createBitmap(
+                        maskPixels,
+                        oriented.width,
+                        oriented.height,
+                        Bitmap.Config.ARGB_8888,
+                    )
+                    FileOutputStream(maskFile).use { output ->
+                        check(binaryMask.compress(Bitmap.CompressFormat.PNG, 100, output))
+                        output.fd.sync()
+                    }
+                    binaryMask.recycle()
                     wroteAnyMask = true
+                } else if (maskFile.exists()) {
+                    check(maskFile.delete())
                 }
                 val boxArea = max(1.0, (box.right - box.left) * (box.bottom - box.top))
                 val maskBoxIou = if (right >= left && bottom >= top) {
@@ -164,6 +237,8 @@ class IrisSegmentationQualificationRuntime(private val context: Context) : AutoC
                     "maskToBoxAreaRatio" to (foreground / boxArea),
                     "maskBoundingBoxIou" to maskBoxIou,
                     "predictedQuality" to predictedQuality,
+                    "maskPath" to if (foreground > 0) maskFile.absolutePath else "",
+                    "maskFileSha256" to if (foreground > 0) sha256(maskFile) else "",
                 )
                 resultForBox.close()
             }
@@ -296,6 +371,10 @@ class IrisSegmentationQualificationRuntime(private val context: Context) : AutoC
     private fun sha256(file: File): String = MessageDigest.getInstance("SHA-256").digest(file.readBytes()).toHex()
     private fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).toHex()
     private fun ByteArray.toHex() = joinToString("") { "%02x".format(it) }
+    private fun qualificationDirectory(): File =
+        File(context.cacheDir, "segmentation-qualification").also {
+            check(it.isDirectory || it.mkdirs())
+        }
 
     override fun close() {
         executor.shutdown()
@@ -308,5 +387,8 @@ class IrisSegmentationQualificationRuntime(private val context: Context) : AutoC
         const val encoderSha256 = "f55b0f6c6949d4737ba06ddf14b99b35ae7c26c782f9865078e34b0a0f45df49"
         const val decoderSha256 = "4a3d6ee977ce5ad077e1ab980db5f1bffb96758c4029a2abccd0d08634a8bf63"
         val eligibleClasses = mapOf(1 to "bicycle", 2 to "car", 3 to "motorcycle", 5 to "bus", 7 to "truck")
+        val safeId = Regex("[a-z0-9][a-z0-9_-]{0,63}")
+        val safeAssetName = Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
+        val sha256Pattern = Regex("[0-9a-f]{64}")
     }
 }

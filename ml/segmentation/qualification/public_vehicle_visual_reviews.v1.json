@@ -1,0 +1,42 @@
+{
+  "schema_version": "iris-public-segmentation-visual-review-v1",
+  "reviewed_at_utc": "2026-10-14T00:00:00Z",
+  "review_method": "Visual inspection of original-image-aligned overlays exported from the physical Realme RMX3780 qualification run.",
+  "reviews": [
+    {
+      "image_id": "motorcycle-clean",
+      "decision": "ACCEPTED",
+      "notes": "The mask follows the complete foreground motorcycle silhouette and remains aligned to the original raster; the visually attached helmet is also selected."
+    },
+    {
+      "image_id": "motorcycle-damaged",
+      "decision": "ACCEPTED",
+      "notes": "The mask remains aligned to the small fallen damaged motorcycle at the image edge and preserves its irregular visible silhouette."
+    },
+    {
+      "image_id": "motorcycle-partial-edge",
+      "decision": "ACCEPTED",
+      "notes": "The mask follows the partly cropped motorcycle, including its visible windshield and luggage, without replacing it with a box."
+    },
+    {
+      "image_id": "motorcycles-multiple",
+      "decision": "ACCEPTED",
+      "notes": "Three genuine TASK007 prompts produce three visibly separate, original-image-aligned motorcycle instance masks."
+    },
+    {
+      "image_id": "car-full",
+      "decision": "ACCEPTED",
+      "notes": "Two genuine car prompts produce aligned masks for the foreground Ferrari and a separately visible background car."
+    },
+    {
+      "image_id": "car-partial-edge",
+      "decision": "REJECTED",
+      "notes": "TASK007 classified the cropped yellow vehicle as bus rather than the governed target class car; no car prompt or segmentation mask was fabricated."
+    },
+    {
+      "image_id": "cars-dense-traffic",
+      "decision": "ACCEPTED",
+      "notes": "Eleven genuine car prompts produce separately aligned masks across dense traffic, including occlusion and scale variation."
+    }
+  ]
+}

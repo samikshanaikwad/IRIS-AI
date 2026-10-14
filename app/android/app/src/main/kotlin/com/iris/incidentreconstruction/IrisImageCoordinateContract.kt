@@ -37,7 +37,7 @@ object IrisImageCoordinateContract {
     )
 
     fun orient(bitmap: Bitmap, file: File): OrientedImage {
-        val orientation = try {
+        val reportedOrientation = try {
             ExifInterface(file).getAttributeInt(
                 ExifInterface.TAG_ORIENTATION,
                 ExifInterface.ORIENTATION_NORMAL,
@@ -45,6 +45,10 @@ object IrisImageCoordinateContract {
         } catch (_: Throwable) {
             ExifInterface.ORIENTATION_NORMAL
         }
+        // Some valid images contain ORIENTATION_UNDEFINED (0). Pixel handling
+        // already treats that as unrotated; v2 metadata must record the same
+        // interpretation using the contract's valid normal value (1).
+        val orientation = normalizeExifOrientation(reportedOrientation)
         val oriented = orient(bitmap, orientation)
         return OrientedImage(
             oriented,
@@ -53,6 +57,13 @@ object IrisImageCoordinateContract {
             orientation,
         )
     }
+
+    internal fun normalizeExifOrientation(value: Int): Int =
+        if (value in ExifInterface.ORIENTATION_NORMAL..ExifInterface.ORIENTATION_ROTATE_270) {
+            value
+        } else {
+            ExifInterface.ORIENTATION_NORMAL
+        }
 
     internal fun orient(bitmap: Bitmap, orientation: Int): Bitmap {
         if (orientation !in setOf(

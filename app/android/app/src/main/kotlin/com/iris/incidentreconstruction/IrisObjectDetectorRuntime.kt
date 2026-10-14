@@ -52,7 +52,23 @@ class IrisObjectDetectorRuntime(private val context: Context) : AutoCloseable {
         try {
             val placement = IrisImageCoordinateContract.contain(oriented.width, oriented.height, 320, 320, IrisImageCoordinateContract.Rounding.FLOOR)
             val input = preprocess(oriented, placement); val outputs = hashMapOf<Int, Any>(0 to Array(1) { Array(25) { FloatArray(4) } }, 1 to Array(1) { FloatArray(25) }, 2 to Array(1) { FloatArray(25) }, 3 to FloatArray(1)); val started = System.nanoTime(); getInterpreter().runForMultipleInputsOutputs(arrayOf(input), outputs); val boxes = outputs[0] as Array<Array<FloatArray>>; val classes = outputs[1] as Array<FloatArray>; val scores = outputs[2] as Array<FloatArray>; val count = (outputs[3] as FloatArray)[0].toInt().coerceIn(0, 25); val detections = mutableListOf<Map<String, Any>>(); val allowed = mapOf(0 to "person", 1 to "bicycle", 2 to "car", 3 to "motorcycle", 5 to "bus", 7 to "truck")
-            for (i in 0 until count) { val id = classes[0][i].toInt(); val score = scores[0][i]; val b = boxes[0][i]; if (allowed.containsKey(id) && score >= scoreThreshold && score.isFinite() && b.all { it.isFinite() } && b[0] <= b[2] && b[1] <= b[3]) detections += mapOf("classId" to id, "score" to score, "box" to listOf(b[0], b[1], b[2], b[3])) }
+            for (i in 0 until count) {
+                val id = classes[0][i].toInt()
+                val score = scores[0][i]
+                val clippedBox = clipNormalizedBox(boxes[0][i])
+                if (
+                    allowed.containsKey(id) &&
+                    score >= scoreThreshold &&
+                    score.isFinite() &&
+                    clippedBox != null
+                ) {
+                    detections += mapOf(
+                        "classId" to id,
+                        "score" to score,
+                        "box" to clippedBox,
+                    )
+                }
+            }
             return mapOf("detectorSha256" to modelSha256, "thresholdPolicyVersion" to thresholdPolicyVersion, "coordinateMetadata" to IrisImageCoordinateContract.metadata(orientedImage, placement), "detections" to detections, "inferenceMs" to ((System.nanoTime() - started) / 1_000_000L))
         } finally { oriented.recycle() }
     }
@@ -60,5 +76,23 @@ class IrisObjectDetectorRuntime(private val context: Context) : AutoCloseable {
     private fun preprocess(source: Bitmap, placement: IrisImageCoordinateContract.Placement): ByteBuffer { val w=placement.resizedWidth; val h=placement.resizedHeight; val resized=Bitmap.createScaledBitmap(source,w,h,true); val canvas=Bitmap.createBitmap(320,320,Bitmap.Config.ARGB_8888); Canvas(canvas).apply { drawColor(Color.BLACK); drawBitmap(resized,placement.offsetX.toFloat(),placement.offsetY.toFloat(),Paint(Paint.FILTER_BITMAP_FLAG)) }; resized.recycle(); val pixels=IntArray(320*320); canvas.getPixels(pixels,0,320,0,0,320,320); val input=ByteBuffer.allocateDirect(320*320*3).order(ByteOrder.nativeOrder()); for (p in pixels) { input.put(((p shr 16) and 255).toByte()); input.put(((p shr 8) and 255).toByte()); input.put((p and 255).toByte()) }; canvas.recycle(); input.rewind(); return input }
     private fun sha256(bytes: ByteArray)=MessageDigest.getInstance("SHA-256").digest(bytes).joinToString(""){ "%02x".format(it) }
     override fun close(){ executor.shutdown(); synchronized(this){interpreter?.close();interpreter=null} }
-    companion object { const val modelAsset="models/iris_v0_efficientdet_lite0.tflite"; const val modelSha256="2e04c53bfeac0ac2a30c057c7e2a777594ce39baaac35a92f74fb1e8c4fc4e0b"; const val scoreThreshold=0.30f; const val thresholdPolicyVersion="v1-score-threshold-0.30" }
+    companion object {
+        const val modelAsset = "models/iris_v0_efficientdet_lite0.tflite"
+        const val modelSha256 = "2e04c53bfeac0ac2a30c057c7e2a777594ce39baaac35a92f74fb1e8c4fc4e0b"
+        const val scoreThreshold = 0.30f
+        const val thresholdPolicyVersion = "v1-score-threshold-0.30"
+
+        internal fun clipNormalizedBox(box: FloatArray): List<Float>? {
+            if (box.size != 4 || box.any { !it.isFinite() }) return null
+            val top = box[0].coerceIn(0f, 1f)
+            val left = box[1].coerceIn(0f, 1f)
+            val bottom = box[2].coerceIn(0f, 1f)
+            val right = box[3].coerceIn(0f, 1f)
+            return if (top < bottom && left < right) {
+                listOf(top, left, bottom, right)
+            } else {
+                null
+            }
+        }
+    }
 }

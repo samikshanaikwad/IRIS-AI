@@ -43,5 +43,25 @@ class IrisImageCoordinateContractTest {
         }
     }
 
+    @Test
+    fun undefinedOrInvalidExifOrientationNormalizesToContractNormal() {
+        assertEquals(
+            ExifInterface.ORIENTATION_NORMAL,
+            IrisImageCoordinateContract.normalizeExifOrientation(
+                ExifInterface.ORIENTATION_UNDEFINED,
+            ),
+        )
+        assertEquals(
+            ExifInterface.ORIENTATION_NORMAL,
+            IrisImageCoordinateContract.normalizeExifOrientation(9),
+        )
+        assertEquals(
+            ExifInterface.ORIENTATION_TRANSVERSE,
+            IrisImageCoordinateContract.normalizeExifOrientation(
+                ExifInterface.ORIENTATION_TRANSVERSE,
+            ),
+        )
+    }
+
     private data class Expected(val width: Int, val height: Int, val pixels: IntArray)
 }

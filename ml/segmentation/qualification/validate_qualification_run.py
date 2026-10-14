@@ -15,6 +15,11 @@ from pathlib import Path
 INVENTORY_SCHEMA = "iris-segmentation-candidate-inventory-v1"
 RUN_SCHEMA = "iris-segmentation-qualification-run-v1"
 REQUIRED_CLASSES = {"bicycle", "car", "motorcycle", "bus", "truck"}
+TASK007_DETECTOR_SHA256 = (
+    "2e04c53bfeac0ac2a30c057c7e2a777594ce39baaac35a92f74fb1e8c4fc4e0b"
+)
+MAX_QUALIFICATION_TOTAL_MS = 35_000
+MAX_QUALIFICATION_PEAK_PSS_BYTES = 1_610_612_736  # 1.5 GiB
 
 
 def sha256(path: Path) -> str:
@@ -80,8 +85,8 @@ def validate_run(inventory: dict, run_path: Path) -> None:
     candidate_id = run.get("candidate_id")
     if candidate_id not in candidates:
         raise ValueError("run references an unknown candidate")
-    if candidates[candidate_id]["decision"] == "REJECTED":
-        raise ValueError("a rejected candidate cannot produce a qualifying run")
+    if candidates[candidate_id]["decision"] != "QUALIFIED":
+        raise ValueError("only a qualified candidate can produce a qualifying run")
     if run.get("coordinate_contract_version") != "iris-image-coordinate-v2":
         raise ValueError("run did not use the current image-coordinate contract")
     device = run.get("device")
@@ -118,6 +123,7 @@ def validate_run(inventory: dict, run_path: Path) -> None:
     if not isinstance(results, list) or not results:
         raise ValueError("no real inference results recorded")
     observed_success = set()
+    successful_image_ids = set()
     for result in results:
         if result.get("image_id") not in image_ids:
             raise ValueError("result references an unknown evaluation image")
@@ -128,22 +134,65 @@ def validate_run(inventory: dict, run_path: Path) -> None:
         if vehicle_class not in REQUIRED_CLASSES:
             raise ValueError("result class is outside the IRIS qualification contract")
         if status == "SUCCESS":
-            require_hashed_file(result["mask"], base, "mask")
+            if result.get("prompt_source") != "TASK007_REAL_DETECTION":
+                raise ValueError("successful mask requires genuine TASK007 prompt provenance")
+            if result.get("detector_sha256") != TASK007_DETECTOR_SHA256:
+                raise ValueError("successful mask used an unexpected detector artifact")
+            if not isinstance(result.get("prompt_count"), int) or result["prompt_count"] <= 0:
+                raise ValueError("successful mask requires at least one real detector prompt")
+            masks = result.get("masks")
+            if not isinstance(masks, list) or len(masks) != result["prompt_count"]:
+                raise ValueError("every real detector prompt requires one recorded mask")
+            for index, mask in enumerate(masks):
+                require_hashed_file(mask, base, f"mask {index}")
             require_hashed_file(result["overlay"], base, "overlay")
+            review = result.get("visual_review")
+            if (
+                not isinstance(review, dict)
+                or review.get("decision") != "ACCEPTED"
+                or not isinstance(review.get("notes"), str)
+                or not review["notes"].strip()
+            ):
+                raise ValueError("successful mask requires an accepted documented visual review")
             observed_success.add(vehicle_class)
+            successful_image_ids.add(result["image_id"])
+        elif status == "NO_RELIABLE_MASK":
+            if result.get("masks") or result.get("overlay"):
+                raise ValueError("failed evaluation must not carry mask artifacts")
+            if not isinstance(result.get("failure_reason"), str) or not result["failure_reason"].strip():
+                raise ValueError("failed evaluation requires an explicit reason")
     if set(run.get("claimed_supported_classes", [])) != observed_success:
         raise ValueError("claimed classes do not equal successful real results")
 
     metrics = run.get("device_metrics")
     if not isinstance(metrics, dict):
         raise ValueError("device metrics are missing")
-    latencies = metrics.get("inference_ms")
-    if not isinstance(latencies, list) or not latencies or any(
-        not isinstance(value, (int, float)) or value <= 0 for value in latencies
-    ):
-        raise ValueError("positive measured inference latency samples are required")
-    if not isinstance(metrics.get("peak_rss_bytes"), int) or metrics["peak_rss_bytes"] <= 0:
-        raise ValueError("positive measured peak RSS is required")
+    if metrics.get("memory_metric") != "sampled_process_pss":
+        raise ValueError("qualification requires the sampled process PSS metric actually measured on Android")
+    peak_pss = metrics.get("peak_pss_bytes")
+    if not isinstance(peak_pss, int) or peak_pss <= 0:
+        raise ValueError("positive measured peak process PSS is required")
+    if peak_pss > MAX_QUALIFICATION_PEAK_PSS_BYTES:
+        raise ValueError("measured peak process PSS exceeds the qualification threshold")
+    per_image = metrics.get("per_image")
+    if not isinstance(per_image, list) or not per_image:
+        raise ValueError("per-image device measurements are required")
+    measured_image_ids = set()
+    for sample in per_image:
+        if not isinstance(sample, dict) or sample.get("image_id") not in successful_image_ids:
+            raise ValueError("device metric references a non-successful image")
+        measured_image_ids.add(sample["image_id"])
+        for field in ("detector_ms", "encoder_ms", "decoder_ms", "total_ms"):
+            value = sample.get(field)
+            if not isinstance(value, (int, float)) or value <= 0:
+                raise ValueError(f"positive measured {field} is required")
+        if sample["total_ms"] > MAX_QUALIFICATION_TOTAL_MS:
+            raise ValueError("measured total latency exceeds the qualification threshold")
+        sample_pss = sample.get("sampled_peak_pss_bytes")
+        if not isinstance(sample_pss, int) or sample_pss <= 0:
+            raise ValueError("positive per-image sampled process PSS is required")
+    if measured_image_ids != successful_image_ids:
+        raise ValueError("every successful image requires device latency and memory measurements")
 
 
 def main() -> None:

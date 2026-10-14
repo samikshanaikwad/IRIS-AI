@@ -19,6 +19,7 @@ class HomeScreen extends StatelessWidget {
     required this.onAnalyzeIncident,
     required this.onOpenCase,
     required this.onViewCases,
+    this.onOpenSegmentationQualification,
     super.key,
   });
 
@@ -26,6 +27,7 @@ class HomeScreen extends StatelessWidget {
   final VoidCallback onAnalyzeIncident;
   final ValueChanged<String> onOpenCase;
   final VoidCallback onViewCases;
+  final VoidCallback? onOpenSegmentationQualification;
 
   @override
   Widget build(BuildContext context) {
@@ -117,6 +119,33 @@ class HomeScreen extends StatelessWidget {
               return _buildRecentCases(context);
             },
           ),
+          if (onOpenSegmentationQualification != null) ...<Widget>[
+            const SizedBox(height: IrisSpacing.lg),
+            IrisCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'Development qualification',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: IrisSpacing.xs),
+                  const Text(
+                    'Run governed public images through the real detector and segmentation candidate. Debug builds only.',
+                  ),
+                  const SizedBox(height: IrisSpacing.sm),
+                  IrisSecondaryButton(
+                    key: const ValueKey<String>(
+                      'open-public-segmentation-qualification',
+                    ),
+                    label: 'Open segmentation qualification',
+                    icon: Icons.science_outlined,
+                    onPressed: onOpenSegmentationQualification,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

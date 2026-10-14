@@ -11,12 +11,16 @@
       "class_contract": "No native class labels; a genuine TASK007 box would be the prompt and retains the class provenance.",
       "source_commit": "f706ad9c4eb7f219c00d9050e46328518ffb65d2",
       "checkpoint_sha256": "6dbb90523a35330fedd7f1d3dfc66f995213d81b29a5ca8108dbcdd4e37d6c2f",
-      "offline_android_path": "Pinned upstream ViT-T checkpoint exported locally to two hashed ONNX artifacts; debug-only ONNX Runtime Android runner compiles. No device inference is yet recorded.",
-      "decision": "BLOCKED",
-      "blockers": [
-        "The repository application ID is not installed on the connected Realme, so the existing in-app evidence cannot yet be reached without user direction.",
-        "No RMX3780 mask result, latency or peak-memory measurement exists.",
-        "No rights-cleared intact/occluded/multiple-instance evaluation set with ground-truth masks has been run."
+      "offline_android_path": "Pinned upstream ViT-T checkpoint exported locally to two hashed ONNX artifacts and executed through the debug-only ONNX Runtime Android runner on a physical Realme RMX3780.",
+      "decision": "QUALIFIED",
+      "qualified_classes": ["car", "motorcycle"],
+      "qualification_scope": "Real TASK007 box-prompted instance masks on rights-cleared public car and motorcycle images, using iris-image-coordinate-v2. This is not damage classification or production-renderer approval.",
+      "limitations": [
+        "Bicycle, bus and truck have not been qualified with genuine evaluation images on the device.",
+        "The cropped-car evaluation failed because TASK007 classified the target as bus; the failure remains recorded and no mask was fabricated.",
+        "Visual overlay review was performed, but no pixel-level ground-truth mask dataset was used.",
+        "The measured peak process PSS is high and model-session lifecycle/batching must be addressed before production promotion.",
+        "Checkpoint redistribution and product legal review remain required before release packaging."
       ]
     },
     {

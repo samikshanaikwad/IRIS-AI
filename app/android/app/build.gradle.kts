@@ -17,6 +17,9 @@ android {
     sourceSets.getByName("debug").assets.srcDir(
         rootProject.file("../../.local-tools/segmentation-qualification/export"),
     )
+    sourceSets.getByName("debug").assets.srcDir(
+        rootProject.file("../../.local-tools/segmentation-qualification/evaluation"),
+    )
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

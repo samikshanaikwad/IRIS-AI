@@ -1,0 +1,152 @@
+{
+  "schema_version": "iris-public-segmentation-device-summary-v1",
+  "captured_on": "2026-10-14",
+  "device": {
+    "manufacturer": "realme",
+    "model": "RMX3780",
+    "android_version": "15",
+    "abi": "arm64-v8a"
+  },
+  "coordinate_contract_version": "iris-image-coordinate-v2",
+  "detector_sha256": "2e04c53bfeac0ac2a30c057c7e2a777594ce39baaac35a92f74fb1e8c4fc4e0b",
+  "model": {
+    "identity": "MobileSAM ViT-T",
+    "source_commit": "f706ad9c4eb7f219c00d9050e46328518ffb65d2",
+    "checkpoint_sha256": "6dbb90523a35330fedd7f1d3dfc66f995213d81b29a5ca8108dbcdd4e37d6c2f",
+    "encoder_onnx_sha256": "f55b0f6c6949d4737ba06ddf14b99b35ae7c26c782f9865078e34b0a0f45df49",
+    "decoder_onnx_sha256": "4a3d6ee977ce5ad077e1ab980db5f1bffb96758c4029a2abccd0d08634a8bf63",
+    "upstream_license_file_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+  },
+  "memory_metric": "sampled_process_pss",
+  "peak_sampled_process_pss_kb": 1241246,
+  "results": [
+    {
+      "image_id": "motorcycle-clean",
+      "image_sha256": "01d636fa67d18e048ce009022c7df99185e3646874840f2e15f642451e789059",
+      "status": "SUCCESS",
+      "vehicle_class": "motorcycle",
+      "prompt_count": 1,
+      "detector_ms": 132,
+      "encoder_ms": 2818.806154,
+      "decoder_ms": 239.682231,
+      "total_ms": 8115.917616,
+      "sampled_peak_pss_kb": 818256,
+      "mask_file_sha256": [
+        "1030a9d2a038648d6621325b0dc2a95970833d324c5de73de4c879adb26eec3f"
+      ],
+      "overlay_file_sha256": "47bc0bba56a288a71f9c38ba1a3bfc84360d2d4265cc548ea0f050a4dea5bfe9"
+    },
+    {
+      "image_id": "motorcycle-damaged",
+      "image_sha256": "718294a6042acca0e8d176107b6a1c9069c95d36d2b2b8c18b427a999dd9314d",
+      "status": "SUCCESS",
+      "vehicle_class": "motorcycle",
+      "prompt_count": 1,
+      "detector_ms": 60,
+      "encoder_ms": 2828.535385,
+      "decoder_ms": 202.254077,
+      "total_ms": 7307.346692,
+      "sampled_peak_pss_kb": 1149500,
+      "mask_file_sha256": [
+        "b9fa49b1cb2bc170eafd665413703c0e8a0ad28ec61e8be2846192bc06f7b0ff"
+      ],
+      "overlay_file_sha256": "1b24995583bbdc5a80d1e34a3e4dbbc7255f3c6ff47991788eced8ee4ef5197b"
+    },
+    {
+      "image_id": "motorcycle-partial-edge",
+      "image_sha256": "d1978e268574e3bae0cdaa09b1d5e292b302a98d16f21de882e346ea7a312149",
+      "status": "SUCCESS",
+      "vehicle_class": "motorcycle",
+      "prompt_count": 1,
+      "detector_ms": 58,
+      "encoder_ms": 2665.344616,
+      "decoder_ms": 256.457538,
+      "total_ms": 8505.034462,
+      "sampled_peak_pss_kb": 1191252,
+      "mask_file_sha256": [
+        "57e2ea516218ef3864268babc89b7c19c8595a75940599f55f9caaf82b853a8e"
+      ],
+      "overlay_file_sha256": "e5abfbb14bf9b65db8eb6675b3667f45ff27b7f2c7ed80d26c689245ab295102"
+    },
+    {
+      "image_id": "motorcycles-multiple",
+      "image_sha256": "e89f7cc65abf5403658a20ba76a262e8cf738cdef5d43b794ce31d5ee8426fa0",
+      "status": "SUCCESS",
+      "vehicle_class": "motorcycle",
+      "prompt_count": 3,
+      "detector_ms": 80,
+      "encoder_ms": 2693.990077,
+      "decoder_ms": 578.588692,
+      "total_ms": 12581.596077,
+      "sampled_peak_pss_kb": 1223628,
+      "mask_file_sha256": [
+        "4404fbe6172d0651b6faeb51142d7988bb150083ceced94b51d9d59ed2a16883",
+        "5b24c9bf926972e4fab7d0667844d8f7ae2d8a60b332a4d65ab52cba35e60bf8",
+        "df2fb6ae3e344289d2e2ddf590accafe56f0d2075be858979c0e4853b0a3f129"
+      ],
+      "overlay_file_sha256": "2996dfe8f8b542cf62bfd527e847ad523f59ad67d2c54dbda228e2744f954500"
+    },
+    {
+      "image_id": "car-full",
+      "image_sha256": "3cbd6d96b14ffcb21bb187eda4932b2ec593165c229fdc9c235a968bd777f1de",
+      "status": "SUCCESS",
+      "vehicle_class": "car",
+      "prompt_count": 2,
+      "detector_ms": 79,
+      "encoder_ms": 2662.834462,
+      "decoder_ms": 382.525769,
+      "total_ms": 8302.928001,
+      "sampled_peak_pss_kb": 1212564,
+      "mask_file_sha256": [
+        "ef74ab3007971b57795929ce8482cf0303c5767e77ab9760dbebfe4598b71400",
+        "bd26ed50a39ecd25e6866fbbf48e875d6d1397a49c2765354de507c7532f5b73"
+      ],
+      "overlay_file_sha256": "8dbc25585183bd6f6e0115334c011cb81a9fa6027a7b5d8dd36cba5f5ad0a01e"
+    },
+    {
+      "image_id": "car-partial-edge",
+      "image_sha256": "8548381d567af0d6d6471b5764e51b875a2b6b849022d851d84a90009e5428be",
+      "status": "NO_RELIABLE_MASK",
+      "vehicle_class": "car",
+      "prompt_count": 0,
+      "detector_ms": 59,
+      "failure_reason": "TASK007 classified the cropped yellow vehicle as bus rather than the governed target class car; no prompt or mask was substituted."
+    },
+    {
+      "image_id": "cars-dense-traffic",
+      "image_sha256": "30ae6ce002d4431b1f19bba5bde67811a8d7dbe62f26093e64cd6c1e12339ed5",
+      "status": "SUCCESS",
+      "vehicle_class": "car",
+      "prompt_count": 11,
+      "detector_ms": 58,
+      "encoder_ms": 3286.869231,
+      "decoder_ms": 2127.640845,
+      "total_ms": 31551.307002,
+      "sampled_peak_pss_kb": 1241246,
+      "mask_file_sha256": [
+        "7790c64abd420a222cd52fd0aa7c6789e5548b9c468a7475bf27e1fc8f46b6ed",
+        "83c6d09167ebf4ba1ac3f85aa929cafb4db52dbc70dd4cdd8decd3e7a5d34ae3",
+        "19031483e96c14dc117dbc7a33f98f1c0b2469e9df2825c111a2e724bd893fa2",
+        "e18c827ec19c87869360a69faf52c6e40cd0184478f3cc3d6a1bd438f47d58a8",
+        "38143f253ac8785e97358e2a6bd737614d1a3a91bb56b8375c3b33c39092b049",
+        "b78f725fcbf0fc6ceac37d51194eb4a1add6dd731dce8af53b086deb64975bea",
+        "b5f72bee34aa79917127aad06d768ed18526312cf98406e4e5facb3ec59159eb",
+        "9c7646d6a9cfc86054324c6365940977f0a6b2dcb14a1764895b25b9261009d7",
+        "8cd80b8197d35040b6029998303e849820444dcb63050000ec5a473e1fba5d92",
+        "80f23e4a3372dd53d627f23f755972d8cbf7c3176870eb57e56ffcb5a4656528",
+        "a76095c4d8989c5092d50d40dada95db8a39e65a39016b435e6acba8078d7ded"
+      ],
+      "overlay_file_sha256": "7ed0042d44ce34815dd80527db680bc48c0ccd5678f3eeebdd294d16e45f975e"
+    }
+  ],
+  "qualified_classes": [
+    "car",
+    "motorcycle"
+  ],
+  "unqualified_classes": [
+    "bicycle",
+    "bus",
+    "truck"
+  ],
+  "qualification_package_run_json_sha256": "def065ee39a39a4a48d6e76047a1424ffc130683d01388cd0b8b0c8cf6605bce"
+}
