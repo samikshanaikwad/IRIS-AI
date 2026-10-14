@@ -299,7 +299,7 @@ void main() {
         (await db.query('environment_contexts')).single['sources_json'],
         '[]',
       );
-      expect(IrisDatabaseConstants.schemaVersion, 16);
+      expect(IrisDatabaseConstants.schemaVersion, 17);
     },
   );
   test(

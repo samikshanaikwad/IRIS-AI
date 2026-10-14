@@ -3,7 +3,6 @@ package com.iris.incidentreconstruction
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import androidx.exifinterface.media.ExifInterface
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
@@ -12,7 +11,6 @@ import io.flutter.plugin.common.MethodChannel
 import java.io.File
 import java.nio.FloatBuffer
 import java.security.MessageDigest
-import kotlin.math.roundToInt
 
 class IrisDepthRuntime(private val context: Context) : AutoCloseable {
     private val environment = OrtEnvironment.getEnvironment()
@@ -39,18 +37,22 @@ class IrisDepthRuntime(private val context: Context) : AutoCloseable {
     }
 
     private fun run(path: String): Map<String, Any> {
-        val image = decodeOriented(File(path))
+        val sourceFile = File(path)
+        val decoded = BitmapFactory.decodeFile(sourceFile.absolutePath) ?: error("Evidence image could not be decoded.")
+        val orientedImage = IrisImageCoordinateContract.orient(decoded, sourceFile)
+        val image = orientedImage.bitmap
+        if (image !== decoded) decoded.recycle()
         val originalWidth = image.width
         val originalHeight = image.height
-        val scale = minOf(518f / originalWidth, 518f / originalHeight)
-        val resizedWidth = (originalWidth * scale).roundToInt().coerceAtLeast(1)
-        val resizedHeight = (originalHeight * scale).roundToInt().coerceAtLeast(1)
+        val placement = IrisImageCoordinateContract.contain(originalWidth, originalHeight, 518, 518, IrisImageCoordinateContract.Rounding.NEAREST)
+        val resizedWidth = placement.resizedWidth
+        val resizedHeight = placement.resizedHeight
         val resized = Bitmap.createScaledBitmap(image, resizedWidth, resizedHeight, true)
         val canvasBitmap = Bitmap.createBitmap(518, 518, Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(canvasBitmap)
         canvas.drawColor(android.graphics.Color.rgb(124, 116, 103))
-        val offsetX = (518 - resizedWidth) / 2
-        val offsetY = (518 - resizedHeight) / 2
+        val offsetX = placement.offsetX
+        val offsetY = placement.offsetY
         canvas.drawBitmap(resized, offsetX.toFloat(), offsetY.toFloat(), null)
         val pixels = IntArray(518 * 518)
         canvasBitmap.getPixels(pixels, 0, 518, 0, 0, 518, 518)
@@ -87,6 +89,7 @@ class IrisDepthRuntime(private val context: Context) : AutoCloseable {
             "height" to originalHeight,
             "modelWidth" to 518,
             "modelHeight" to 518,
+            "coordinateMetadata" to IrisImageCoordinateContract.metadata(orientedImage, placement),
             "paddingLeft" to offsetX,
             "paddingTop" to offsetY,
             "resizedWidth" to resizedWidth,
@@ -107,20 +110,6 @@ class IrisDepthRuntime(private val context: Context) : AutoCloseable {
         options.addConfigEntry("session.load_model_format", "ORT")
         session = environment.createSession(model.absolutePath, options)
         return session!!
-    }
-
-    private fun decodeOriented(file: File): Bitmap {
-        require(file.exists()) { "Evidence file is unavailable." }
-        val bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: error("Evidence image could not be decoded.")
-        val orientation = ExifInterface(file.absolutePath).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
-        val matrix = android.graphics.Matrix()
-        when (orientation) {
-            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
-            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
-            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
-            else -> return bitmap
-        }
-        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true).also { if (it != bitmap) bitmap.recycle() }
     }
 
     private fun flatten(value: Any?): List<Float> = when (value) {

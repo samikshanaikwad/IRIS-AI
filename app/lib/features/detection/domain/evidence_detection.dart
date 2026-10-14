@@ -1,3 +1,5 @@
+import '../../evidence/domain/image_coordinate_contract.dart';
+
 class EvidenceDetection {
   const EvidenceDetection({
     required this.classId,
@@ -24,12 +26,14 @@ class EvidenceDetectionAnalysis {
     required this.analyzedAt,
     required this.inferenceMs,
     required this.detections,
+    this.coordinateMetadata,
   });
   final String id, evidenceId, evidenceSha256, detectorSha256;
   final String thresholdPolicyVersion;
   final DateTime analyzedAt;
   final int? inferenceMs;
   final List<EvidenceDetection> detections;
+  final ImageCoordinateMetadata? coordinateMetadata;
 }
 
 enum DetectionState {

@@ -4,11 +4,9 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
-import android.graphics.Matrix
 import android.graphics.Paint
 import android.os.Handler
 import android.os.Looper
-import androidx.exifinterface.media.ExifInterface
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import org.tensorflow.lite.Interpreter
@@ -85,7 +83,7 @@ class IrisClassifierRuntime(private val context: Context) : AutoCloseable {
         check(file.isFile) { "Managed evidence file is unavailable." }
         val bitmap = BitmapFactory.decodeFile(file.absolutePath)
             ?: throw IllegalArgumentException("Managed evidence could not be decoded.")
-        val oriented = applyExifOrientation(bitmap, file)
+        val oriented = IrisImageCoordinateContract.orient(bitmap, file).bitmap
         if (oriented !== bitmap) bitmap.recycle()
         try {
             val input = preprocess(oriented)
@@ -128,22 +126,6 @@ class IrisClassifierRuntime(private val context: Context) : AutoCloseable {
         canvas.recycle()
         input.rewind()
         return input
-    }
-
-    private fun applyExifOrientation(bitmap: Bitmap, file: File): Bitmap {
-        val orientation = try { ExifInterface(file).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL) } catch (_: Throwable) { ExifInterface.ORIENTATION_NORMAL }
-        val matrix = Matrix()
-        when (orientation) {
-            ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
-            ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
-            ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
-            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.preScale(-1f, 1f)
-            ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.preScale(1f, -1f)
-            ExifInterface.ORIENTATION_TRANSPOSE -> { matrix.postRotate(90f); matrix.preScale(-1f, 1f) }
-            ExifInterface.ORIENTATION_TRANSVERSE -> { matrix.postRotate(270f); matrix.preScale(-1f, 1f) }
-            else -> return bitmap
-        }
-        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
     }
 
     override fun close() {

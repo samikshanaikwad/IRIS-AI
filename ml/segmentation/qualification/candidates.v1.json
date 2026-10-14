@@ -1,0 +1,51 @@
+{
+  "schema_version": "iris-segmentation-candidate-inventory-v1",
+  "reviewed_at_utc": "2026-10-13T00:00:00Z",
+  "required_vehicle_classes": ["bicycle", "car", "motorcycle", "bus", "truck"],
+  "candidates": [
+    {
+      "id": "mobilesam-vit-t-box-prompt",
+      "capability": "class-agnostic prompt-guided instance mask",
+      "official_source": "https://github.com/ChaoningZhang/MobileSAM",
+      "license": "Apache-2.0",
+      "class_contract": "No native class labels; a genuine TASK007 box would be the prompt and retains the class provenance.",
+      "offline_android_path": "No exact official Android artifact qualified. Official ONNX export covers prompt encoder/mask decoder; the exact image-encoder export and Android package remain unpinned.",
+      "decision": "BLOCKED",
+      "blockers": [
+        "No governed encoder+decoder Android artifact with hashes is present.",
+        "No RMX3780 latency or peak-memory result exists.",
+        "No real damaged/occluded multi-vehicle evaluation run exists."
+      ]
+    },
+    {
+      "id": "mediapipe-bundled-image-segmenters",
+      "capability": "semantic category masks",
+      "official_source": "https://developers.google.com/edge/mediapipe/solutions/vision/image_segmenter",
+      "license": "Documentation/code examples Apache-2.0; exact model terms remain model-specific.",
+      "class_contract": "Bundled models are person-part or generic semantic models and do not provide required per-vehicle instances.",
+      "offline_android_path": "MediaPipe Image Segmenter supports Android, but its documented bundled models do not meet the IRIS instance contract.",
+      "decision": "REJECTED",
+      "blockers": ["Semantic/category masks cannot separate multiple same-class vehicle instances."]
+    },
+    {
+      "id": "torchvision-maskrcnn-resnet50-fpn-coco-v1",
+      "capability": "COCO instance segmentation",
+      "official_source": "https://docs.pytorch.org/vision/master/_modules/torchvision/models/detection/mask_rcnn.html",
+      "license": "TorchVision code BSD-3-Clause; downstream image/dataset terms remain separate.",
+      "class_contract": "COCO masks include bicycle, car, motorcycle, bus and truck instances.",
+      "offline_android_path": "No qualified IRIS Android execution artifact; official checkpoint is approximately 169.84 MB before runtime overhead.",
+      "decision": "REJECTED",
+      "blockers": ["No practical governed RMX3780 runtime path at the documented size/compute cost."]
+    },
+    {
+      "id": "ultralytics-yolo-instance-segmentation",
+      "capability": "class-labelled instance segmentation",
+      "official_source": "https://docs.ultralytics.com/",
+      "license": "AGPL-3.0 or separately purchased Enterprise License",
+      "class_contract": "Model-dependent; COCO segmentation variants can include the required road-user classes.",
+      "offline_android_path": "Export paths exist, but IRIS has no Enterprise licence and cannot assume proprietary-app redistribution under AGPL.",
+      "decision": "BLOCKED",
+      "blockers": ["Commercial/proprietary redistribution authority has not been established."]
+    }
+  ]
+}

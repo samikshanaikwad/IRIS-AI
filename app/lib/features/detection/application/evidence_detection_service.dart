@@ -7,6 +7,7 @@ import '../../evidence_quality/application/evidence_quality_service.dart';
 import '../../evidence_quality/domain/evidence_quality_assessment.dart';
 import '../data/sqlite_evidence_detection_repository.dart';
 import '../domain/evidence_detection.dart';
+import '../../evidence/domain/image_coordinate_contract.dart';
 
 abstract interface class EvidenceDetectionOperations {
   Future<EvidenceDetectionSnapshot> load(EvidenceImage e);
@@ -112,6 +113,7 @@ class EvidenceDetectionService implements EvidenceDetectionOperations {
         })
         .whereType<EvidenceDetection>()
         .toList();
+    final coordinateMetadata = _coordinateMetadata(response);
     final a = EvidenceDetectionAnalysis(
       id: '${e.id}-${DateTime.now().microsecondsSinceEpoch}',
       evidenceId: e.id,
@@ -121,9 +123,18 @@ class EvidenceDetectionService implements EvidenceDetectionOperations {
       analyzedAt: DateTime.now().toUtc(),
       inferenceMs: (response['inferenceMs'] as num?)?.toInt(),
       detections: list,
+      coordinateMetadata: coordinateMetadata,
     );
     await repository.save(a);
     return a;
+  }
+
+  ImageCoordinateMetadata _coordinateMetadata(Map<Object?, Object?> response) {
+    final raw = response['coordinateMetadata'];
+    if (raw is! Map) {
+      throw StateError('Detector coordinate metadata is unavailable.');
+    }
+    return ImageCoordinateMetadata.fromJson(Map<String, Object?>.from(raw));
   }
 
   Future<String> _hash(EvidenceImage e) async {

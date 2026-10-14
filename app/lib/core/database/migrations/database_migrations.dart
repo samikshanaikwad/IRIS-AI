@@ -43,10 +43,32 @@ Future<void> migrateDatabase(
         );
       case 16:
         await _createVersionSixteen(database);
+      case 17:
+        await _createVersionSeventeen(database);
       default:
         throw StateError(
           'No database migration registered for version $version.',
         );
+    }
+  }
+}
+
+Future<void> _createVersionSeventeen(Database database) async {
+  for (final table in <String>[
+    IrisDatabaseConstants.evidenceDetectionAnalysesTable,
+    IrisDatabaseConstants.evidenceDepthAnalysesTable,
+  ]) {
+    final columns = await database.rawQuery('PRAGMA table_info($table)');
+    final names = columns.map((row) => row['name']).toSet();
+    if (!names.contains('coordinate_contract_version')) {
+      await database.execute(
+        'ALTER TABLE $table ADD COLUMN coordinate_contract_version TEXT',
+      );
+    }
+    if (!names.contains('coordinate_metadata_json')) {
+      await database.execute(
+        'ALTER TABLE $table ADD COLUMN coordinate_metadata_json TEXT',
+      );
     }
   }
 }

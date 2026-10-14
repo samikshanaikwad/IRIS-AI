@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import '../../../core/database/database_constants.dart';
 import '../../../core/database/iris_database.dart';
 import '../domain/evidence_detection.dart';
+import '../../evidence/domain/image_coordinate_contract.dart';
 
 class SqliteEvidenceDetectionRepository {
   SqliteEvidenceDetectionRepository(this._database);
@@ -34,6 +37,7 @@ class SqliteEvidenceDetectionRepository {
         isUtc: true,
       ),
       inferenceMs: row['inference_ms'] as int?,
+      coordinateMetadata: _metadata(row['coordinate_metadata_json']),
       detections: detections
           .map(
             (d) => EvidenceDetection(
@@ -68,6 +72,11 @@ class SqliteEvidenceDetectionRepository {
         'status': 'complete',
         'analyzed_at': value.analyzedAt.millisecondsSinceEpoch,
         'inference_ms': value.inferenceMs,
+        'coordinate_contract_version':
+            value.coordinateMetadata?.contractVersion,
+        'coordinate_metadata_json': value.coordinateMetadata == null
+            ? null
+            : jsonEncode(value.coordinateMetadata!.toJson()),
       });
       for (var i = 0; i < value.detections.length; i++) {
         final d = value.detections[i];
@@ -85,5 +94,12 @@ class SqliteEvidenceDetectionRepository {
         });
       }
     });
+  }
+
+  ImageCoordinateMetadata? _metadata(Object? encoded) {
+    if (encoded is! String || encoded.isEmpty) return null;
+    return ImageCoordinateMetadata.fromJson(
+      Map<String, Object?>.from(jsonDecode(encoded) as Map),
+    );
   }
 }
