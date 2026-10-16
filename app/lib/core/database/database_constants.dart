@@ -1,6 +1,6 @@
 abstract final class IrisDatabaseConstants {
   static const String fileName = 'iris.db';
-  static const int schemaVersion = 18;
+  static const int schemaVersion = 19;
 
   static const String casesTable = 'cases';
   static const String casesUpdatedAtIndex = 'idx_cases_updated_at';
@@ -24,4 +24,6 @@ abstract final class IrisDatabaseConstants {
   static const String evidenceWorldAlignmentsTable =
       'evidence_world_alignments';
   static const String environmentContextsTable = 'environment_contexts';
+  static const String scenarioObservationsTable = 'scenario_observations';
+  static const String scenarioAnalysesTable = 'scenario_analyses';
 }

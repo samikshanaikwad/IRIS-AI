@@ -30,6 +30,8 @@ import '../../location/presentation/location_section.dart';
 import '../../location/presentation/road_scene_viewer.dart';
 import '../../geometry/application/evidence_world_alignment_service.dart';
 import '../../geometry/presentation/evidence_alignment_section.dart';
+import '../../scenarios/application/accident_scenario_service.dart';
+import '../../scenarios/presentation/accident_scenario_section.dart';
 
 class CaseOverviewScreen extends StatefulWidget {
   const CaseOverviewScreen({
@@ -45,6 +47,7 @@ class CaseOverviewScreen extends StatefulWidget {
     required this.multiView,
     required this.location,
     required this.worldAlignment,
+    required this.accidentScenarios,
     super.key,
   });
 
@@ -60,6 +63,7 @@ class CaseOverviewScreen extends StatefulWidget {
   final MultiViewService multiView;
   final CaseLocationService location;
   final EvidenceWorldAlignmentService worldAlignment;
+  final AccidentScenarioOperations accidentScenarios;
 
   @override
   State<CaseOverviewScreen> createState() => _CaseOverviewScreenState();
@@ -330,11 +334,11 @@ class _CaseOverviewScreenState extends State<CaseOverviewScreen> {
           location: widget.location,
           alignment: widget.worldAlignment,
         ),
-        const SizedBox(height: IrisSpacing.md),
-        const _WorkflowState(
-          icon: Icons.alt_route_outlined,
-          title: 'Scenarios',
-          state: 'Not generated',
+        const SizedBox(height: IrisSpacing.lg),
+        AccidentScenarioSection(
+          caseId: widget.caseId,
+          service: widget.accidentScenarios,
+          evidenceController: widget.evidenceController,
         ),
         const SizedBox(height: IrisSpacing.sm),
         const _WorkflowState(

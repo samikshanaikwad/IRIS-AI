@@ -37,6 +37,8 @@ import '../features/segmentation/application/evidence_segmentation_controller.da
 import '../features/segmentation/application/evidence_segmentation_service.dart';
 import '../features/segmentation/data/evidence_segmentation_storage.dart';
 import '../features/segmentation/data/sqlite_evidence_segmentation_repository.dart';
+import '../features/scenarios/application/accident_scenario_service.dart';
+import '../features/scenarios/data/sqlite_accident_scenario_repository.dart';
 
 class IrisApplicationServices {
   IrisApplicationServices({
@@ -54,6 +56,7 @@ class IrisApplicationServices {
     this.multiView,
     this.location,
     this.worldAlignment,
+    this.accidentScenarios,
     Future<void> Function()? close,
   }) : _close = close;
 
@@ -119,6 +122,11 @@ class IrisApplicationServices {
           // redistribution review and lower-memory device qualification pass.
           executionEnabled: kDebugMode,
         );
+    final AccidentScenarioService scenarioService = AccidentScenarioService(
+      repository: SqliteAccidentScenarioRepository(database),
+      evidence: evidenceRepository,
+      detection: detectionService,
+    );
     return IrisApplicationServices(
       caseRepository: ManagedCaseRepository(
         SqliteCaseRepository(database),
@@ -144,6 +152,7 @@ class IrisApplicationServices {
       multiView: multiViewService,
       location: locationService,
       worldAlignment: worldAlignmentService,
+      accidentScenarios: scenarioService,
       close: database.close,
     );
   }
@@ -162,6 +171,7 @@ class IrisApplicationServices {
   final MultiViewService? multiView;
   final CaseLocationService? location;
   final EvidenceWorldAlignmentService? worldAlignment;
+  final AccidentScenarioOperations? accidentScenarios;
   final Future<void> Function()? _close;
 
   EvidenceController evidenceControllerFor(String caseId) {

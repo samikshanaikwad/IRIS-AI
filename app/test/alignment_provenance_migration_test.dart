@@ -60,7 +60,7 @@ void main() {
       expect(row['road_context_fingerprint'], 'c' * 64);
       expect(row['world_frame_fingerprint'], isNull);
       expect(row['provenance_version'], isNull);
-      expect(IrisDatabaseConstants.schemaVersion, 18);
+      expect(IrisDatabaseConstants.schemaVersion, 19);
     },
   );
 }

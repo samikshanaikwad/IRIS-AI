@@ -134,7 +134,7 @@ class IrisDatabase {
     }
 
     final List<Map<String, Object?>> tables = await database.rawQuery(
-      "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       <Object?>[
         IrisDatabaseConstants.casesTable,
         IrisDatabaseConstants.evidenceTable,
@@ -151,9 +151,11 @@ class IrisDatabase {
         IrisDatabaseConstants.roadContextsTable,
         IrisDatabaseConstants.evidenceWorldAlignmentsTable,
         IrisDatabaseConstants.environmentContextsTable,
+        IrisDatabaseConstants.scenarioObservationsTable,
+        IrisDatabaseConstants.scenarioAnalysesTable,
       ],
     );
-    if (tables.length != 15) {
+    if (tables.length != 17) {
       throw StateError('IRIS database schema is missing required tables.');
     }
   }

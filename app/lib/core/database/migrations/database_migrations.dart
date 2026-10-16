@@ -47,12 +47,44 @@ Future<void> migrateDatabase(
         await _createVersionSeventeen(database);
       case 18:
         await _createVersionEighteen(database);
+      case 19:
+        await _createVersionNineteen(database);
       default:
         throw StateError(
           'No database migration registered for version $version.',
         );
     }
   }
+}
+
+Future<void> _createVersionNineteen(Database database) async {
+  await database.execute('''
+    CREATE TABLE ${IrisDatabaseConstants.scenarioObservationsTable} (
+      id TEXT PRIMARY KEY NOT NULL,
+      case_id TEXT NOT NULL,
+      evidence_id TEXT NOT NULL,
+      evidence_sha256 TEXT NOT NULL CHECK(length(evidence_sha256) = 64),
+      kind TEXT NOT NULL,
+      subject_label TEXT NOT NULL,
+      note TEXT NOT NULL,
+      provenance TEXT NOT NULL CHECK(provenance = 'USER_ENTERED'),
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      FOREIGN KEY(case_id) REFERENCES ${IrisDatabaseConstants.casesTable}(id) ON DELETE CASCADE,
+      FOREIGN KEY(evidence_id) REFERENCES ${IrisDatabaseConstants.evidenceTable}(id) ON DELETE CASCADE
+    )
+  ''');
+  await database.execute('''
+    CREATE TABLE ${IrisDatabaseConstants.scenarioAnalysesTable} (
+      case_id TEXT PRIMARY KEY NOT NULL,
+      engine_version TEXT NOT NULL,
+      input_fingerprint TEXT NOT NULL CHECK(length(input_fingerprint) = 64),
+      status TEXT NOT NULL CHECK(status IN ('AVAILABLE', 'INSUFFICIENT_EVIDENCE')),
+      hypotheses_json TEXT NOT NULL,
+      generated_at INTEGER NOT NULL,
+      FOREIGN KEY(case_id) REFERENCES ${IrisDatabaseConstants.casesTable}(id) ON DELETE CASCADE
+    )
+  ''');
 }
 
 Future<void> _createVersionEighteen(Database database) async {
