@@ -19,6 +19,7 @@ import '../../evidence_quality/application/evidence_quality_service.dart';
 import '../../classification/application/evidence_classification_service.dart';
 import '../../detection/application/evidence_detection_service.dart';
 import '../../depth/application/evidence_depth_service.dart';
+import '../../segmentation/application/evidence_segmentation_service.dart';
 import '../../geometry/application/relative_geometry_service.dart';
 import 'case_date_formatter.dart';
 import 'case_title_sheet.dart';
@@ -39,6 +40,7 @@ class CaseOverviewScreen extends StatefulWidget {
     required this.evidenceClassification,
     required this.evidenceDetection,
     required this.evidenceDepth,
+    required this.evidenceSegmentation,
     required this.relativeGeometry,
     required this.multiView,
     required this.location,
@@ -53,6 +55,7 @@ class CaseOverviewScreen extends StatefulWidget {
   final EvidenceClassificationOperations evidenceClassification;
   final EvidenceDetectionOperations evidenceDetection;
   final EvidenceDepthOperations evidenceDepth;
+  final EvidenceSegmentationOperations evidenceSegmentation;
   final RelativeGeometryOperations relativeGeometry;
   final MultiViewService multiView;
   final CaseLocationService location;
@@ -292,6 +295,7 @@ class _CaseOverviewScreenState extends State<CaseOverviewScreen> {
           classificationOperations: widget.evidenceClassification,
           detectionOperations: widget.evidenceDetection,
           depthOperations: widget.evidenceDepth,
+          segmentationOperations: widget.evidenceSegmentation,
           geometryOperations: widget.relativeGeometry,
         ),
         const SizedBox(height: IrisSpacing.lg),

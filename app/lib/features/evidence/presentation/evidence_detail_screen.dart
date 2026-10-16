@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../app/theme/iris_spacing.dart';
 import '../../../app/theme/iris_colors.dart';
@@ -24,7 +22,8 @@ import '../../depth/application/evidence_depth_controller.dart';
 import '../../depth/presentation/evidence_depth_section.dart';
 import '../../geometry/application/relative_geometry_controller.dart';
 import '../../geometry/presentation/relative_geometry_section.dart';
-import '../../segmentation_qualification/segmentation_prompt_box.dart';
+import '../../segmentation/application/evidence_segmentation_controller.dart';
+import '../../segmentation/presentation/evidence_segmentation_section.dart';
 
 class EvidenceDetailScreen extends StatefulWidget {
   const EvidenceDetailScreen({
@@ -34,6 +33,7 @@ class EvidenceDetailScreen extends StatefulWidget {
     required this.classificationController,
     required this.detectionController,
     required this.depthController,
+    required this.segmentationController,
     required this.geometryController,
     super.key,
   });
@@ -44,6 +44,7 @@ class EvidenceDetailScreen extends StatefulWidget {
   final EvidenceClassificationController classificationController;
   final EvidenceDetectionController detectionController;
   final EvidenceDepthController depthController;
+  final EvidenceSegmentationController segmentationController;
   final RelativeGeometryController geometryController;
 
   @override
@@ -54,13 +55,6 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
   String? _path;
   bool _missing = false;
   bool _deleting = false;
-  bool _segmentationBusy = false;
-  Map<String, Object?>? _segmentationResult;
-  String? _segmentationFailure;
-
-  static const MethodChannel _segmentationChannel = MethodChannel(
-    'com.iris.debug/segmentation-qualification',
-  );
 
   @override
   void initState() {
@@ -124,91 +118,6 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
           ),
         );
       }
-    }
-  }
-
-  Future<void> _qualifySegmentation() async {
-    final snapshot = widget.detectionController.snapshot;
-    final analysis = snapshot.analysis;
-    final metadata = analysis?.coordinateMetadata;
-    if (!kDebugMode ||
-        snapshot.state != DetectionState.complete ||
-        analysis == null ||
-        analysis.evidenceSha256 != widget.evidence.sha256 ||
-        metadata == null ||
-        _segmentationBusy) {
-      return;
-    }
-    final prompts = <Map<String, Object>>[];
-    var rejectedPrompts = 0;
-    for (final detection in analysis.detections) {
-      if (!SegmentationPromptBox.supportedClasses.containsKey(
-        detection.classId,
-      )) {
-        continue;
-      }
-      try {
-        prompts.add(
-          SegmentationPromptBox.fromDetection(
-            detection: detection,
-            metadata: metadata,
-          ).toChannelValue(),
-        );
-      } on FormatException {
-        rejectedPrompts++;
-      }
-    }
-    if (prompts.isEmpty) {
-      setState(() {
-        _segmentationFailure =
-            'No eligible current vehicle box maps to valid image pixels.';
-        _segmentationResult = null;
-      });
-      return;
-    }
-    setState(() {
-      _segmentationBusy = true;
-      _segmentationFailure = null;
-      _segmentationResult = null;
-    });
-    try {
-      final result = await _segmentationChannel
-          .invokeMapMethod<String, Object?>(
-            'runQualification',
-            <String, Object?>{
-              'absolutePath': _path,
-              'coordinateContractVersion': metadata.contractVersion,
-              'boxes': prompts,
-            },
-          );
-      if (result == null || result['status'] != 'MASKS_GENERATED_ON_DEVICE') {
-        throw StateError('No real mask was returned.');
-      }
-      if (mounted) {
-        setState(() {
-          _segmentationResult = <String, Object?>{
-            ...result,
-            'rejectedPrompts': rejectedPrompts,
-          };
-        });
-      }
-    } on PlatformException catch (error) {
-      if (mounted) {
-        setState(() {
-          _segmentationFailure =
-              error.message ??
-              'The on-device qualification runner is unavailable.';
-        });
-      }
-    } on Object {
-      if (mounted) {
-        setState(() {
-          _segmentationFailure =
-              'On-device segmentation failed; no mask or fallback was saved.';
-        });
-      }
-    } finally {
-      if (mounted) setState(() => _segmentationBusy = false);
     }
   }
 
@@ -313,10 +222,10 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
           ),
           const SizedBox(height: IrisSpacing.md),
           EvidenceDetectionSection(controller: widget.detectionController),
-          if (kDebugMode) ...<Widget>[
-            const SizedBox(height: IrisSpacing.sm),
-            _segmentationQualificationPanel(),
-          ],
+          const SizedBox(height: IrisSpacing.sm),
+          EvidenceSegmentationSection(
+            controller: widget.segmentationController,
+          ),
           const SizedBox(height: IrisSpacing.md),
           EvidenceDepthSection(controller: widget.depthController),
           const SizedBox(height: IrisSpacing.md),
@@ -332,97 +241,6 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
       ),
     );
   }
-
-  Widget _segmentationQualificationPanel() {
-    final snapshot = widget.detectionController.snapshot;
-    final analysis = snapshot.analysis;
-    final canRun =
-        snapshot.state == DetectionState.complete &&
-        analysis != null &&
-        analysis.evidenceSha256 == widget.evidence.sha256 &&
-        analysis.coordinateMetadata != null &&
-        analysis.detections.any(
-          (detection) => SegmentationPromptBox.supportedClasses.containsKey(
-            detection.classId,
-          ),
-        );
-    final result = _segmentationResult;
-    final overlayPath = result?['overlayPath'];
-    final detectionResults = result?['promptMaskResults'];
-    return IrisCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          const Text('Segmentation qualification — debug only'),
-          const SizedBox(height: IrisSpacing.xs),
-          const Text(
-            'Uses current saved TASK007 boxes as prompts. It does not save a mask as evidence or alter the production reconstruction.',
-          ),
-          const SizedBox(height: IrisSpacing.sm),
-          IrisPrimaryButton(
-            key: const ValueKey<String>('debug-segmentation-qualification'),
-            label: _segmentationBusy
-                ? 'Running on this device…'
-                : 'Run real on-device mask qualification',
-            icon: Icons.layers_outlined,
-            onPressed: !canRun || _segmentationBusy || _path == null
-                ? null
-                : _qualifySegmentation,
-          ),
-          if (analysis?.coordinateMetadata == null)
-            const Text('Requires current v2 image-coordinate metadata.'),
-          if (_segmentationFailure != null) ...<Widget>[
-            const SizedBox(height: IrisSpacing.sm),
-            Text(_segmentationFailure!),
-          ],
-          if (result != null && overlayPath is String) ...<Widget>[
-            const SizedBox(height: IrisSpacing.md),
-            AspectRatio(
-              aspectRatio:
-                  (result['orientedWidth'] as num).toDouble() /
-                  (result['orientedHeight'] as num).toDouble(),
-              child: Image.file(
-                File(overlayPath),
-                fit: BoxFit.contain,
-                errorBuilder: (_, _, _) => const Center(
-                  child: Text('Private-cache mask overlay is unavailable.'),
-                ),
-              ),
-            ),
-            const SizedBox(height: IrisSpacing.sm),
-            Text('Model: ${result['model']} (class-agnostic prompts)'),
-            Text('Coordinate mapping: ${result['coordinateContractVersion']}'),
-            Text(
-              'Preprocess ${_ms(result['preprocessMs'])} ms • encoder ${_ms(result['imageEncoderMs'])} ms • total ${_ms(result['totalMs'])} ms',
-            ),
-            Text(
-              'Sampled peak process PSS: ${result['sampledPeakPssKb']} kB (baseline ${result['baselinePssKb']} kB; sampling may miss brief peaks)',
-            ),
-            if (result['rejectedPrompts'] != 0)
-              Text(
-                'Boxes rejected by coordinate checks: ${result['rejectedPrompts']}',
-              ),
-            if (detectionResults is List<Object?>)
-              ...detectionResults.whereType<Map<Object?, Object?>>().map(
-                (item) => Text(
-                  '${item['className']}: ${item['status']}, mask pixels ${item['maskPixels']}, model score ${_score(item['predictedQuality'])}, mask/box ratio ${_score(item['maskToBoxAreaRatio'])}, mask-box IoU ${_score(item['maskBoundingBoxIou'])}',
-                ),
-              ),
-            const SizedBox(height: IrisSpacing.xs),
-            const Text(
-              'Mask/box overlap and model score are diagnostics, not ground-truth accuracy. Overlay colors are visualization-only.',
-            ),
-            SelectableText('Overlay SHA-256: ${result['overlaySha256']}'),
-          ],
-        ],
-      ),
-    );
-  }
-
-  String _ms(Object? value) =>
-      value is num ? value.toStringAsFixed(1) : 'unavailable';
-  String _score(Object? value) =>
-      value is num ? value.toStringAsFixed(3) : 'unavailable';
 }
 
 class _Metadata extends StatelessWidget {

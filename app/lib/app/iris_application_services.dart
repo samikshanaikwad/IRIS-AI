@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../core/database/iris_database.dart';
 import '../features/cases/data/managed_case_repository.dart';
 import '../features/cases/data/sqlite_case_repository.dart';
@@ -31,6 +33,10 @@ import '../features/location/application/case_location_service.dart';
 import '../features/location/data/sqlite_case_location_repository.dart';
 import '../features/geometry/application/evidence_world_alignment_service.dart';
 import '../features/geometry/data/sqlite_world_alignment_repository.dart';
+import '../features/segmentation/application/evidence_segmentation_controller.dart';
+import '../features/segmentation/application/evidence_segmentation_service.dart';
+import '../features/segmentation/data/evidence_segmentation_storage.dart';
+import '../features/segmentation/data/sqlite_evidence_segmentation_repository.dart';
 
 class IrisApplicationServices {
   IrisApplicationServices({
@@ -42,6 +48,7 @@ class IrisApplicationServices {
     this.evidenceQuality,
     this.evidenceClassification,
     this.evidenceDetection,
+    this.evidenceSegmentation,
     this.evidenceDepth,
     this.relativeGeometry,
     this.multiView,
@@ -101,6 +108,17 @@ class IrisApplicationServices {
       storage: storage,
       quality: qualityService,
     );
+    final EvidenceSegmentationService segmentationService =
+        EvidenceSegmentationService(
+          repository: SqliteEvidenceSegmentationRepository(database),
+          storage: EvidenceSegmentationStorage(storage),
+          evidenceStorage: storage,
+          detection: detectionService,
+          runtime: const MethodChannelEvidenceSegmentationRuntime(),
+          // The exact MobileSAM artifacts remain debug-only until product
+          // redistribution review and lower-memory device qualification pass.
+          executionEnabled: kDebugMode,
+        );
     return IrisApplicationServices(
       caseRepository: ManagedCaseRepository(
         SqliteCaseRepository(database),
@@ -120,6 +138,7 @@ class IrisApplicationServices {
         quality: qualityService,
       ),
       evidenceDetection: detectionService,
+      evidenceSegmentation: segmentationService,
       evidenceDepth: depthService,
       relativeGeometry: geometryService,
       multiView: multiViewService,
@@ -137,6 +156,7 @@ class IrisApplicationServices {
   final EvidenceQualityOperations? evidenceQuality;
   final EvidenceClassificationOperations? evidenceClassification;
   final EvidenceDetectionOperations? evidenceDetection;
+  final EvidenceSegmentationOperations? evidenceSegmentation;
   final EvidenceDepthOperations? evidenceDepth;
   final RelativeGeometryOperations? relativeGeometry;
   final MultiViewService? multiView;
@@ -200,9 +220,23 @@ class IrisApplicationServices {
 
   EvidenceDepthController evidenceDepthControllerFor(EvidenceImage evidence) {
     final operations = evidenceDepth;
-    if (operations == null)
+    if (operations == null) {
       throw StateError('Depth services are not configured.');
+    }
     return EvidenceDepthController(evidence: evidence, operations: operations);
+  }
+
+  EvidenceSegmentationController evidenceSegmentationControllerFor(
+    EvidenceImage evidence,
+  ) {
+    final operations = evidenceSegmentation;
+    if (operations == null) {
+      throw StateError('Segmentation services are not configured.');
+    }
+    return EvidenceSegmentationController(
+      evidence: evidence,
+      operations: operations,
+    );
   }
 
   Future<void> close() async {

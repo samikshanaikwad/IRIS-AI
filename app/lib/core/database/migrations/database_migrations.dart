@@ -45,12 +45,66 @@ Future<void> migrateDatabase(
         await _createVersionSixteen(database);
       case 17:
         await _createVersionSeventeen(database);
+      case 18:
+        await _createVersionEighteen(database);
       default:
         throw StateError(
           'No database migration registered for version $version.',
         );
     }
   }
+}
+
+Future<void> _createVersionEighteen(Database database) async {
+  await database.execute('''
+    CREATE TABLE ${IrisDatabaseConstants.evidenceSegmentationAnalysesTable} (
+      id TEXT PRIMARY KEY NOT NULL,
+      evidence_id TEXT NOT NULL UNIQUE,
+      case_id TEXT NOT NULL,
+      source_evidence_sha256 TEXT NOT NULL CHECK(length(source_evidence_sha256) = 64),
+      detection_analysis_id TEXT NOT NULL,
+      detector_sha256 TEXT NOT NULL CHECK(length(detector_sha256) = 64),
+      detector_contract_version TEXT NOT NULL,
+      model_id TEXT NOT NULL,
+      model_source_commit TEXT NOT NULL,
+      model_checkpoint_sha256 TEXT NOT NULL CHECK(length(model_checkpoint_sha256) = 64),
+      encoder_sha256 TEXT NOT NULL CHECK(length(encoder_sha256) = 64),
+      decoder_sha256 TEXT NOT NULL CHECK(length(decoder_sha256) = 64),
+      coordinate_contract_version TEXT NOT NULL,
+      coordinate_metadata_json TEXT NOT NULL,
+      analyzed_at INTEGER NOT NULL,
+      mask_count INTEGER NOT NULL CHECK(mask_count > 0),
+      overlay_file_relative_path TEXT NOT NULL UNIQUE,
+      overlay_sha256 TEXT NOT NULL CHECK(length(overlay_sha256) = 64),
+      encoder_ms REAL,
+      decoder_ms REAL,
+      total_ms REAL,
+      sampled_peak_pss_kb INTEGER CHECK(sampled_peak_pss_kb IS NULL OR sampled_peak_pss_kb >= 0),
+      baseline_pss_kb INTEGER CHECK(baseline_pss_kb IS NULL OR baseline_pss_kb >= 0),
+      FOREIGN KEY(case_id) REFERENCES ${IrisDatabaseConstants.casesTable}(id) ON DELETE CASCADE,
+      FOREIGN KEY(evidence_id) REFERENCES ${IrisDatabaseConstants.evidenceTable}(id) ON DELETE CASCADE
+    )
+  ''');
+  await database.execute('''
+    CREATE TABLE ${IrisDatabaseConstants.evidenceSegmentationMasksTable} (
+      id TEXT PRIMARY KEY NOT NULL,
+      analysis_id TEXT NOT NULL,
+      detection_index INTEGER NOT NULL CHECK(detection_index >= 0),
+      class_id INTEGER NOT NULL CHECK(class_id IN (2, 3)),
+      class_name TEXT NOT NULL CHECK(class_name IN ('car', 'motorcycle')),
+      detection_score REAL NOT NULL CHECK(detection_score >= 0.0 AND detection_score <= 1.0),
+      prompt_left REAL NOT NULL,
+      prompt_top REAL NOT NULL,
+      prompt_right REAL NOT NULL,
+      prompt_bottom REAL NOT NULL,
+      mask_file_relative_path TEXT NOT NULL UNIQUE,
+      mask_sha256 TEXT NOT NULL CHECK(length(mask_sha256) = 64),
+      mask_pixel_count INTEGER NOT NULL CHECK(mask_pixel_count > 0),
+      predicted_quality REAL,
+      FOREIGN KEY(analysis_id) REFERENCES ${IrisDatabaseConstants.evidenceSegmentationAnalysesTable}(id) ON DELETE CASCADE,
+      UNIQUE(analysis_id, detection_index)
+    )
+  ''');
 }
 
 Future<void> _createVersionSeventeen(Database database) async {

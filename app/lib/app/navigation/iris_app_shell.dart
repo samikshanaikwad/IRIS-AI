@@ -57,6 +57,7 @@ class _IrisAppShellState extends State<IrisAppShell> {
     final evidenceClassification = widget.services.evidenceClassification;
     final evidenceDetection = widget.services.evidenceDetection;
     final evidenceDepth = widget.services.evidenceDepth;
+    final evidenceSegmentation = widget.services.evidenceSegmentation;
     final relativeGeometry = widget.services.relativeGeometry;
     final multiView = widget.services.multiView;
     final location = widget.services.location;
@@ -65,6 +66,7 @@ class _IrisAppShellState extends State<IrisAppShell> {
         evidenceClassification == null ||
         evidenceDetection == null ||
         evidenceDepth == null ||
+        evidenceSegmentation == null ||
         relativeGeometry == null ||
         multiView == null ||
         location == null ||
@@ -82,6 +84,7 @@ class _IrisAppShellState extends State<IrisAppShell> {
             evidenceClassification: evidenceClassification,
             evidenceDetection: evidenceDetection,
             evidenceDepth: evidenceDepth,
+            evidenceSegmentation: evidenceSegmentation,
             relativeGeometry: relativeGeometry,
             multiView: multiView,
             location: location,

@@ -9,6 +9,7 @@ import android.os.Debug
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.Log
 import androidx.exifinterface.media.ExifInterface
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
@@ -29,10 +30,11 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
- * Debug-only, isolated MobileSAM qualification runner. It consumes current
- * TASK007 box prompts supplied by the evidence screen and writes only one
- * visualization overlay into app-private cache. It never saves an analysis,
- * mask, or image into the evidence/database repositories.
+ * Debug-only MobileSAM execution boundary shared by the isolated A2 harness
+ * and the A3 evidence workflow. Dart owns durable persistence; this runtime
+ * writes atomic temporary artifacts only into app-private cache. Release
+ * builds do not register either channel while redistribution review remains
+ * open.
  */
 class IrisSegmentationQualificationRuntime(private val context: Context) : AutoCloseable {
     private val executor = Executors.newSingleThreadExecutor()
@@ -75,6 +77,38 @@ class IrisSegmentationQualificationRuntime(private val context: Context) : AutoC
         return true
     }
 
+    fun handleEvidence(call: MethodCall, result: MethodChannel.Result): Boolean {
+        if (!context.applicationInfo.flags.let { it and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0 }) {
+            result.error("unavailable", "Vehicle segmentation is not enabled in this build.", null)
+            return true
+        }
+        if (call.method != "run") return false
+        val path = call.argument<String>("absolutePath")
+        val contract = call.argument<String>("coordinateContractVersion")
+        val boxes = call.argument<List<Map<String, Any>>>("boxes")
+        val outputId = call.argument<String>("outputId")
+        if (path.isNullOrBlank() || contract != IrisImageCoordinateContract.VERSION || boxes.isNullOrEmpty() || boxes.size > 12 || outputId == null || !safeId.matches(outputId)) {
+            result.error("invalid_request", "Current image coordinates and qualified TASK007 detections are required.", null)
+            return true
+        }
+        executor.execute {
+            try {
+                val output = runQualification(File(path), boxes, outputId)
+                Handler(Looper.getMainLooper()).post { result.success(output) }
+            } catch (_: OutOfMemoryError) {
+                releaseSessions()
+                Handler(Looper.getMainLooper()).post {
+                    result.error("insufficient_memory", "MobileSAM could not obtain enough memory; no mask was saved.", null)
+                }
+            } catch (_: Throwable) {
+                Handler(Looper.getMainLooper()).post {
+                    result.error("segmentation_failed", "On-device segmentation did not produce a persistent-ready mask.", null)
+                }
+            }
+        }
+        return true
+    }
+
     private fun preparePublicEvaluationImage(call: MethodCall, result: MethodChannel.Result) {
         val assetName = call.argument<String>("assetName")
         val expectedSha256 = call.argument<String>("sha256")
@@ -93,10 +127,7 @@ class IrisSegmentationQualificationRuntime(private val context: Context) : AutoC
                 check(sha256(bytes) == expectedSha256)
                 val directory = qualificationDirectory()
                 val destination = File(directory, "source-$assetName")
-                FileOutputStream(destination).use { output ->
-                    output.write(bytes)
-                    output.fd.sync()
-                }
+                writeBytesAtomic(destination, bytes)
                 Handler(Looper.getMainLooper()).post {
                     result.success(
                         mapOf(
@@ -145,18 +176,51 @@ class IrisSegmentationQualificationRuntime(private val context: Context) : AutoC
         }.apply { name = "iris-segmentation-memory-sampler"; isDaemon = true; start() }
         val allStarted = SystemClock.elapsedRealtimeNanos()
         try {
-            val modelLoadStarted = SystemClock.elapsedRealtimeNanos()
-            val (encoderSession, decoderSession) = getSessions()
-            val modelLoadMs = elapsedMs(modelLoadStarted)
+            var modelLoadNanos = 0L
+            var loadStarted = SystemClock.elapsedRealtimeNanos()
+            val encoderSession = createSession(
+                "mobilesam_vit_t_encoder.onnx",
+                encoderSha256,
+            )
+            encoder = encoderSession
+            modelLoadNanos += SystemClock.elapsedRealtimeNanos() - loadStarted
             val preprocessStart = SystemClock.elapsedRealtimeNanos()
             val prepared = prepareSamInput(oriented)
-            val imageTensor = OnnxTensor.createTensor(environment, prepared, longArrayOf(1, 3, 1024, 1024))
             val encodeStarted = SystemClock.elapsedRealtimeNanos()
-            val embeddingResult = encoderSession.run(mapOf("normalized_image" to imageTensor))
+            lateinit var embeddingValues: FloatArray
+            OnnxTensor.createTensor(
+                environment,
+                prepared,
+                longArrayOf(1, 3, 1024, 1024),
+            ).use { imageTensor ->
+                encoderSession.run(mapOf("normalized_image" to imageTensor)).use { embeddingResult ->
+                    val encoded = embeddingResult
+                        .get("image_embeddings")
+                        .orElseThrow() as OnnxTensor
+                    val shape = encoded.info.shape
+                    check(shape.contentEquals(longArrayOf(1, 256, 64, 64)))
+                    val values = encoded.floatBuffer
+                    embeddingValues = FloatArray(values.remaining())
+                    values.get(embeddingValues)
+                }
+            }
             val encodeMs = elapsedMs(encodeStarted)
-            imageTensor.close()
-            val embedding = embeddingResult.get("image_embeddings").orElseThrow() as OnnxTensor
             val preparedMs = nanosToMs(encodeStarted - preprocessStart)
+            releaseSessions()
+
+            loadStarted = SystemClock.elapsedRealtimeNanos()
+            val decoderSession = createSession(
+                "mobilesam_vit_t_box_decoder.onnx",
+                decoderSha256,
+            )
+            decoder = decoderSession
+            modelLoadNanos += SystemClock.elapsedRealtimeNanos() - loadStarted
+            val modelLoadMs = nanosToMs(modelLoadNanos)
+            val embedding = OnnxTensor.createTensor(
+                environment,
+                FloatBuffer.wrap(embeddingValues),
+                longArrayOf(1, 256, 64, 64),
+            )
             val overlay = oriented.copy(Bitmap.Config.ARGB_8888, true)
             val canvas = Canvas(overlay)
             val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { alpha = 150 }
@@ -209,10 +273,7 @@ class IrisSegmentationQualificationRuntime(private val context: Context) : AutoC
                         oriented.height,
                         Bitmap.Config.ARGB_8888,
                     )
-                    FileOutputStream(maskFile).use { output ->
-                        check(binaryMask.compress(Bitmap.CompressFormat.PNG, 100, output))
-                        output.fd.sync()
-                    }
+                    writeBitmapAtomic(maskFile, binaryMask)
                     binaryMask.recycle()
                     wroteAnyMask = true
                 } else if (maskFile.exists()) {
@@ -242,20 +303,30 @@ class IrisSegmentationQualificationRuntime(private val context: Context) : AutoC
                 )
                 resultForBox.close()
             }
-            embeddingResult.close()
+            embedding.close()
             check(wroteAnyMask)
-            FileOutputStream(outputFile).use { output ->
-                check(overlay.compress(Bitmap.CompressFormat.PNG, 100, output))
-                output.fd.sync()
-            }
+            writeBitmapAtomic(outputFile, overlay)
             overlay.recycle()
             val outputHash = sha256(outputFile)
             val pssAtReturn = currentPssKb()
             peakPss.updateAndGet { current -> max(current, pssAtReturn) }
+            val decoderTotalMs = perDetection.sumOf {
+                (it["decoderMs"] as Number).toDouble()
+            }
+            val totalMs = elapsedMs(allStarted)
+            Log.d(
+                "IRISSegmentation",
+                "stage=completed masks=${perDetection.size} " +
+                    "encoderMs=$encodeMs decoderMs=$decoderTotalMs totalMs=$totalMs " +
+                    "baselinePssKb=$baselinePss sampledPeakPssKb=${peakPss.get()} " +
+                    "lifecycle=SEQUENTIAL_ENCODER_DECODER_RELEASE_AFTER_RUN",
+            )
             return mapOf(
                 "status" to "MASKS_GENERATED_ON_DEVICE",
                 "model" to "MobileSAM ViT-T",
+                "modelId" to "mobilesam-vit-t-task007-box-v1",
                 "modelSourceCommit" to upstreamCommit,
+                "modelCheckpointSha256" to checkpointSha256,
                 "encoderSha256" to encoderSha256,
                 "decoderSha256" to decoderSha256,
                 "coordinateContractVersion" to IrisImageCoordinateContract.VERSION,
@@ -265,10 +336,11 @@ class IrisSegmentationQualificationRuntime(private val context: Context) : AutoC
                 "preprocessMs" to preparedMs,
                 "imageEncoderMs" to encodeMs,
                 "promptMaskResults" to perDetection,
-                "totalMs" to elapsedMs(allStarted),
+                "totalMs" to totalMs,
                 "sampledPeakPssKb" to peakPss.get(),
                 "baselinePssKb" to baselinePss,
                 "peakPssDeltaKb" to max(0, peakPss.get() - baselinePss),
+                "modelLifecycle" to "SEQUENTIAL_ENCODER_DECODER_RELEASE_AFTER_RUN",
                 "overlayPath" to outputFile.absolutePath,
                 "overlaySha256" to outputHash,
             )
@@ -277,6 +349,11 @@ class IrisSegmentationQualificationRuntime(private val context: Context) : AutoC
             sampler.interrupt()
             if (Thread.currentThread() != sampler) sampler.join(100)
             oriented.recycle()
+            // The A2 device run measured process PSS as high as 1,241,246 kB.
+            // Do not retain both ONNX sessions after a deferred analysis. This
+            // does not claim a lower peak; it bounds post-run residency and is
+            // re-measured by every returned baseline/peak sample.
+            releaseSessions()
         }
     }
 
@@ -294,22 +371,19 @@ class IrisSegmentationQualificationRuntime(private val context: Context) : AutoC
         return PromptBox(className, score, left, top, right, bottom)
     }
 
-    private fun getSessions(): Pair<OrtSession, OrtSession> {
-        if (encoder == null) {
-            val encoderBytes = context.assets.open("mobilesam_vit_t_encoder.onnx").use { it.readBytes() }
-            val decoderBytes = context.assets.open("mobilesam_vit_t_box_decoder.onnx").use { it.readBytes() }
-            check(sha256(encoderBytes) == encoderSha256 && sha256(decoderBytes) == decoderSha256)
-            val options = OrtSession.SessionOptions().apply {
-                setIntraOpNumThreads(4)
-                setInterOpNumThreads(1)
-                setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
-            }
-            try {
-                encoder = environment.createSession(encoderBytes, options)
-                decoder = environment.createSession(decoderBytes, options)
-            } finally { options.close() }
+    private fun createSession(assetName: String, expectedSha256: String): OrtSession {
+        val bytes = context.assets.open(assetName).use { it.readBytes() }
+        check(sha256(bytes) == expectedSha256)
+        val options = OrtSession.SessionOptions().apply {
+            setIntraOpNumThreads(4)
+            setInterOpNumThreads(1)
+            setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
         }
-        return Pair(checkNotNull(encoder), checkNotNull(decoder))
+        return try {
+            environment.createSession(bytes, options)
+        } finally {
+            options.close()
+        }
     }
 
     private fun runDecoder(session: OrtSession, embedding: OnnxTensor, width: Int, height: Int, box: PromptBox): OrtSession.Result {
@@ -376,18 +450,53 @@ class IrisSegmentationQualificationRuntime(private val context: Context) : AutoC
             check(it.isDirectory || it.mkdirs())
         }
 
-    override fun close() {
-        executor.shutdown()
+    private fun writeBitmapAtomic(destination: File, bitmap: Bitmap) {
+        val temporary = File(destination.parentFile, destination.name + ".part")
+        if (temporary.exists()) check(temporary.delete())
+        try {
+            FileOutputStream(temporary).use { output ->
+                check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output))
+                output.fd.sync()
+            }
+            if (destination.exists()) check(destination.delete())
+            check(temporary.renameTo(destination))
+        } finally {
+            if (temporary.exists()) temporary.delete()
+        }
+    }
+
+    private fun writeBytesAtomic(destination: File, bytes: ByteArray) {
+        val temporary = File(destination.parentFile, destination.name + ".part")
+        if (temporary.exists()) check(temporary.delete())
+        try {
+            FileOutputStream(temporary).use { output ->
+                output.write(bytes)
+                output.fd.sync()
+            }
+            if (destination.exists()) check(destination.delete())
+            check(temporary.renameTo(destination))
+        } finally {
+            if (temporary.exists()) temporary.delete()
+        }
+    }
+
+    private fun releaseSessions() {
         encoder?.close(); encoder = null
         decoder?.close(); decoder = null
     }
 
+    override fun close() {
+        executor.shutdown()
+        releaseSessions()
+    }
+
     private companion object {
         const val upstreamCommit = "f706ad9c4eb7f219c00d9050e46328518ffb65d2"
+        const val checkpointSha256 = "6dbb90523a35330fedd7f1d3dfc66f995213d81b29a5ca8108dbcdd4e37d6c2f"
         const val encoderSha256 = "f55b0f6c6949d4737ba06ddf14b99b35ae7c26c782f9865078e34b0a0f45df49"
         const val decoderSha256 = "4a3d6ee977ce5ad077e1ab980db5f1bffb96758c4029a2abccd0d08634a8bf63"
-        val eligibleClasses = mapOf(1 to "bicycle", 2 to "car", 3 to "motorcycle", 5 to "bus", 7 to "truck")
-        val safeId = Regex("[a-z0-9][a-z0-9_-]{0,63}")
+        val eligibleClasses = mapOf(2 to "car", 3 to "motorcycle")
+        val safeId = Regex("[A-Za-z0-9][A-Za-z0-9_-]{0,127}")
         val safeAssetName = Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
         val sha256Pattern = Regex("[0-9a-f]{64}")
     }

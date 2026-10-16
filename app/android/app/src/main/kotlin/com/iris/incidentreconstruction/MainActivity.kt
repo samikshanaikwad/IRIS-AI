@@ -54,6 +54,12 @@ class MainActivity : FlutterActivity() {
             ).setMethodCallHandler { call, result ->
                 if (!segmentation.handle(call, result)) result.notImplemented()
             }
+            MethodChannel(
+                flutterEngine.dartExecutor.binaryMessenger,
+                segmentationChannel,
+            ).setMethodCallHandler { call, result ->
+                if (!segmentation.handleEvidence(call, result)) result.notImplemented()
+            }
             installPluginRegistrationDiagnostics(
                 flutterEngine,
                 generatedRegistrantInvoked,
@@ -161,6 +167,7 @@ class MainActivity : FlutterActivity() {
         const val multiViewChannel = "com.iris.multiview/v1"
         const val locationChannel = "com.iris.location/v1"
         const val segmentationQualificationChannel = "com.iris.debug/segmentation-qualification"
+        const val segmentationChannel = "com.iris.segmentation/v1"
         internal val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
         const val sqflitePluginClassName = "com.tekartik.sqflite.SqflitePlugin"
         val pluginClassNames = mapOf(
