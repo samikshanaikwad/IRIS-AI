@@ -13,6 +13,7 @@ import '../../evidence_quality/application/evidence_quality_service.dart';
 import '../../classification/application/evidence_classification_service.dart';
 import '../../depth/application/evidence_depth_service.dart';
 import '../../multiview/application/multiview_service.dart';
+import '../../partial_surface/application/evidence_partial_surface_service.dart';
 import '../../reconstruction/application/reconstruction_scene_service.dart';
 import '../../reconstruction/domain/reconstruction_scene.dart';
 import '../../reconstruction/presentation/scene_render_data.dart';
@@ -30,6 +31,7 @@ class RoadSceneSection extends StatefulWidget {
     this.classification,
     this.depth,
     this.multiView,
+    this.partialSurfaces,
     super.key,
   });
   final String caseId;
@@ -42,6 +44,7 @@ class RoadSceneSection extends StatefulWidget {
   final EvidenceClassificationOperations? classification;
   final EvidenceDepthOperations? depth;
   final MultiViewService? multiView;
+  final EvidencePartialSurfaceOperations? partialSurfaces;
   @override
   State<RoadSceneSection> createState() => _RoadSceneSectionState();
 }
@@ -68,6 +71,7 @@ class _RoadSceneSectionState extends State<RoadSceneSection> {
         classification: widget.classification,
         depth: widget.depth,
         multiView: widget.multiView,
+        partialSurfaces: widget.partialSurfaces,
       );
       final scene = await loader.load(widget.caseId);
       if (!mounted) return;

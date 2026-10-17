@@ -37,6 +37,10 @@ import '../features/segmentation/application/evidence_segmentation_controller.da
 import '../features/segmentation/application/evidence_segmentation_service.dart';
 import '../features/segmentation/data/evidence_segmentation_storage.dart';
 import '../features/segmentation/data/sqlite_evidence_segmentation_repository.dart';
+import '../features/partial_surface/application/evidence_partial_surface_controller.dart';
+import '../features/partial_surface/application/evidence_partial_surface_service.dart';
+import '../features/partial_surface/data/evidence_partial_surface_storage.dart';
+import '../features/partial_surface/data/sqlite_evidence_partial_surface_repository.dart';
 import '../features/scenarios/application/accident_scenario_service.dart';
 import '../features/scenarios/data/sqlite_accident_scenario_repository.dart';
 
@@ -51,6 +55,7 @@ class IrisApplicationServices {
     this.evidenceClassification,
     this.evidenceDetection,
     this.evidenceSegmentation,
+    this.evidencePartialSurfaces,
     this.evidenceDepth,
     this.relativeGeometry,
     this.multiView,
@@ -127,6 +132,15 @@ class IrisApplicationServices {
       evidence: evidenceRepository,
       detection: detectionService,
     );
+    final EvidencePartialSurfaceService partialSurfaceService =
+        EvidencePartialSurfaceService(
+          repository: SqliteEvidencePartialSurfaceRepository(database),
+          storage: EvidencePartialSurfaceStorage(storage),
+          evidenceStorage: storage,
+          segmentation: segmentationService,
+          depth: depthService,
+          runtime: const MethodChannelEvidencePartialSurfaceRuntime(),
+        );
     return IrisApplicationServices(
       caseRepository: ManagedCaseRepository(
         SqliteCaseRepository(database),
@@ -147,6 +161,7 @@ class IrisApplicationServices {
       ),
       evidenceDetection: detectionService,
       evidenceSegmentation: segmentationService,
+      evidencePartialSurfaces: partialSurfaceService,
       evidenceDepth: depthService,
       relativeGeometry: geometryService,
       multiView: multiViewService,
@@ -166,6 +181,7 @@ class IrisApplicationServices {
   final EvidenceClassificationOperations? evidenceClassification;
   final EvidenceDetectionOperations? evidenceDetection;
   final EvidenceSegmentationOperations? evidenceSegmentation;
+  final EvidencePartialSurfaceOperations? evidencePartialSurfaces;
   final EvidenceDepthOperations? evidenceDepth;
   final RelativeGeometryOperations? relativeGeometry;
   final MultiViewService? multiView;
@@ -244,6 +260,19 @@ class IrisApplicationServices {
       throw StateError('Segmentation services are not configured.');
     }
     return EvidenceSegmentationController(
+      evidence: evidence,
+      operations: operations,
+    );
+  }
+
+  EvidencePartialSurfaceController evidencePartialSurfaceControllerFor(
+    EvidenceImage evidence,
+  ) {
+    final operations = evidencePartialSurfaces;
+    if (operations == null) {
+      throw StateError('Partial surface services are not configured.');
+    }
+    return EvidencePartialSurfaceController(
       evidence: evidence,
       operations: operations,
     );

@@ -21,6 +21,8 @@ import '../../depth/application/evidence_depth_controller.dart';
 import '../../depth/application/evidence_depth_service.dart';
 import '../../segmentation/application/evidence_segmentation_controller.dart';
 import '../../segmentation/application/evidence_segmentation_service.dart';
+import '../../partial_surface/application/evidence_partial_surface_controller.dart';
+import '../../partial_surface/application/evidence_partial_surface_service.dart';
 import '../../geometry/application/relative_geometry_controller.dart';
 import '../../geometry/application/relative_geometry_service.dart';
 import '../application/evidence_acquisition_service.dart';
@@ -38,6 +40,7 @@ class CaseEvidenceSection extends StatefulWidget {
     required this.detectionOperations,
     required this.depthOperations,
     required this.segmentationOperations,
+    required this.partialSurfaceOperations,
     required this.geometryOperations,
     this.picker,
     super.key,
@@ -49,6 +52,7 @@ class CaseEvidenceSection extends StatefulWidget {
   final EvidenceDetectionOperations detectionOperations;
   final EvidenceDepthOperations depthOperations;
   final EvidenceSegmentationOperations segmentationOperations;
+  final EvidencePartialSurfaceOperations partialSurfaceOperations;
   final RelativeGeometryOperations geometryOperations;
   final EvidencePickerGateway? picker;
 
@@ -339,6 +343,11 @@ class _CaseEvidenceSectionState extends State<CaseEvidenceSection> {
                           evidence: evidence,
                           operations: widget.segmentationOperations,
                         ),
+                        partialSurfaceController:
+                            EvidencePartialSurfaceController(
+                              evidence: evidence,
+                              operations: widget.partialSurfaceOperations,
+                            ),
                         geometryController: RelativeGeometryController(
                           evidence: evidence,
                           operations: widget.geometryOperations,

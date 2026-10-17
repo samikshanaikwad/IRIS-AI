@@ -179,7 +179,9 @@ class ReconstructionPainter extends CustomPainter {
         Paint()
           ..isAntiAlias =
               false // Shared coplanar subdivisions must not show seams.
-          ..color = shadeDisplayFace(projected.face),
+          ..color = projected.face.preserveSourceColour
+              ? projected.face.color
+              : shadeDisplayFace(projected.face),
       );
       if (projected.mesh.id.startsWith('road/')) {
         // Display-only surface separation, not a curb/lane/map attribute.

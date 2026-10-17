@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/domain/case_local_world.dart';
+import '../../geometry/domain/relative_geometry.dart';
 import '../domain/reconstruction_scene.dart';
 
 /// DISPLAY ONLY. These mesh dimensions must never be passed to analytical or
@@ -11,10 +12,19 @@ class RenderPoint {
 }
 
 class RenderFace {
-  const RenderFace(this.vertices, this.color, {this.holes = const []});
+  const RenderFace(
+    this.vertices,
+    this.color, {
+    this.holes = const [],
+    this.preserveSourceColour = false,
+  });
   final List<RenderPoint> vertices;
   final List<List<RenderPoint>> holes;
   final Color color;
+
+  /// Evidence-photo colours are already observations rather than display
+  /// materials. Keep them out of directional display shading.
+  final bool preserveSourceColour;
 }
 
 class RenderMesh {
@@ -718,7 +728,64 @@ class SceneRenderData {
         );
       }
     }
+    final partialVehicleIds = <String>{};
+    for (final surface in source.partialSurfaces) {
+      final local = surface.mesh.vertices;
+      final world = local
+          .map((vertex) {
+            final point = surface.alignment.transform(
+              RelativePoint(
+                x: vertex.x,
+                y: vertex.y,
+                z: vertex.z,
+                u: vertex.u,
+                v: vertex.v,
+              ),
+            );
+            return RenderPoint(point.x, point.y, point.z);
+          })
+          .toList(growable: false);
+      final faces = <RenderFace>[];
+      for (final triangle in surface.mesh.triangles) {
+        if (triangle.a >= world.length ||
+            triangle.b >= world.length ||
+            triangle.c >= world.length) {
+          continue;
+        }
+        faces.add(
+          RenderFace(
+            <RenderPoint>[
+              world[triangle.a],
+              world[triangle.b],
+              world[triangle.c],
+            ],
+            _surfaceFaceColour(
+              local[triangle.a].argb,
+              local[triangle.b].argb,
+              local[triangle.c].argb,
+            ),
+            preserveSourceColour: true,
+          ),
+        );
+      }
+      if (faces.isEmpty) continue;
+      partialVehicleIds.add(surface.vehicleId);
+      out.add(
+        RenderMesh(
+          'evidence-surface/${surface.vehicleId}',
+          'Evidence-coloured partial ${surface.mesh.part.className}',
+          'Visible pixels: original evidence colour + current vehicle mask + relative depth\n'
+              'Evidence-derived + user aligned • partial, nonmetric, uncalibrated\n'
+              'No hidden geometry, dimensions, damage finding, or orientation established',
+          faces,
+        ),
+      );
+    }
     for (final vehicle in source.vehicles) {
+      // A current visible surface is preferable to the old class silhouette.
+      // Never cover a real, potentially damaged appearance with an intact
+      // representational proxy for the same evidence/detection.
+      if (partialVehicleIds.contains(vehicle.id)) continue;
       out.add(
         RenderMesh(
           vehicle.id,
@@ -783,6 +850,13 @@ class SceneRenderData {
     return List.unmodifiable(out);
   }
 }
+
+Color _surfaceFaceColour(int a, int b, int c) => Color.fromARGB(
+  ((a >>> 24) + (b >>> 24) + (c >>> 24)) ~/ 3,
+  (((a >>> 16) & 255) + ((b >>> 16) & 255) + ((c >>> 16) & 255)) ~/ 3,
+  (((a >>> 8) & 255) + ((b >>> 8) & 255) + ((c >>> 8) & 255)) ~/ 3,
+  ((a & 255) + (b & 255) + (c & 255)) ~/ 3,
+);
 
 /// Normalize winding and repeated closure for display only, retaining the
 /// original source geometry. Interior rings face into the courtyard.

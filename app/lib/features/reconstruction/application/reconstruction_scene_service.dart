@@ -20,6 +20,8 @@ import '../../classification/application/evidence_classification_service.dart';
 import '../../depth/application/evidence_depth_service.dart';
 import '../../depth/domain/evidence_depth.dart';
 import '../../multiview/application/multiview_service.dart';
+import '../../partial_surface/application/evidence_partial_surface_service.dart';
+import '../../partial_surface/domain/evidence_partial_surface.dart';
 import '../domain/reconstruction_scene.dart';
 import '../domain/evidence_reconstruction_eligibility.dart';
 
@@ -34,6 +36,7 @@ class ReconstructionSceneService {
     this.classification,
     this.depth,
     this.multiView,
+    this.partialSurfaces,
   });
   final CaseLocationService location;
   final Future<List<EvidenceImage>> Function() loadEvidence;
@@ -44,6 +47,7 @@ class ReconstructionSceneService {
   final EvidenceClassificationOperations? classification;
   final EvidenceDepthOperations? depth;
   final MultiViewService? multiView;
+  final EvidencePartialSurfaceOperations? partialSurfaces;
 
   Future<ReconstructionScene> load(String caseId) async {
     final origin = await location.load(caseId);
@@ -137,6 +141,22 @@ class ReconstructionSceneService {
         geometryState = ReconstructionPrerequisite.ready;
         return 'current';
       });
+      var visibleSurfaces = <EvidencePartialSurfaceMesh>[];
+      if (partialSurfaces != null) {
+        await stage('Visible partial surface', () async {
+          final snapshot = await partialSurfaces!.load(item);
+          if (snapshot.state != EvidencePartialSurfaceState.current ||
+              snapshot.analysis == null) {
+            return snapshot.state.name;
+          }
+          visibleSurfaces = List<EvidencePartialSurfaceMesh>.unmodifiable(
+            await Future.wait(
+              snapshot.analysis!.parts.map(partialSurfaces!.read),
+            ),
+          );
+          return 'current (${visibleSurfaces.length} part${visibleSurfaces.length == 1 ? '' : 's'})';
+        });
+      }
       EvidenceWorldAlignment? saved;
       var alignmentState = ReconstructionPrerequisite.unavailable;
       // The confirmed location defines the canonical TASK012 world frame.
@@ -233,6 +253,7 @@ class ReconstructionSceneService {
           capabilities: capabilities,
           geometry: points,
           alignment: saved,
+          partialSurfaces: visibleSurfaces,
           detection: analysis,
           eligibility: evaluateEvidenceReconstruction(
             evidenceId: item.id,
@@ -291,6 +312,7 @@ class ReconstructionSceneService {
               'stage=scene evidence=${evidence.length} '
               'aligned=${evidence.where((e) => e.geometry != null && e.alignment != null).length} '
               'vehicles=${evidence.fold<int>(0, (n, e) => n + e.markers.length)} '
+              'partialSurfaces=${evidence.fold<int>(0, (n, e) => n + e.partialSurfaces.length)} '
               'buildings=${environment?.count('building') ?? 0} '
               'trees=${environment?.count('tree') ?? 0} barriers=${environment?.count('barrier') ?? 0} '
               'environment=${environment?.providerState.storageValue ?? 'UNAVAILABLE'}',
@@ -325,6 +347,7 @@ SceneEvidence composeSceneEvidence({
   required Map<String, String> capabilities,
   RelativeGeometry? geometry,
   EvidenceWorldAlignment? alignment,
+  List<EvidencePartialSurfaceMesh> partialSurfaces = const [],
   EvidenceDetectionAnalysis? detection,
   EvidenceReconstructionEligibility? eligibility,
 }) {
@@ -362,6 +385,7 @@ SceneEvidence composeSceneEvidence({
     geometry: geometry,
     alignment: alignment,
     markers: List.unmodifiable(markers),
+    partialSurfaces: List.unmodifiable(partialSurfaces),
     eligibility: eligibility,
   );
 }

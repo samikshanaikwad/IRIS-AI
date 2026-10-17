@@ -24,6 +24,8 @@ import '../../geometry/application/relative_geometry_controller.dart';
 import '../../geometry/presentation/relative_geometry_section.dart';
 import '../../segmentation/application/evidence_segmentation_controller.dart';
 import '../../segmentation/presentation/evidence_segmentation_section.dart';
+import '../../partial_surface/application/evidence_partial_surface_controller.dart';
+import '../../partial_surface/presentation/evidence_partial_surface_section.dart';
 
 class EvidenceDetailScreen extends StatefulWidget {
   const EvidenceDetailScreen({
@@ -34,6 +36,7 @@ class EvidenceDetailScreen extends StatefulWidget {
     required this.detectionController,
     required this.depthController,
     required this.segmentationController,
+    required this.partialSurfaceController,
     required this.geometryController,
     super.key,
   });
@@ -45,6 +48,7 @@ class EvidenceDetailScreen extends StatefulWidget {
   final EvidenceDetectionController detectionController;
   final EvidenceDepthController depthController;
   final EvidenceSegmentationController segmentationController;
+  final EvidencePartialSurfaceController partialSurfaceController;
   final RelativeGeometryController geometryController;
 
   @override
@@ -59,6 +63,14 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
   @override
   void initState() {
     super.initState();
+    // Depth and mask generation are independent, user-triggered operations.
+    // Refresh the derived-surface eligibility after either changes so an
+    // already-open evidence screen never retains a stale “prerequisite
+    // missing” state after a genuine on-device analysis completes.
+    widget.depthController.addListener(_refreshPartialSurfaceEligibility);
+    widget.segmentationController.addListener(
+      _refreshPartialSurfaceEligibility,
+    );
     unawaited(widget.depthController.load());
     unawaited(widget.geometryController.load());
     widget.controller.absolutePath(widget.evidence).then((String value) async {
@@ -70,6 +82,21 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
         });
       }
     });
+  }
+
+  void _refreshPartialSurfaceEligibility() {
+    if (!widget.partialSurfaceController.busy) {
+      unawaited(widget.partialSurfaceController.load());
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.depthController.removeListener(_refreshPartialSurfaceEligibility);
+    widget.segmentationController.removeListener(
+      _refreshPartialSurfaceEligibility,
+    );
+    super.dispose();
   }
 
   Future<void> _remove() async {
@@ -225,6 +252,10 @@ class _EvidenceDetailScreenState extends State<EvidenceDetailScreen> {
           const SizedBox(height: IrisSpacing.sm),
           EvidenceSegmentationSection(
             controller: widget.segmentationController,
+          ),
+          const SizedBox(height: IrisSpacing.md),
+          EvidencePartialSurfaceSection(
+            controller: widget.partialSurfaceController,
           ),
           const SizedBox(height: IrisSpacing.md),
           EvidenceDepthSection(controller: widget.depthController),

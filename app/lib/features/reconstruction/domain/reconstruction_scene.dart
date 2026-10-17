@@ -4,6 +4,7 @@ import '../../location/domain/environment_context.dart';
 import '../../geometry/domain/relative_geometry.dart';
 import '../../geometry/domain/evidence_world_alignment.dart';
 import '../../geometry/domain/evidence_vehicle_marker.dart';
+import '../../partial_surface/domain/evidence_partial_surface.dart';
 import 'evidence_reconstruction_eligibility.dart';
 
 enum SceneProvenance {
@@ -45,6 +46,17 @@ class ReconstructionScene {
   Iterable<RelativePoint> get alignedPoints => evidence
       .where((e) => e.geometry != null && e.alignment != null)
       .expand((e) => e.geometry!.points.map(e.alignment!.transform));
+  Iterable<ScenePartialSurface> get partialSurfaces => evidence
+      .where((e) => e.alignment != null && e.partialSurfaces.isNotEmpty)
+      .expand(
+        (e) => e.partialSurfaces.map(
+          (surface) => ScenePartialSurface(
+            evidenceId: e.evidenceId,
+            alignment: e.alignment!,
+            mesh: surface,
+          ),
+        ),
+      );
   ReconstructionScene withEnvironment(EnvironmentContext? value) =>
       ReconstructionScene(
         caseId: caseId,
@@ -65,6 +77,7 @@ class SceneEvidence {
     this.geometry,
     this.alignment,
     this.markers = const [],
+    this.partialSurfaces = const [],
     this.eligibility,
   });
   final String evidenceId, label, placementStatus;
@@ -72,11 +85,28 @@ class SceneEvidence {
   final RelativeGeometry? geometry;
   final EvidenceWorldAlignment? alignment;
   final List<EvidenceVehicleMarker> markers;
+  final List<EvidencePartialSurfaceMesh> partialSurfaces;
   final EvidenceReconstructionEligibility? eligibility;
   Set<SceneProvenance> get provenance => {
     SceneProvenance.evidenceDerived,
     if (alignment != null) SceneProvenance.userAligned,
   };
+}
+
+/// A visible-only, original-colour evidence mesh in the case-local scene only
+/// after a current explicit user alignment is available.  No automatic road
+/// snap or world/metric conversion occurs here.
+class ScenePartialSurface {
+  const ScenePartialSurface({
+    required this.evidenceId,
+    required this.alignment,
+    required this.mesh,
+  });
+
+  final String evidenceId;
+  final EvidenceWorldAlignment alignment;
+  final EvidencePartialSurfaceMesh mesh;
+  String get vehicleId => '$evidenceId/detection/${mesh.part.detectionIndex}';
 }
 
 class SceneVehicle {

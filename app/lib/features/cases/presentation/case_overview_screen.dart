@@ -20,6 +20,7 @@ import '../../classification/application/evidence_classification_service.dart';
 import '../../detection/application/evidence_detection_service.dart';
 import '../../depth/application/evidence_depth_service.dart';
 import '../../segmentation/application/evidence_segmentation_service.dart';
+import '../../partial_surface/application/evidence_partial_surface_service.dart';
 import '../../geometry/application/relative_geometry_service.dart';
 import 'case_date_formatter.dart';
 import 'case_title_sheet.dart';
@@ -43,6 +44,7 @@ class CaseOverviewScreen extends StatefulWidget {
     required this.evidenceDetection,
     required this.evidenceDepth,
     required this.evidenceSegmentation,
+    required this.evidencePartialSurfaces,
     required this.relativeGeometry,
     required this.multiView,
     required this.location,
@@ -59,6 +61,7 @@ class CaseOverviewScreen extends StatefulWidget {
   final EvidenceDetectionOperations evidenceDetection;
   final EvidenceDepthOperations evidenceDepth;
   final EvidenceSegmentationOperations evidenceSegmentation;
+  final EvidencePartialSurfaceOperations evidencePartialSurfaces;
   final RelativeGeometryOperations relativeGeometry;
   final MultiViewService multiView;
   final CaseLocationService location;
@@ -300,6 +303,7 @@ class _CaseOverviewScreenState extends State<CaseOverviewScreen> {
           detectionOperations: widget.evidenceDetection,
           depthOperations: widget.evidenceDepth,
           segmentationOperations: widget.evidenceSegmentation,
+          partialSurfaceOperations: widget.evidencePartialSurfaces,
           geometryOperations: widget.relativeGeometry,
         ),
         const SizedBox(height: IrisSpacing.lg),
@@ -325,6 +329,7 @@ class _CaseOverviewScreenState extends State<CaseOverviewScreen> {
           classification: widget.evidenceClassification,
           depth: widget.evidenceDepth,
           multiView: widget.multiView,
+          partialSurfaces: widget.evidencePartialSurfaces,
         ),
         const SizedBox(height: IrisSpacing.lg),
         EvidenceAlignmentSection(

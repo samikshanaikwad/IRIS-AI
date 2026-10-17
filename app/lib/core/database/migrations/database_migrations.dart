@@ -49,12 +49,60 @@ Future<void> migrateDatabase(
         await _createVersionEighteen(database);
       case 19:
         await _createVersionNineteen(database);
+      case 20:
+        await _createVersionTwenty(database);
       default:
         throw StateError(
           'No database migration registered for version $version.',
         );
     }
   }
+}
+
+/// Visible-only, evidence-coloured meshes.  These records deliberately store
+/// relative depth geometry and provenance, never measured vehicle dimensions
+/// or a world transform.  World placement remains a separate TASK012B concern.
+Future<void> _createVersionTwenty(Database database) async {
+  await database.execute('''
+    CREATE TABLE ${IrisDatabaseConstants.evidencePartialSurfaceAnalysesTable} (
+      id TEXT PRIMARY KEY NOT NULL,
+      evidence_id TEXT NOT NULL UNIQUE,
+      case_id TEXT NOT NULL,
+      source_evidence_sha256 TEXT NOT NULL CHECK(length(source_evidence_sha256) = 64),
+      segmentation_analysis_id TEXT NOT NULL,
+      segmentation_fingerprint TEXT NOT NULL CHECK(length(segmentation_fingerprint) = 64),
+      depth_evidence_sha256 TEXT NOT NULL CHECK(length(depth_evidence_sha256) = 64),
+      depth_analyzed_at INTEGER NOT NULL,
+      depth_model_sha256 TEXT NOT NULL CHECK(length(depth_model_sha256) = 64),
+      depth_file_sha256 TEXT NOT NULL CHECK(length(depth_file_sha256) = 64),
+      coordinate_contract_version TEXT NOT NULL,
+      coordinate_metadata_json TEXT NOT NULL,
+      processing_version TEXT NOT NULL,
+      generated_at INTEGER NOT NULL,
+      total_ms REAL,
+      sampled_peak_pss_kb INTEGER CHECK(sampled_peak_pss_kb IS NULL OR sampled_peak_pss_kb >= 0),
+      baseline_pss_kb INTEGER CHECK(baseline_pss_kb IS NULL OR baseline_pss_kb >= 0),
+      FOREIGN KEY(case_id) REFERENCES ${IrisDatabaseConstants.casesTable}(id) ON DELETE CASCADE,
+      FOREIGN KEY(evidence_id) REFERENCES ${IrisDatabaseConstants.evidenceTable}(id) ON DELETE CASCADE
+    )
+  ''');
+  await database.execute('''
+    CREATE TABLE ${IrisDatabaseConstants.evidencePartialSurfacePartsTable} (
+      id TEXT PRIMARY KEY NOT NULL,
+      analysis_id TEXT NOT NULL,
+      segmentation_mask_id TEXT NOT NULL,
+      detection_index INTEGER NOT NULL CHECK(detection_index >= 0),
+      class_id INTEGER NOT NULL CHECK(class_id IN (2, 3)),
+      class_name TEXT NOT NULL CHECK(class_name IN ('car', 'motorcycle')),
+      mask_sha256 TEXT NOT NULL CHECK(length(mask_sha256) = 64),
+      mesh_file_relative_path TEXT NOT NULL UNIQUE,
+      mesh_sha256 TEXT NOT NULL CHECK(length(mesh_sha256) = 64),
+      vertex_count INTEGER NOT NULL CHECK(vertex_count > 2 AND vertex_count <= 4096),
+      triangle_count INTEGER NOT NULL CHECK(triangle_count > 0 AND triangle_count <= 8192),
+      FOREIGN KEY(analysis_id) REFERENCES ${IrisDatabaseConstants.evidencePartialSurfaceAnalysesTable}(id) ON DELETE CASCADE,
+      UNIQUE(analysis_id, detection_index)
+    )
+  ''');
 }
 
 Future<void> _createVersionNineteen(Database database) async {

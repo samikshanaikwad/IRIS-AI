@@ -75,6 +75,6 @@ void main() {
       ],
     );
     expect(tables, hasLength(2));
-    expect(IrisDatabaseConstants.schemaVersion, 19);
+    expect(IrisDatabaseConstants.schemaVersion, 20);
   });
 }

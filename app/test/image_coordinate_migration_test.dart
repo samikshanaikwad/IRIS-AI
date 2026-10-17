@@ -68,7 +68,7 @@ void main() {
       expect(depth['contract_version'], 'legacy');
       expect(depth['coordinate_contract_version'], isNull);
       expect(depth['coordinate_metadata_json'], isNull);
-      expect(IrisDatabaseConstants.schemaVersion, 19);
+      expect(IrisDatabaseConstants.schemaVersion, 20);
     },
   );
 }

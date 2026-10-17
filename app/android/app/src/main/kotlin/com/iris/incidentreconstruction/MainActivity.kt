@@ -15,6 +15,7 @@ class MainActivity : FlutterActivity() {
     private var multiViewRuntime: IrisMultiViewRuntime? = null
     private var locationRuntime: IrisLocationRuntime? = null
     private var segmentationQualificationRuntime: IrisSegmentationQualificationRuntime? = null
+    private var partialSurfaceRuntime: IrisPartialSurfaceRuntime? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         // FlutterActivity normally reaches this registrant through reflection.
@@ -60,6 +61,14 @@ class MainActivity : FlutterActivity() {
             ).setMethodCallHandler { call, result ->
                 if (!segmentation.handleEvidence(call, result)) result.notImplemented()
             }
+            val partialSurface = IrisPartialSurfaceRuntime(applicationContext)
+            partialSurfaceRuntime = partialSurface
+            MethodChannel(
+                flutterEngine.dartExecutor.binaryMessenger,
+                partialSurfaceChannel,
+            ).setMethodCallHandler { call, result ->
+                if (!partialSurface.handle(call, result)) result.notImplemented()
+            }
             installPluginRegistrationDiagnostics(
                 flutterEngine,
                 generatedRegistrantInvoked,
@@ -78,6 +87,8 @@ class MainActivity : FlutterActivity() {
         locationRuntime = null
         segmentationQualificationRuntime?.close()
         segmentationQualificationRuntime = null
+        partialSurfaceRuntime?.close()
+        partialSurfaceRuntime = null
         super.onDestroy()
     }
 
@@ -168,6 +179,7 @@ class MainActivity : FlutterActivity() {
         const val locationChannel = "com.iris.location/v1"
         const val segmentationQualificationChannel = "com.iris.debug/segmentation-qualification"
         const val segmentationChannel = "com.iris.segmentation/v1"
+        const val partialSurfaceChannel = "com.iris.partial_surface/v1"
         internal val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
         const val sqflitePluginClassName = "com.tekartik.sqflite.SqflitePlugin"
         val pluginClassNames = mapOf(
