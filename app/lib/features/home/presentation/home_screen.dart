@@ -48,7 +48,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 alignment: Alignment.center,
                 child: const Icon(
-                  Icons.view_in_ar_outlined,
+                  Icons.shield_outlined,
                   color: IrisColors.primaryBlueLight,
                   size: 26,
                 ),
@@ -61,12 +61,12 @@ class HomeScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
-                        'IRIS',
+                        'AEGIS AI',
                         style: Theme.of(context).textTheme.displaySmall,
                       ),
                       const SizedBox(height: IrisSpacing.xxs),
                       Text(
-                        'Incident Reconstruction & Intelligence System',
+                        'Intelligent Road Accident Evidence Analysis System',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
@@ -94,7 +94,7 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: IrisSpacing.xs),
                 Text(
                   'Create a case to organize real incident evidence and '
-                  'reconstruction work on this device.',
+                  'evidence observations on this device.',
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 const SizedBox(height: IrisSpacing.md),
@@ -158,7 +158,7 @@ class HomeScreen extends StatelessWidget {
       case CaseCollectionState.error:
         return IrisErrorState(
           title: 'Recent cases unavailable',
-          message: 'IRIS could not read cases from local storage.',
+          message: 'AEGIS AI could not read cases from local storage.',
           onRetry: caseController.retry,
         );
       case CaseCollectionState.data:
