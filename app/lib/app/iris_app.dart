@@ -44,7 +44,7 @@ class _IrisAppState extends State<IrisApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'IRIS',
+      title: 'AEGIS AI',
       debugShowCheckedModeBanner: false,
       theme: IrisTheme.dark,
       darkTheme: IrisTheme.dark,
