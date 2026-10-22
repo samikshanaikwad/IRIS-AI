@@ -16,27 +16,27 @@ class MoreScreen extends StatelessWidget {
       appBar: const IrisAppBar(title: 'More'),
       body: IrisPageBody(
         children: <Widget>[
-          const IrisSectionHeader(title: 'About IRIS'),
+          const IrisSectionHeader(title: 'About AEGIS AI'),
           const SizedBox(height: IrisSpacing.sm),
           IrisCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 const Icon(
-                  Icons.view_in_ar_outlined,
+                  Icons.shield_outlined,
                   color: IrisColors.primaryBlueLight,
                   size: 28,
                 ),
                 const SizedBox(height: IrisSpacing.sm),
-                Text('IRIS', style: Theme.of(context).textTheme.headlineSmall),
+                Text('AEGIS AI', style: Theme.of(context).textTheme.headlineSmall),
                 const SizedBox(height: IrisSpacing.xxs),
                 Text(
-                  'Incident Reconstruction & Intelligence System',
+                  'Intelligent Road Accident Evidence Analysis System',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: IrisSpacing.sm),
                 Text(
-                  'AI-assisted incident reconstruction platform.',
+                  'Image-based road accident evidence management and analysis. AI findings require verification.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],
