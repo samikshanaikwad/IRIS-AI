@@ -18,7 +18,7 @@
         tools:replace="android:required" />
 
     <application
-        android:label="IRIS"
+        android:label="AEGIS AI"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
